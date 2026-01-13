@@ -10,6 +10,7 @@ import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { OssModule } from './oss/oss.module';
 import { CustomThrottlerGuard } from './common/guards/throttler.guard';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CustomThrottlerGuard } from './common/guards/throttler.guard';
     RedisModule,
     HealthModule,
     OssModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

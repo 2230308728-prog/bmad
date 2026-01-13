@@ -54,9 +54,9 @@ development_status:
 
   # Epic 2: 用户认证系统
   epic-2: in-progress
-  2-1-design-user-data-model: ready-for-dev
-  2-2-implement-jwt-auth-infrastructure: backlog
-  2-3-implement-admin-password-login: backlog
+  2-1-design-user-data-model: done
+  2-2-implement-jwt-auth-infrastructure: done
+  2-3-implement-admin-password-login: ready-for-dev
   2-4-implement-parent-wechat-login: backlog
   2-5-implement-role-permission-guard: backlog
   2-6-implement-token-refresh-session-management: backlog
