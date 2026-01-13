@@ -11,6 +11,7 @@ import { HealthModule } from './health/health.module';
 import { OssModule } from './oss/oss.module';
 import { CustomThrottlerGuard } from './common/guards/throttler.guard';
 import { AuthModule } from './auth/auth.module';
+import { ProductsModule } from './features/products/products.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { AuthModule } from './auth/auth.module';
     HealthModule,
     OssModule,
     AuthModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [

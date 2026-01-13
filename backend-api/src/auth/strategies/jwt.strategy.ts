@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -36,6 +36,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * @returns 用户信息对象，会被附加到 request.user
    */
   async validate(payload: JwtPayload) {
-    return { userId: payload.sub, role: payload.role };
+    // 验证令牌类型
+    if (payload.type !== 'access') {
+      throw new UnauthorizedException('无效的令牌类型');
+    }
+
+    // 返回用户信息，将被附加到 request.user
+    // 使用 id 而不是 userId，与 RolesGuard 期望的字段名一致
+    return { id: payload.sub, role: payload.role };
   }
 }

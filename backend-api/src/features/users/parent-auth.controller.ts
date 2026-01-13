@@ -1,11 +1,17 @@
-import { Controller, Post, Body, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Body, Logger, UseGuards, Get } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiSecurity } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
 import { WechatService } from './wechat.service';
 import { UsersService } from './users.service';
 import { AuthService } from '@/auth/auth.service';
 import { WechatLoginDto } from './dto/wechat-login.dto';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { CurrentUser, CurrentUserType } from '@/common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
 
 @ApiTags('parent-auth')
+@ApiSecurity('bearer')
 @Controller('parent/auth')
 export class ParentAuthController {
   private readonly logger = new Logger(ParentAuthController.name);
@@ -58,5 +64,17 @@ export class ParentAuthController {
       );
       throw error;
     }
+  }
+
+  // 示例：受保护的家长端点
+  @Get('profile')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.PARENT)
+  @ApiOperation({ summary: '获取当前家长信息' })
+  @ApiResponse({ status: 200, description: '成功获取' })
+  @ApiResponse({ status: 401, description: '未认证' })
+  @ApiResponse({ status: 403, description: '权限不足' })
+  async getProfile(@CurrentUser() user: CurrentUserType) {
+    return this.usersService.findById(user.id);
   }
 }

@@ -1,11 +1,16 @@
-import { Controller, Post, Body, HttpCode } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Body, HttpCode, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiSecurity } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { AuthService } from '@/auth/auth.service';
 import { AdminRegisterDto } from './dto/admin-register.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 
 @ApiTags('admin-auth')
+@ApiSecurity('bearer')
 @Controller('admin/auth')
 export class AdminAuthController {
   constructor(
@@ -56,5 +61,17 @@ export class AdminAuthController {
         },
       },
     };
+  }
+
+  // 示例：受保护的管理员端点
+  @Post('protected')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: '受保护的管理员端点示例' })
+  @ApiResponse({ status: 200, description: '成功访问' })
+  @ApiResponse({ status: 401, description: '未认证' })
+  @ApiResponse({ status: 403, description: '权限不足' })
+  async protectedEndpoint() {
+    return { message: '管理员权限验证通过' };
   }
 }
