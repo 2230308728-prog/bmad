@@ -8,7 +8,10 @@ export class HealthController {
   constructor(private readonly cacheService: CacheService) {}
 
   @Get('redis')
-  @ApiOperation({ summary: '检查 Redis 健康状态', description: '返回 Redis 连接状态和响应时间' })
+  @ApiOperation({
+    summary: '检查 Redis 健康状态',
+    description: '返回 Redis 连接状态和响应时间',
+  })
   @ApiResponse({ status: 200, description: '成功返回健康检查结果' })
   async checkRedis() {
     // 使用 checkHealth 方法获取实际 Redis 响应时间

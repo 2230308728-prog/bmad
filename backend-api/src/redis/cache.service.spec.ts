@@ -27,7 +27,9 @@ describe('CacheService', () => {
     service = module.get<CacheService>(CacheService);
 
     // Mock checkRedisConnection to avoid actual calls during tests
-    jest.spyOn(service as any, 'checkRedisConnection').mockResolvedValue(undefined);
+    jest
+      .spyOn(service as any, 'checkRedisConnection')
+      .mockResolvedValue(undefined);
   });
 
   it('should be defined', () => {
@@ -36,7 +38,10 @@ describe('CacheService', () => {
 
   describe('onModuleInit', () => {
     it('should check Redis connection on module init', async () => {
-      const checkConnectionSpy = jest.spyOn(service as any, 'checkRedisConnection');
+      const checkConnectionSpy = jest.spyOn(
+        service as any,
+        'checkRedisConnection',
+      );
 
       await service.onModuleInit();
 
@@ -64,7 +69,9 @@ describe('CacheService', () => {
     });
 
     it('should return null on error (graceful degradation)', async () => {
-      (cacheManager.get as jest.Mock).mockRejectedValue(new Error('Redis connection failed'));
+      (cacheManager.get as jest.Mock).mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
 
       const result = await service.get('test-key');
 
@@ -86,7 +93,11 @@ describe('CacheService', () => {
 
       await service.set('test-key', { data: 'test' });
 
-      expect(cacheManager.set).toHaveBeenCalledWith('test-key', { data: 'test' }, undefined);
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        'test-key',
+        { data: 'test' },
+        undefined,
+      );
     });
 
     it('should set cache with randomized TTL', async () => {
@@ -95,7 +106,11 @@ describe('CacheService', () => {
       await service.set('test-key', { data: 'test' }, 300);
 
       expect(cacheManager.set).toHaveBeenCalled();
-      const callArgs = (cacheManager.set as jest.Mock).mock.calls[0];
+      const callArgs = (cacheManager.set as jest.Mock).mock.calls[0] as [
+        string,
+        unknown,
+        number,
+      ];
       expect(callArgs[0]).toBe('test-key');
       expect(callArgs[1]).toEqual({ data: 'test' });
       // TTL should be within ±10% of 300 (270-330)
@@ -104,9 +119,13 @@ describe('CacheService', () => {
     });
 
     it('should not throw on error (graceful degradation)', async () => {
-      (cacheManager.set as jest.Mock).mockRejectedValue(new Error('Redis connection failed'));
+      (cacheManager.set as jest.Mock).mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
 
-      await expect(service.set('test-key', { data: 'test' })).resolves.not.toThrow();
+      await expect(
+        service.set('test-key', { data: 'test' }),
+      ).resolves.not.toThrow();
     });
   });
 
@@ -120,7 +139,9 @@ describe('CacheService', () => {
     });
 
     it('should not throw on error (graceful degradation)', async () => {
-      (cacheManager.del as jest.Mock).mockRejectedValue(new Error('Redis connection failed'));
+      (cacheManager.del as jest.Mock).mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
 
       await expect(service.del('test-key')).resolves.not.toThrow();
     });
@@ -128,12 +149,16 @@ describe('CacheService', () => {
 
   describe('getRandomizedTtl', () => {
     it('should return zero for zero input', () => {
-      const result = (service as any).getRandomizedTtl(0);
+      const result = (
+        service as unknown as { getRandomizedTtl: (n: number) => number }
+      ).getRandomizedTtl(0);
       expect(result).toBe(0);
     });
 
     it('should return same value for negative input', () => {
-      const result = (service as any).getRandomizedTtl(-100);
+      const result = (
+        service as unknown as { getRandomizedTtl: (n: number) => number }
+      ).getRandomizedTtl(-100);
       expect(result).toBe(-100);
     });
 
@@ -143,7 +168,9 @@ describe('CacheService', () => {
 
       // Run multiple times to get different random values
       for (let i = 0; i < 100; i++) {
-        const result = (service as any).getRandomizedTtl(baseTtl);
+        const result = (
+          service as unknown as { getRandomizedTtl: (n: number) => number }
+        ).getRandomizedTtl(baseTtl);
         results.add(result);
         expect(result).toBeGreaterThanOrEqual(270); // 300 - 10%
         expect(result).toBeLessThanOrEqual(330); // 300 + 10%
@@ -176,7 +203,9 @@ describe('CacheService', () => {
     });
 
     it('should return unavailable when Redis fails', async () => {
-      (cacheManager.set as jest.Mock).mockRejectedValue(new Error('Connection failed'));
+      (cacheManager.set as jest.Mock).mockRejectedValue(
+        new Error('Connection failed'),
+      );
 
       const result = await service.checkHealth();
 
@@ -190,7 +219,8 @@ describe('CacheService', () => {
       (cacheManager.del as jest.Mock).mockResolvedValue(undefined);
 
       // First set to false
-      (service as any).redisAvailable = false;
+      (service as unknown as { redisAvailable: boolean }).redisAvailable =
+        false;
 
       await service.checkHealth();
 

@@ -1,25 +1,44 @@
 import { Injectable, Optional } from '@nestjs/common';
-import OSS = require('ali-oss');
+
+/* eslint-disable */
+ 
+const OSS = require('ali-oss');
+/* eslint-enable */
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 
+interface OSSClient {
+  put: (name: string, file: Buffer) => Promise<{ name: string; url: string }>;
+  signatureUrl: (
+    name: string,
+    options: { expires: number; method: string },
+  ) => string;
+  delete: (name: string) => Promise<void>;
+}
+
 @Injectable()
 export class OssService {
-  private client: OSS;
+  private client: OSSClient;
 
   constructor(
     private configService: ConfigService,
-    @Optional() private ossClient?: OSS,
+    @Optional() private ossClient?: OSSClient,
   ) {
     // Allow injection of mock OSS client for testing
+
+    /* eslint-disable */
     this.client =
       this.ossClient ||
-      new OSS({
+       
+      (new OSS({
         region: this.configService.get<string>('OSS_REGION')!,
         accessKeyId: this.configService.get<string>('OSS_ACCESS_KEY_ID')!,
-        accessKeySecret: this.configService.get<string>('OSS_ACCESS_KEY_SECRET')!,
+        accessKeySecret: this.configService.get<string>(
+          'OSS_ACCESS_KEY_SECRET',
+        )!,
         bucket: this.configService.get<string>('OSS_BUCKET')!,
-      });
+      }) as OSSClient);
+    /* eslint-enable */
   }
 
   /**
@@ -47,7 +66,7 @@ export class OssService {
    * @param fileName 文件名
    * @returns 签名 URL
    */
-  async generateSignedUrl(fileName: string): Promise<string> {
+  generateSignedUrl(fileName: string): string {
     const date = new Date();
     date.setMinutes(date.getMinutes() + 15);
 
@@ -69,7 +88,7 @@ export class OssService {
       const pathSegments = url.pathname.split('/').filter(Boolean);
       const fileName = pathSegments.slice(1).join('/'); // Skip bucket name
       await this.client.delete(fileName);
-    } catch (error) {
+    } catch {
       throw new Error(`Invalid OSS URL format: ${fileUrl}`);
     }
   }

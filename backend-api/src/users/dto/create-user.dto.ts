@@ -27,7 +27,11 @@ export class CreateUserDto {
   @IsEnum(Role)
   role!: Role;
 
-  @ApiProperty({ description: '用户状态', enum: UserStatus, example: UserStatus.ACTIVE })
+  @ApiProperty({
+    description: '用户状态',
+    enum: UserStatus,
+    example: UserStatus.ACTIVE,
+  })
   @IsEnum(UserStatus)
   status!: UserStatus;
 }

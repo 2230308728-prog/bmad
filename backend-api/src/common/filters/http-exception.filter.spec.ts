@@ -1,13 +1,12 @@
 import { HttpExceptionFilter } from './http-exception.filter';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { ArgumentsHost } from '@nestjs/core';
 import { Request, Response } from 'express';
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
   let mockResponse: Partial<Response>;
   let mockRequest: Partial<Request>;
-  let mockArgumentsHost: ArgumentsHost;
+  let mockArgumentsHost: any;
 
   beforeEach(() => {
     filter = new HttpExceptionFilter();
@@ -23,10 +22,10 @@ describe('HttpExceptionFilter', () => {
 
     mockArgumentsHost = {
       switchToHttp: jest.fn().mockReturnValue({
-        getResponse: () => mockResponse as Response,
-        getRequest: () => mockRequest as Request,
+        getResponse: () => mockResponse,
+        getRequest: () => mockRequest,
       }),
-    } as unknown as ArgumentsHost;
+    };
   });
 
   it('should catch HttpException and return formatted error', () => {
@@ -40,7 +39,7 @@ describe('HttpExceptionFilter', () => {
         statusCode: 400,
         message: 'Test error',
         error: 'BAD_REQUEST',
-        timestamp: expect.any(String),
+        timestamp: expect.any(String) as unknown,
         path: '/test',
       }),
     );
@@ -51,13 +50,15 @@ describe('HttpExceptionFilter', () => {
 
     filter.catch(exception, mockArgumentsHost);
 
-    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(mockResponse.status).toHaveBeenCalledWith(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: 500,
         message: 'Internal server error',
         error: 'INTERNAL_SERVER_ERROR',
-        timestamp: expect.any(String),
+        timestamp: expect.any(String) as unknown,
         path: '/test',
       }),
     );

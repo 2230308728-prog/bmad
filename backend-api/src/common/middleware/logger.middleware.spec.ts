@@ -20,7 +20,7 @@ describe('LoggerMiddleware', () => {
       statusCode: 200,
       on: jest.fn().mockImplementation((event, callback) => {
         if (event === 'finish') {
-          callback();
+          (callback as () => void)();
         }
       }),
     };
@@ -38,7 +38,10 @@ describe('LoggerMiddleware', () => {
     middleware.use(mockRequest as Request, mockResponse as Response, mockNext);
 
     expect(mockNext).toHaveBeenCalled();
-    expect(mockResponse.on).toHaveBeenCalledWith('finish', expect.any(Function));
+    expect(mockResponse.on).toHaveBeenCalledWith(
+      'finish',
+      expect.any(Function),
+    );
   });
 
   it('should include all required fields in log', () => {
@@ -47,14 +50,20 @@ describe('LoggerMiddleware', () => {
     middleware.use(mockRequest as Request, mockResponse as Response, mockNext);
 
     expect(logSpy).toHaveBeenCalled();
-    const loggedData = JSON.parse(logSpy.mock.calls[0][0]);
+    const firstCall = logSpy.mock.calls[0];
+    if (firstCall && firstCall[0]) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const loggedData: Record<string, unknown> = JSON.parse(
+        String(firstCall[0]),
+      );
 
-    expect(loggedData).toHaveProperty('method');
-    expect(loggedData).toHaveProperty('url');
-    expect(loggedData).toHaveProperty('statusCode');
-    expect(loggedData).toHaveProperty('responseTime');
-    expect(loggedData).toHaveProperty('ip');
-    expect(loggedData).toHaveProperty('timestamp');
+      expect(loggedData).toHaveProperty('method');
+      expect(loggedData).toHaveProperty('url');
+      expect(loggedData).toHaveProperty('statusCode');
+      expect(loggedData).toHaveProperty('responseTime');
+      expect(loggedData).toHaveProperty('ip');
+      expect(loggedData).toHaveProperty('timestamp');
+    }
   });
 
   it('should measure response time', () => {
@@ -62,7 +71,13 @@ describe('LoggerMiddleware', () => {
 
     middleware.use(mockRequest as Request, mockResponse as Response, mockNext);
 
-    const loggedData = JSON.parse(logSpy.mock.calls[0][0]);
-    expect(loggedData.responseTime).toMatch(/\d+ms/);
+    const firstCall = logSpy.mock.calls[0];
+    if (firstCall && firstCall[0]) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const loggedData: { responseTime: string } = JSON.parse(
+        String(firstCall[0]),
+      );
+      expect(loggedData.responseTime).toMatch(/\d+ms/);
+    }
   });
 });

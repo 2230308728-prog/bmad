@@ -5,13 +5,10 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  const configService = app.get(ConfigService);
 
   // 全局验证管道
   app.useGlobalPipes(
@@ -69,4 +66,4 @@ async function bootstrap() {
   console.log(`Swagger documentation: http://localhost:${port}/api-docs`);
 }
 
-bootstrap();
+void bootstrap();

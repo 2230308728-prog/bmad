@@ -56,7 +56,9 @@ export class CacheService implements OnModuleInit {
       }
     } catch (error) {
       this.redisAvailable = false;
-      this.logger.warn(`Redis 连接失败: ${(error as Error).message}，应用将以降级模式运行`);
+      this.logger.warn(
+        `Redis 连接失败: ${(error as Error).message}，应用将以降级模式运行`,
+      );
     }
   }
 
@@ -70,7 +72,9 @@ export class CacheService implements OnModuleInit {
       const value = await this.cacheManager.get<T>(key);
       return value ?? null;
     } catch (error) {
-      this.logger.error(`获取缓存失败 [key: ${key}]: ${(error as Error).message}`);
+      this.logger.error(
+        `获取缓存失败 [key: ${key}]: ${(error as Error).message}`,
+      );
       return null; // 降级策略：返回 null
     }
   }
@@ -85,9 +89,13 @@ export class CacheService implements OnModuleInit {
     try {
       const randomizedTtl = ttl ? this.getRandomizedTtl(ttl) : undefined;
       await this.cacheManager.set(key, value, randomizedTtl);
-      this.logger.debug(`缓存已设置 [key: ${key}, ttl: ${randomizedTtl ?? 'default'}s]`);
+      this.logger.debug(
+        `缓存已设置 [key: ${key}, ttl: ${randomizedTtl ?? 'default'}s]`,
+      );
     } catch (error) {
-      this.logger.error(`设置缓存失败 [key: ${key}]: ${(error as Error).message}`);
+      this.logger.error(
+        `设置缓存失败 [key: ${key}]: ${(error as Error).message}`,
+      );
       // 降级策略：忽略错误，不阻塞业务
     }
   }
@@ -101,7 +109,9 @@ export class CacheService implements OnModuleInit {
       await this.cacheManager.del(key);
       this.logger.debug(`缓存已删除 [key: ${key}]`);
     } catch (error) {
-      this.logger.error(`删除缓存失败 [key: ${key}]: ${(error as Error).message}`);
+      this.logger.error(
+        `删除缓存失败 [key: ${key}]: ${(error as Error).message}`,
+      );
       // 降级策略：忽略错误
     }
   }
@@ -128,7 +138,7 @@ export class CacheService implements OnModuleInit {
 
       this.redisAvailable = true;
       return { available: true, responseTime };
-    } catch (error) {
+    } catch {
       this.redisAvailable = false;
       return { available: false, responseTime: Date.now() - startTime };
     }

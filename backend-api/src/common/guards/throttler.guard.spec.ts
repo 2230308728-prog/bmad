@@ -11,16 +11,18 @@ describe('CustomThrottlerGuard', () => {
     expect(guard).toBeDefined();
   });
 
-  it('should return IP address as tracker', async () => {
+  it('should return IP address as tracker', () => {
     const mockRequest = {
       ip: '127.0.0.1',
     };
 
-    const tracker = await guard.getTracker(mockRequest as any);
+    const tracker = guard.getTracker(mockRequest as Record<string, unknown>);
     expect(tracker).toBe('127.0.0.1');
   });
 
   it('should have custom error message', () => {
-    expect(guard['errorMessage']).toBe('Too many requests, please try again later');
+    expect(guard['errorMessage']).toBe(
+      'Too many requests, please try again later',
+    );
   });
 });

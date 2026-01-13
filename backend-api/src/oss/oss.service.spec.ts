@@ -2,10 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { OssService } from './oss.service';
 
+interface OSSClient {
+  put: (name: string, file: Buffer) => Promise<{ name: string; url: string }>;
+  signatureUrl: (
+    name: string,
+    options: { expires: number; method: string },
+  ) => string;
+  delete: (name: string) => Promise<void>;
+}
+
 describe('OssService', () => {
   let service: OssService;
-  let configService: ConfigService;
-  let mockOssClient: any;
+  let mockOssClient: jest.Mocked<OSSClient>;
 
   const mockConfig = {
     OSS_REGION: 'oss-cn-hangzhou',
@@ -19,7 +27,7 @@ describe('OssService', () => {
       put: jest.fn(),
       signatureUrl: jest.fn(),
       delete: jest.fn(),
-    };
+    } as unknown as jest.Mocked<OSSClient>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -27,7 +35,9 @@ describe('OssService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => mockConfig[key]),
+            get: jest.fn(
+              (key: string) => mockConfig[key as keyof typeof mockConfig],
+            ),
           },
         },
       ],
@@ -35,14 +45,13 @@ describe('OssService', () => {
       .overrideProvider(OssService)
       .useFactory({
         factory: (configService: ConfigService) => {
-          return new OssService(configService, mockOssClient as any);
+          return new OssService(configService, mockOssClient);
         },
         inject: [ConfigService],
       })
       .compile();
 
     service = module.get<OssService>(OssService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {
@@ -91,7 +100,10 @@ describe('OssService', () => {
     it('should upload file and return URL', async () => {
       const fileBuffer = Buffer.from('test file content');
       const originalName = 'test.jpg';
-      mockOssClient.put.mockResolvedValue({ name: '2024/01/09/uuid.jpg', url: 'test-url' });
+      mockOssClient.put.mockResolvedValue({
+        name: '2024/01/09/uuid.jpg',
+        url: 'test-url',
+      });
 
       const result = await service.uploadFile(fileBuffer, originalName);
 
@@ -105,7 +117,10 @@ describe('OssService', () => {
     it('should generate correct file path with date prefix', async () => {
       const fileBuffer = Buffer.from('test');
       const originalName = 'product.png';
-      mockOssClient.put.mockResolvedValue({ name: 'file-path', url: 'test-url' });
+      mockOssClient.put.mockResolvedValue({
+        name: 'file-path',
+        url: 'test-url',
+      });
 
       await service.uploadFile(fileBuffer, originalName);
 
@@ -117,32 +132,38 @@ describe('OssService', () => {
   });
 
   describe('generateSignedUrl', () => {
-    it('should generate signed URL with 15 minute expiry', async () => {
+    it('should generate signed URL with 15 minute expiry', () => {
       const fileName = 'test-file.jpg';
       const mockSignedUrl = 'https://signed-url.example.com';
       mockOssClient.signatureUrl.mockReturnValue(mockSignedUrl);
 
       const beforeCall = Date.now() / 1000; // Convert to seconds
-      const result = await service.generateSignedUrl(fileName);
+      const result = service.generateSignedUrl(fileName);
       const afterCall = Date.now() / 1000;
 
       expect(mockOssClient.signatureUrl).toHaveBeenCalledWith(fileName, {
-        expires: expect.any(Number),
+        expires: expect.any(Number) as unknown,
         method: 'PUT',
       });
 
       const callArgs = mockOssClient.signatureUrl.mock.calls[0];
-      const expiryTime = callArgs[1].expires as number;
-      const method = callArgs[1].method;
+
+      const expiryTime = (callArgs as unknown[])[1] as {
+        expires: number;
+        method: string;
+      };
+      const method = expiryTime.method;
 
       expect(method).toBe('PUT');
-      expect(typeof expiryTime).toBe('number');
+      expect(typeof expiryTime.expires).toBe('number');
 
       // Check that expiry is approximately 15 minutes (900 seconds) from now
-      const timeDiff = expiryTime - beforeCall;
+      const timeDiff = expiryTime.expires - beforeCall;
       const expectedDiff = 15 * 60; // 15 minutes in seconds
       expect(timeDiff).toBeGreaterThanOrEqual(expectedDiff - 1); // Allow 1s tolerance
-      expect(timeDiff).toBeLessThanOrEqual(expectedDiff + 1 + (afterCall - beforeCall));
+      expect(timeDiff).toBeLessThanOrEqual(
+        expectedDiff + 1 + (afterCall - beforeCall),
+      );
 
       expect(result).toBe(mockSignedUrl);
     });
@@ -150,7 +171,8 @@ describe('OssService', () => {
 
   describe('deleteFile', () => {
     it('should delete file from OSS', async () => {
-      const fileUrl = 'https://bmad-products.oss-cn-hangzhou.aliyuncs.com/2024/01/09/uuid.jpg';
+      const fileUrl =
+        'https://bmad-products.oss-cn-hangzhou.aliyuncs.com/2024/01/09/uuid.jpg';
       mockOssClient.delete.mockResolvedValue({});
 
       await service.deleteFile(fileUrl);
@@ -159,18 +181,23 @@ describe('OssService', () => {
     });
 
     it('should extract correct filename from URL', async () => {
-      const fileUrl = 'https://bmad-products.oss-cn-hangzhou.aliyuncs.com/2024/12/25/test-file.png';
+      const fileUrl =
+        'https://bmad-products.oss-cn-hangzhou.aliyuncs.com/2024/12/25/test-file.png';
       mockOssClient.delete.mockResolvedValue({});
 
       await service.deleteFile(fileUrl);
 
-      expect(mockOssClient.delete).toHaveBeenCalledWith('2024/12/25/test-file.png');
+      expect(mockOssClient.delete).toHaveBeenCalledWith(
+        '2024/12/25/test-file.png',
+      );
     });
 
     it('should throw error for invalid URL format', async () => {
       const invalidUrl = 'not-a-valid-url';
 
-      await expect(service.deleteFile(invalidUrl)).rejects.toThrow('Invalid OSS URL format');
+      await expect(service.deleteFile(invalidUrl)).rejects.toThrow(
+        'Invalid OSS URL format',
+      );
     });
   });
 });

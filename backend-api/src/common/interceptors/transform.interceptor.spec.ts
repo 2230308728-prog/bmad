@@ -13,6 +13,9 @@ describe('TransformInterceptor', () => {
     mockContext = {
       getHandler: () => ({}),
       getClass: () => ({}),
+      getArgByIndex: () => ({}),
+      getArgs: () => [],
+      getType: () => 'http',
     } as ExecutionContext;
 
     mockCallHandler = {
@@ -24,23 +27,25 @@ describe('TransformInterceptor', () => {
     interceptor.intercept(mockContext, mockCallHandler).subscribe((result) => {
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('meta');
-      expect(result.data).toEqual({ test: 'data' });
+      expect((result as { data: unknown }).data).toEqual({ test: 'data' });
       done();
     });
   });
 
   it('should include timestamp in meta', (done) => {
     interceptor.intercept(mockContext, mockCallHandler).subscribe((result) => {
-      expect(result.meta).toHaveProperty('timestamp');
-      expect(result.meta.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      const meta = (result as { meta: { timestamp: string } }).meta;
+      expect(meta).toHaveProperty('timestamp');
+      expect(meta.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       done();
     });
   });
 
   it('should include version in meta', (done) => {
     interceptor.intercept(mockContext, mockCallHandler).subscribe((result) => {
-      expect(result.meta).toHaveProperty('version');
-      expect(result.meta.version).toBe('1.0');
+      const meta = (result as { meta: { version: string } }).meta;
+      expect(meta).toHaveProperty('version');
+      expect(meta.version).toBe('1.0');
       done();
     });
   });

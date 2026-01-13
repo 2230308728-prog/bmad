@@ -11,7 +11,7 @@ export class OssController {
   @Post('signature')
   @ApiOperation({ summary: '获取 OSS 直传签名 URL' })
   @ApiResponse({ status: 200, description: '签名 URL 生成成功' })
-  async getSignature(@Body() createUploadDto: CreateUploadDto) {
+  getSignature(@Body() createUploadDto: CreateUploadDto) {
     const { fileName } = createUploadDto;
 
     // 验证文件类型
@@ -26,7 +26,7 @@ export class OssController {
       throw new BadRequestException('File size exceeds 5MB limit.');
     }
 
-    const signedUrl = await this.ossService.generateSignedUrl(fileName);
+    const signedUrl = this.ossService.generateSignedUrl(fileName);
     return {
       data: {
         signedUrl,

@@ -1,5 +1,10 @@
-import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
 
 @ApiTags('users')
@@ -29,7 +34,10 @@ export class UsersController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: '获取单个用户', description: '根据 ID 获取用户详细信息' })
+  @ApiOperation({
+    summary: '获取单个用户',
+    description: '根据 ID 获取用户详细信息',
+  })
   @ApiResponse({ status: 200, description: '成功获取用户信息' })
   @ApiResponse({ status: 404, description: '用户不存在' })
   findOne(@Param('id') id: string) {

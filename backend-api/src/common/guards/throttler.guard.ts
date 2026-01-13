@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModuleOptions } from '@nestjs/throttler';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     super(reflector, configService);
   }
 
-  protected async getTracker(req: Record<string, any>): Promise<string> {
-    return req.ip; // 使用 IP 地址作为限流标识
+  protected getTracker(req: Record<string, any>): string {
+    return (req.ip as string) ?? 'unknown'; // 使用 IP 地址作为限流标识
   }
 }
