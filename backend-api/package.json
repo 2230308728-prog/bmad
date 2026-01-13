@@ -25,6 +25,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
@@ -87,7 +88,8 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^uuid$": "uuid"
+      "^uuid$": "uuid",
+      "^@/(.*)$": "<rootDir>/$1"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!(uuid)/)"

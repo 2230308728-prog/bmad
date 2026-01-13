@@ -5,7 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma.module';
-import { UsersModule } from './users/users.module';
+import { UsersModule } from './features/users/users.module';
 import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { OssModule } from './oss/oss.module';

@@ -1,6 +1,6 @@
 # Story 2.3: 实现管理员账号密码登录
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -51,80 +51,80 @@ So that 我可以安全地访问系统的管理功能。
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: 安装 bcrypt 相关依赖** (AC: Given - 依赖安装)
-  - [ ] 在 backend-api 目录执行 `npm install bcrypt @types/bcrypt`
-  - [ ] 验证 package.json 中依赖已添加
-  - [ ] 确认 TypeScript 类型定义正确
+- [x] **Task 1: 安装 bcrypt 相关依赖** (AC: Given - 依赖安装)
+  - [x] 在 backend-api 目录执行 `npm install bcrypt @types/bcrypt`
+  - [x] 验证 package.json 中依赖已添加
+  - [x] 确认 TypeScript 类型定义正确
 
-- [ ] **Task 2: 创建 AdminAuth DTO** (AC: When - 请求体验证)
-  - [ ] 创建 backend-api/src/features/users/dto/admin-register.dto.ts
-    - [ ] 定义 email 字段（@IsEmail(), @IsNotEmpty()）
-    - [ ] 定义 password 字段（@IsString(), @MinLength(8), @Matches(/^(?=.*[A-Za-z])(?=.*\d)/)）
-    - [ ] 定义 nickname 字段（@IsString(), @IsNotEmpty()）
-  - [ ] 创建 backend-api/src/features/users/dto/admin-login.dto.ts
-    - [ ] 定义 email 字段（@IsEmail(), @IsNotEmpty()）
-    - [ ] 定义 password 字段（@IsString(), @IsNotEmpty()）
+- [x] **Task 2: 创建 AdminAuth DTO** (AC: When - 请求体验证)
+  - [x] 创建 backend-api/src/features/users/dto/admin-register.dto.ts
+    - [x] 定义 email 字段（@IsEmail(), @IsNotEmpty()）
+    - [x] 定义 password 字段（@IsString(), @MinLength(8), @Matches(/^(?=.*[A-Za-z])(?=.*\d)/)）
+    - [x] 定义 nickname 字段（@IsString(), @IsNotEmpty()）
+  - [x] 创建 backend-api/src/features/users/dto/admin-login.dto.ts
+    - [x] 定义 email 字段（@IsEmail(), @IsNotEmpty()）
+    - [x] 定义 password 字段（@IsString(), @IsNotEmpty()）
 
-- [ ] **Task 3: 创建 UsersService** (AC: Then - 业务逻辑)
-  - [ ] 创建 backend-api/src/features/users/users.service.ts
-  - [ ] 实现 createAdmin() 方法：
-    - [ ] 检查 email 是否已存在（抛出 ConflictException 如果存在）
-    - [ ] 使用 bcrypt.hash() 加密密码（salt rounds: 10）
-    - [ ] 使用 Prisma 创建 User（role: ADMIN, status: ACTIVE）
-    - [ ] 返回创建的用户（移除 password 字段）
-  - [ ] 实现 validateAdmin() 方法：
-    - [ ] 通过 email 查找用户（role: ADMIN）
-    - [ ] 如果用户不存在，抛出 UnauthorizedException
-    - [ ] 使用 bcrypt.compare() 验证密码
-    - [ ] 如果密码错误，抛出 UnauthorizedException
-    - [ ] 如果用户状态不是 ACTIVE，抛出 ForbiddenException
-    - [ ] 返回用户信息（移除 password 字段）
-  - [ ] 实现 findById() 方法：
-    - [ ] 通过 id 查找用户
-    - [ ] 返回用户信息（移除 password 字段）
+- [x] **Task 3: 创建 UsersService** (AC: Then - 业务逻辑)
+  - [x] 创建 backend-api/src/features/users/users.service.ts
+  - [x] 实现 createAdmin() 方法：
+    - [x] 检查 email 是否已存在（抛出 ConflictException 如果存在）
+    - [x] 使用 bcrypt.hash() 加密密码（salt rounds: 10）
+    - [x] 使用 Prisma 创建 User（role: ADMIN, status: ACTIVE）
+    - [x] 返回创建的用户（移除 password 字段）
+  - [x] 实现 validateAdmin() 方法：
+    - [x] 通过 email 查找用户（role: ADMIN）
+    - [x] 如果用户不存在，抛出 UnauthorizedException
+    - [x] 使用 bcrypt.compare() 验证密码
+    - [x] 如果密码错误，抛出 UnauthorizedException
+    - [x] 如果用户状态不是 ACTIVE，抛出 ForbiddenException
+    - [x] 返回用户信息（移除 password 字段）
+  - [x] 实现 findById() 方法：
+    - [x] 通过 id 查找用户
+    - [x] 返回用户信息（移除 password 字段）
 
-- [ ] **Task 4: 创建 AdminAuthController** (综合)
-  - [ ] 创建 backend-api/src/features/users/admin-auth.controller.ts
-  - [ ] 实现 POST /api/v1/admin/auth/register 端点：
-    - [ ] 使用 @Body() 验证 AdminRegisterDto
-    - [ ] 调用 usersService.createAdmin()
-    - [ ] 返回 201 和用户信息
-  - [ ] 实现 POST /api/v1/admin/auth/login 端点：
-    - [ ] 使用 @Body() 验证 AdminLoginDto
-    - [ ] 调用 usersService.validateAdmin()
-    - [ ] 调用 authService.generateTokens() 生成令牌
-    - [ ] 返回 200 和令牌 + 用户信息
+- [x] **Task 4: 创建 AdminAuthController** (综合)
+  - [x] 创建 backend-api/src/features/users/admin-auth.controller.ts
+  - [x] 实现 POST /api/v1/admin/auth/register 端点：
+    - [x] 使用 @Body() 验证 AdminRegisterDto
+    - [x] 调用 usersService.createAdmin()
+    - [x] 返回 201 和用户信息
+  - [x] 实现 POST /api/v1/admin/auth/login 端点：
+    - [x] 使用 @Body() 验证 AdminLoginDto
+    - [x] 调用 usersService.validateAdmin()
+    - [x] 调用 authService.generateTokens() 生成令牌
+    - [x] 返回 200 和令牌 + 用户信息
 
-- [ ] **Task 5: 创建 UsersModule** (模块组织)
-  - [ ] 创建 backend-api/src/features/users/users.module.ts
-  - [ ] 导入 PrismaModule（或 PrismaService）
-  - [ ] 导入 AuthModule（使用 AuthService.generateTokens）
-  - [ ] 注册 UsersService 和 AdminAuthController
-  - [ ] 在 AppModule 中导入 UsersModule
+- [x] **Task 5: 创建 UsersModule** (模块组织)
+  - [x] 创建 backend-api/src/features/users/users.module.ts
+  - [x] 导入 PrismaModule（或 PrismaService）
+  - [x] 导入 AuthModule（使用 AuthService.generateTokens）
+  - [x] 注册 UsersService 和 AdminAuthController
+  - [x] 在 AppModule 中导入 UsersModule
 
-- [ ] **Task 6: 编写单元测试** (测试标准)
-  - [ ] 创建 users.service.spec.ts
-    - [ ] 测试 createAdmin() 创建管理员成功
-    - [ ] 测试 createAdmin() email 重复时抛出异常
-    - [ ] 测试 createAdmin() 密码正确加密
-    - [ ] 测试 validateAdmin() 验证成功
-    - [ ] 测试 validateAdmin() 用户不存在时抛出异常
-    - [ ] 测试 validateAdmin() 密码错误时抛出异常
-    - [ ] 测试 validateAdmin() 用户被禁用时抛出异常
-  - [ ] 创建 admin-auth.controller.spec.ts
-    - [ ] 测试 register 端点返回 201
-    - [ ] 测试 register 端点验证失败时返回 400
-    - [ ] 测试 login 端点返回 200 和令牌
-    - [ ] 测试 login 端点验证失败时返回 401
+- [x] **Task 6: 编写单元测试** (测试标准)
+  - [x] 创建 users.service.spec.ts
+    - [x] 测试 createAdmin() 创建管理员成功
+    - [x] 测试 createAdmin() email 重复时抛出异常
+    - [x] 测试 createAdmin() 密码正确加密
+    - [x] 测试 validateAdmin() 验证成功
+    - [x] 测试 validateAdmin() 用户不存在时抛出异常
+    - [x] 测试 validateAdmin() 密码错误时抛出异常
+    - [x] 测试 validateAdmin() 用户被禁用时抛出异常
+  - [x] 创建 admin-auth.controller.spec.ts
+    - [x] 测试 register 端点返回 201
+    - [x] 测试 register 端点验证失败时返回 400
+    - [x] 测试 login 端点返回 200 和令牌
+    - [x] 测试 login 端点验证失败时返回 401
 
-- [ ] **Task 7: 验证和集成** (综合验证)
-  - [ ] 执行 `npm run build` 验证 TypeScript 编译通过
-  - [ ] 运行单元测试 `npm test users.service.spec`（所有测试通过）
-  - [ ] 运行单元测试 `npm test admin-auth.controller.spec`（所有测试通过）
-  - [ ] 手动测试注册端点（curl 或 Postman）
-  - [ ] 手动测试登录端点并验证 JWT 令牌
-  - [ ] 验证与 User 模型（Story 2.1）的集成
-  - [ ] 验证与 AuthService（Story 2.2）的集成
+- [x] **Task 7: 验证和集成** (综合验证)
+  - [x] 执行 `npm run build` 验证 TypeScript 编译通过
+  - [x] 运行单元测试 `npm test users.service.spec`（所有测试通过）
+  - [x] 运行单元测试 `npm test admin-auth.controller.spec`（所有测试通过）
+  - [x] 手动测试注册端点（curl 或 Postman）
+  - [x] 手动测试登录端点并验证 JWT 令牌
+  - [x] 验证与 User 模型（Story 2.1）的集成
+  - [x] 验证与 AuthService（Story 2.2）的集成
 
 ## Dev Notes
 
@@ -714,6 +714,64 @@ npm run build
 
 ## Change Log
 
+**2026-01-13 - 代码审查修复：**
+- HIGH 修复: 添加 @HttpCode(201) 到 register 端点（AC 要求返回 201 状态码）
+- MEDIUM 修复: 更新 File List 记录所有修改的文件（包括 main.ts、schema.prisma、tsconfig.json）
+- MEDIUM 修复: 添加 email null 断言（user.email!）确保类型安全
+- MEDIUM 修复: 添加 DTO 验证测试（邮箱格式、密码强度）
+- MEDIUM 修复: 添加 HTTP 状态码验证测试
+- 更新 AdminAuthController 导入 HttpCode 装饰器
+
+**2026-01-13 - Story 实现：**
+- 安装 bcrypt 相关依赖包：bcrypt 6.0.0, @types/bcrypt 6.0.0
+- 创建 AdminAuth DTO（AdminRegisterDto, AdminLoginDto）
+  - 邮箱格式验证
+  - 密码强度验证（至少8位，包含字母和数字）
+  - 昵称非空验证
+- 创建 UsersService：
+  - createAdmin() 方法：检查邮箱重复、bcrypt 密码加密、创建管理员用户
+  - validateAdmin() 方法：验证邮箱和密码、检查用户状态
+  - findById() 方法：根据 ID 查找用户
+- 创建 AdminAuthController：
+  - POST /admin/auth/register：管理员注册端点
+  - POST /admin/auth/login：管理员登录端点（返回 JWT 令牌）
+- 创建 UsersModule 并集成到 AppModule
+- 配置 TypeScript 路径别名（@/*）
+- 配置 Jest moduleNameMapper 支持 @/ 别名
+- 更新 Prisma Schema：添加 email 和 password 字段到 User 模型
+- 生成 Prisma Client
+- 编写完整的单元测试：
+  - UsersService: 12 个测试全部通过
+  - AdminAuthController: 8 个测试全部通过（新增 3 个）
+  - 总计 90/90 测试通过
+
+**技术决策：**
+- bcrypt 版本: 6.0.0（最新稳定版）
+- salt rounds: 10（2025年推荐值，平衡安全性和性能）
+- 密码验证: 包含字母和数字的正则表达式 `/^(?=.*[A-Za-z])(?=.*\d)/`
+- 错误处理: 统一返回"邮箱或密码错误"不泄露用户是否存在
+- UsersService: 单独服务，供后续 Story 2.4/2.5 使用
+- 路径别名: 使用 @/ 别名简化导入路径
+- Prisma Schema: email 和 password 可选字段（支持两种登录方式）
+
+**遇到的问题和解决方案：**
+- 问题 1: Prisma Schema 缺少 email 和 password 字段
+  - 解决: 更新 schema.prisma 添加字段，重新生成 Prisma Client
+- 问题 2: TypeScript 无法识别 @/ 路径别名
+  - 解决: 在 tsconfig.json 中添加 paths 配置
+- 问题 3: Jest 无法识别 @/ 路径别名
+  - 解决: 在 package.json 的 Jest 配置中添加 moduleNameMapper
+- 问题 4: bcrypt.compare() 类型错误（password 可能为 null）
+  - 解决: 在比较前添加 null 检查
+- 问题 5: Jest spyOn 与原生 bcrypt 模块冲突
+  - 解决: 使用 jest.mock() 在顶层模拟 bcrypt 模块
+- 问题 6: 注册端点返回 200 而非 201 状态码（代码审查发现）
+  - 解决: 添加 @HttpCode(201) 装饰器
+- 问题 7: user.email 可能为 null 导致类型不安全（代码审查发现）
+  - 解决: 使用 non-null 断言 user.email!
+- 问题 8: 测试缺少 DTO 验证和 HTTP 状态码覆盖（代码审查发现）
+  - 解决: 添加新的测试用例
+
 **2026-01-13 - Story 创建：**
 - 从 Epic 文档提取完整验收标准
 - 集成 Story 2.1 的 User 模型和 Role 枚举
@@ -722,13 +780,6 @@ npm run build
 - 创建详细的实现指南和代码示例
 - 定义单元测试要求和模板
 - 添加 2025 年 bcrypt 最佳实践（来源：2025年1月最新文档）
-
-**技术决策：**
-- bcrypt salt rounds: 10（2025年推荐值，平衡安全性和性能）
-- 密码强度：至少8位，包含字母和数字
-- UsersModule 导入 AuthModule 使用全局 AuthService
-- 错误消息统一：不泄露用户是否存在
-- 密码字段永不返回前端
 
 ## Dev Agent Record
 
@@ -759,7 +810,7 @@ glm-4.7 (claude-opus-4-5-20251101)
 
 ### File List
 
-**待创建文件：**
+**创建文件：**
 - `backend-api/src/features/users/users.module.ts`
 - `backend-api/src/features/users/users.service.ts`
 - `backend-api/src/features/users/admin-auth.controller.ts`
@@ -767,6 +818,13 @@ glm-4.7 (claude-opus-4-5-20251101)
 - `backend-api/src/features/users/dto/admin-login.dto.ts`
 - `backend-api/src/features/users/users.service.spec.ts`
 - `backend-api/src/features/users/admin-auth.controller.spec.ts`
-- `backend-api/package.json` （修改：添加 bcrypt 依赖）
-- `backend-api/src/app.module.ts` （修改：导入 UsersModule）
+
+**修改文件：**
+- `backend-api/package.json` （添加 Jest moduleNameMapper 配置）
+- `backend-api/tsconfig.json` （添加 paths 配置支持 @/ 别名）
+- `backend-api/prisma/schema.prisma` （添加 email 和 password 字段到 User 模型）
+- `backend-api/src/app.module.ts` （更新 UsersModule 导入路径）
+- `backend-api/src/main.ts` （已存在，包含全局 ValidationPipe 配置）
+- `backend-api/src/features/users/admin-auth.controller.ts` （代码审查修复：添加 @HttpCode(201) 和 email null 断言）
+- `backend-api/src/features/users/admin-auth.controller.spec.ts` （代码审查修复：添加 DTO 验证和 HTTP 状态码测试）
 - `2-3-implement-admin-password-login.md` （本故事文件）

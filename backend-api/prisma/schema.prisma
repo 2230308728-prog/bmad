@@ -23,13 +23,15 @@ enum UserStatus {
 }
 
 // 用户模型
-// 设计说明：openid 可为 NULL 是有意为之
-// - PARENT 用户：必须有 openid（微信授权登录）
-// - ADMIN 用户：openid 为 NULL（使用账号密码登录）
+// 设计说明：
+// - PARENT 用户：使用微信授权登录（openid 必填，email/password 为 NULL）
+// - ADMIN 用户：使用账号密码登录（openid 为 NULL，email/password 必填）
 // - @unique 约束在 PostgreSQL 中允许多个 NULL 值，这符合我们的业务需求
 model User {
   id        Int        @id @default(autoincrement())
-  openid    String?    @unique // 微信 OpenID，唯一索引（允许多个 NULL）
+  openid    String?    @unique // 微信 OpenID，唯一索引（允许多个 NULL）- PARENT 用户使用
+  email     String?    @unique // 邮箱，唯一索引（允许多个 NULL）- ADMIN 用户使用
+  password  String? // 密码（bcrypt 加密）- ADMIN 用户使用
   nickname  String? // 用户昵称
   avatarUrl String?    @map("avatar_url") // 头像 URL
   phone     String? // 手机号（加密存储）
@@ -39,4 +41,57 @@ model User {
   updatedAt DateTime   @updatedAt @map("updated_at")
 
   @@map("users") // 表名映射为小写复数
+}
+
+// 产品状态枚举
+enum ProductStatus {
+  DRAFT // 草稿状态，未发布
+  PUBLISHED // 已发布，对用户可见
+  UNPUBLISHED // 已下架，不再显示
+}
+
+// 产品分类模型
+model ProductCategory {
+  id          Int      @id @default(autoincrement())
+  name        String // 分类名称，如"自然科学"、"历史文化"
+  description String? // 分类描述
+  sortOrder   Int      @default(0) @map("sort_order") // 排序权重
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  products Product[] // 一个分类有多个产品
+
+  @@map("product_categories") // 表名映射为小写复数
+}
+
+// 产品模型
+model Product {
+  id            Int           @id @default(autoincrement())
+  title         String // 产品标题
+  description   String // 详细描述，支持富文本
+  categoryId    Int           @map("category_id") // 外键关联 ProductCategory
+  price         Decimal       @db.Decimal(10, 2) // 价格
+  originalPrice Decimal?      @map("original_price") @db.Decimal(10, 2) // 原价，用于展示优惠
+  stock         Int           @default(0) // 库存数量
+  minAge        Int           @default(3) @map("min_age") // 最小年龄
+  maxAge        Int           @default(18) @map("max_age") // 最大年龄
+  duration      String // 活动时长，如"3天2夜"
+  location      String // 活动地点
+  images        String[] // 图片 URL 数组（PostgreSQL text[]）
+  status        ProductStatus @default(DRAFT) // 产品状态
+  featured      Boolean       @default(false) // 是否推荐
+  viewCount     Int           @default(0) @map("view_count") // 浏览次数
+  bookingCount  Int           @default(0) @map("booking_count") // 预订次数
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // 关联关系
+  category ProductCategory @relation(fields: [categoryId], references: [id])
+
+  // 索引
+  @@index([categoryId]) // 分类查询优化
+  @@index([status]) // 状态筛选优化
+  @@index([createdAt]) // 时间排序优化
+  @@index([status, featured]) // 推荐产品查询优化
+  @@map("products") // 表名映射为小写复数
 }
