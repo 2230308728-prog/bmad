@@ -53,21 +53,21 @@ development_status:
   epic-1-retrospective: done
 
   # Epic 2: 用户认证系统
-  epic-2: in-progress
+  epic-2: done
   2-1-design-user-data-model: done
   2-2-implement-jwt-auth-infrastructure: done
   2-3-implement-admin-password-login: done
   2-4-implement-parent-wechat-login: done
   2-5-implement-role-permission-guard: done
   2-6-implement-token-refresh-session-management: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   # Epic 3: 产品发现与管理
   epic-3: in-progress
   3-1-design-product-data-model: done
   3-2-implement-product-list-query-api: done
   3-3-implement-product-search-filter-api: done
-  3-4-implement-product-detail-api: backlog
+  3-4-implement-product-detail-api: done
   3-5-implement-admin-product-crud-api: backlog
   3-6-implement-product-status-stock-management: backlog
   3-7-implement-product-image-upload: backlog

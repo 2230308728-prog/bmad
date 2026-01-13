@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, NotFoundException } from '@nestjs/common';
 import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
 import { GetProductsDto } from './dto/get-products.dto';
@@ -12,6 +12,8 @@ describe('ProductsController', () => {
   beforeEach(async () => {
     productsService = {
       findAll: jest.fn(),
+      search: jest.fn(),
+      findOne: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -303,6 +305,70 @@ describe('ProductsController', () => {
       await controller.search(searchDto);
 
       expect(productsService.search).toHaveBeenCalledWith(searchDto);
+    });
+  });
+
+  describe('findOne', () => {
+    const mockProductDetail = {
+      id: 1,
+      title: '上海科技馆探索之旅',
+      description: '<p>详细的产品介绍...</p>',
+      price: '299.00',
+      originalPrice: '399.00',
+      images: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+      location: '上海浦东新区',
+      duration: '1天',
+      stock: 50,
+      featured: true,
+      minAge: 6,
+      maxAge: 12,
+      viewCount: 1234,
+      bookingCount: 89,
+      category: { id: 1, name: '自然科学' },
+      createdAt: new Date('2024-01-09T12:00:00Z'),
+    };
+
+    it('should return product detail when found', async () => {
+      productsService.findOne = jest.fn().mockResolvedValue(mockProductDetail);
+
+      const result = await controller.findOne(1);
+
+      expect(result).toEqual({ data: mockProductDetail });
+      expect(productsService.findOne).toHaveBeenCalledWith(1);
+    });
+
+    it('should throw NotFoundException when product not found', async () => {
+      productsService.findOne = jest.fn().mockResolvedValue(null);
+
+      await expect(controller.findOne(999)).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne(999)).rejects.toThrow('产品不存在');
+      expect(productsService.findOne).toHaveBeenCalledWith(999);
+    });
+
+    it('should throw NotFoundException for unpublished products', async () => {
+      productsService.findOne = jest.fn().mockResolvedValue(null);
+
+      await expect(controller.findOne(1)).rejects.toThrow(NotFoundException);
+      expect(productsService.findOne).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle service errors gracefully', async () => {
+      productsService.findOne = jest.fn().mockRejectedValue(
+        new Error('Database connection failed'),
+      );
+
+      await expect(controller.findOne(1)).rejects.toThrow('Database connection failed');
+    });
+
+    it('should parse and validate positive integer id', async () => {
+      productsService.findOne = jest.fn().mockResolvedValue(mockProductDetail);
+
+      // Valid IDs
+      await controller.findOne(1);
+      await controller.findOne(100);
+      await controller.findOne(9999);
+
+      expect(productsService.findOne).toHaveBeenCalledTimes(3);
     });
   });
 });

@@ -49,6 +49,10 @@ export class AdminAuthController {
 
     const tokens = await this.authService.generateTokens(user.id, user.role);
 
+    // 保存刷新令牌到用户会话
+    const refreshTTL = 604800; // 7天
+    await this.usersService.saveRefreshToken(user.id, tokens.refreshToken, refreshTTL);
+
     return {
       data: {
         accessToken: tokens.accessToken,

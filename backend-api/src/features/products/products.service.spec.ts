@@ -32,6 +32,8 @@ describe('ProductsService', () => {
     product: {
       findMany: jest.fn(),
       count: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
   };
 
@@ -668,6 +670,217 @@ describe('ProductsService', () => {
       });
 
       expect(result.data).toHaveLength(1);
+    });
+  });
+
+  describe('findOne', () => {
+    const mockProduct = {
+      id: 1,
+      title: '上海科技馆探索之旅',
+      description: '<p>精彩探索之旅</p>',
+      price: { toString: () => '299.00' },
+      originalPrice: { toString: () => '399.00' },
+      images: ['https://example.com/image.jpg'],
+      location: '上海',
+      duration: '1天',
+      stock: 50,
+      featured: true,
+      minAge: 6,
+      maxAge: 12,
+      viewCount: 1234,
+      bookingCount: 89,
+      status: 'PUBLISHED',
+      createdAt: new Date('2024-01-09T12:00:00Z'),
+      category: {
+        id: 1,
+        name: '自然科学',
+      },
+    };
+
+    it('should return product detail when found and published', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
+      mockPrismaService.product.update.mockResolvedValue({});
+
+      const result = await service.findOne(1);
+
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe(1);
+      expect(result?.title).toBe('上海科技馆探索之旅');
+      expect(result?.price).toBe('299.00');
+      expect(result?.category.id).toBe(1);
+      expect(result?.category.name).toBe('自然科学');
+      expect(mockPrismaService.product.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: {
+          category: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+    });
+
+    it('should return null when product not found', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue(null);
+
+      const result = await service.findOne(999);
+
+      expect(result).toBeNull();
+      expect(mockPrismaService.product.update).not.toHaveBeenCalled();
+    });
+
+    it('should return null when product status is not PUBLISHED', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue({
+        ...mockProduct,
+        status: 'DRAFT',
+      });
+
+      const result = await service.findOne(1);
+
+      expect(result).toBeNull();
+      expect(mockPrismaService.product.update).not.toHaveBeenCalled();
+    });
+
+    it('should return cached product detail when cache hit', async () => {
+      const cachedResult = {
+        id: 1,
+        title: '上海科技馆探索之旅',
+        description: '<p>精彩探索之旅</p>',
+        price: '299.00',
+        originalPrice: '399.00',
+        images: ['https://example.com/image.jpg'],
+        location: '上海',
+        duration: '1天',
+        stock: 50,
+        featured: true,
+        minAge: 6,
+        maxAge: 12,
+        viewCount: 1234,
+        bookingCount: 89,
+        category: { id: 1, name: '自然科学' },
+        createdAt: new Date('2024-01-09T12:00:00Z'),
+      };
+
+      mockCacheManager.get.mockResolvedValue(cachedResult);
+
+      const result = await service.findOne(1);
+
+      expect(result).toEqual(cachedResult);
+      expect(cacheManager.get).toHaveBeenCalledWith('products:detail:1');
+      expect(mockPrismaService.product.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should cache product detail after query', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
+      mockPrismaService.product.update.mockResolvedValue({});
+
+      await service.findOne(1);
+
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        'products:detail:1',
+        expect.any(Object),
+        600, // TTL: 10分钟
+      );
+    });
+
+    it('should increment viewCount asynchronously', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
+      mockPrismaService.product.update.mockResolvedValue({
+        viewCount: 1235,
+      });
+
+      await service.findOne(1);
+
+      expect(mockPrismaService.product.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: {
+          viewCount: {
+            increment: 1,
+          },
+        },
+      });
+    });
+
+    it('should handle cache get failure gracefully', async () => {
+      mockCacheManager.get.mockRejectedValue(new Error('Redis connection failed'));
+      mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
+      mockPrismaService.product.update.mockResolvedValue({});
+
+      const result = await service.findOne(1);
+
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe(1);
+      expect(mockPrismaService.product.findUnique).toHaveBeenCalled();
+    });
+
+    it('should handle cache set failure gracefully', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
+      mockCacheManager.set.mockRejectedValue(new Error('Redis connection failed'));
+      mockPrismaService.product.update.mockResolvedValue({});
+
+      const result = await service.findOne(1);
+
+      // Should still return result even if caching fails
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe(1);
+    });
+
+    it('should handle viewCount increment failure gracefully', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
+      mockPrismaService.product.update.mockRejectedValue(new Error('Database error'));
+
+      const result = await service.findOne(1);
+
+      // Should still return result even if viewCount increment fails
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe(1);
+    });
+
+    it('should convert Decimal fields to strings', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
+      mockPrismaService.product.update.mockResolvedValue({});
+
+      const result = await service.findOne(1);
+
+      expect(result?.price).toBe('299.00');
+      expect(result?.originalPrice).toBe('399.00');
+      expect(typeof result?.price).toBe('string');
+      expect(typeof result?.originalPrice).toBe('string');
+    });
+
+    it('should handle product without originalPrice', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue({
+        ...mockProduct,
+        originalPrice: null,
+      });
+      mockPrismaService.product.update.mockResolvedValue({});
+
+      const result = await service.findOne(1);
+
+      expect(result?.originalPrice).toBeUndefined();
+    });
+
+    it('should handle product without age range', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPrismaService.product.findUnique.mockResolvedValue({
+        ...mockProduct,
+        minAge: null,
+        maxAge: null,
+      });
+      mockPrismaService.product.update.mockResolvedValue({});
+
+      const result = await service.findOne(1);
+
+      expect(result?.minAge).toBeNull();
+      expect(result?.maxAge).toBeNull();
     });
   });
 });

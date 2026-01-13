@@ -13,6 +13,7 @@ describe('AdminAuthController', () => {
   const mockUsersService = {
     createAdmin: jest.fn(),
     validateAdmin: jest.fn(),
+    saveRefreshToken: jest.fn(),
   };
 
   const mockAuthService = {

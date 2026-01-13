@@ -3,6 +3,8 @@ import { ConflictException, UnauthorizedException, ForbiddenException, NotFoundE
 import { Role, UserStatus } from '@prisma/client';
 import { UsersService } from './users.service';
 import { PrismaService } from '@/lib/prisma.service';
+import { TokenBlacklistService } from './token-blacklist.service';
+import { UserSessionService } from './user-session.service';
 
 // Mock bcrypt at the top level
 jest.mock('bcrypt', () => ({
@@ -25,6 +27,20 @@ describe('UsersService', () => {
     },
   };
 
+  const mockTokenBlacklistService = {
+    isAccessBlacklisted: jest.fn(),
+    isRefreshBlacklisted: jest.fn(),
+    addToAccessBlacklist: jest.fn(),
+    addToRefreshBlacklist: jest.fn(),
+  };
+
+  const mockUserSessionService = {
+    saveRefreshToken: jest.fn(),
+    getValidRefreshToken: jest.fn(),
+    validateRefreshToken: jest.fn(),
+    deleteUserRefreshTokens: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,6 +48,14 @@ describe('UsersService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: TokenBlacklistService,
+          useValue: mockTokenBlacklistService,
+        },
+        {
+          provide: UserSessionService,
+          useValue: mockUserSessionService,
         },
       ],
     }).compile();

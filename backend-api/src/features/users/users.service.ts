@@ -1,11 +1,17 @@
 import { Injectable, ConflictException, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma.service';
+import { TokenBlacklistService } from './token-blacklist.service';
+import { UserSessionService } from './user-session.service';
 import * as bcrypt from 'bcrypt';
 import { Role, UserStatus } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tokenBlacklistService: TokenBlacklistService,
+    private readonly userSessionService: UserSessionService,
+  ) {}
 
   /**
    * 创建管理员用户
@@ -187,5 +193,60 @@ export class UsersService {
 
     const { password: _, openid: __, ...userWithoutSensitive } = updatedUser;
     return userWithoutSensitive;
+  }
+
+  /**
+   * 检查刷新令牌是否在黑名单中
+   * @param refreshToken 刷新令牌
+   * @returns 如果在黑名单中返回 true
+   */
+  async isRefreshTokenBlacklisted(refreshToken: string): Promise<boolean> {
+    return this.tokenBlacklistService.isRefreshBlacklisted(refreshToken);
+  }
+
+  /**
+   * 验证刷新令牌是否匹配用户当前会话
+   * @param userId 用户ID
+   * @param refreshToken 刷新令牌
+   * @returns 如果令牌匹配返回 true
+   */
+  async validateRefreshToken(userId: number, refreshToken: string): Promise<boolean> {
+    return this.userSessionService.validateRefreshToken(userId, refreshToken);
+  }
+
+  /**
+   * 将刷新令牌加入黑名单
+   * @param refreshToken 刷新令牌
+   * @param ttl 过期时间（秒）
+   */
+  async addRefreshTokenToBlacklist(refreshToken: string, ttl: number): Promise<void> {
+    await this.tokenBlacklistService.addToRefreshBlacklist(refreshToken, ttl);
+  }
+
+  /**
+   * 保存用户刷新令牌
+   * @param userId 用户ID
+   * @param refreshToken 刷新令牌
+   * @param ttl 过期时间（秒）
+   */
+  async saveRefreshToken(userId: number, refreshToken: string, ttl: number): Promise<void> {
+    await this.userSessionService.saveRefreshToken(userId, refreshToken, ttl);
+  }
+
+  /**
+   * 删除用户的所有刷新令牌
+   * @param userId 用户ID
+   */
+  async deleteUserRefreshTokens(userId: number): Promise<void> {
+    await this.userSessionService.deleteUserRefreshTokens(userId);
+  }
+
+  /**
+   * 将访问令牌加入黑名单
+   * @param accessToken 访问令牌
+   * @param ttl 过期时间（秒）
+   */
+  async addAccessTokenToBlacklist(accessToken: string, ttl: number): Promise<void> {
+    await this.tokenBlacklistService.addToAccessBlacklist(accessToken, ttl);
   }
 }

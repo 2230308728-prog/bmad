@@ -7,7 +7,8 @@ import { AuthService } from '@/auth/auth.service';
 import { WechatLoginDto } from './dto/wechat-login.dto';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
-import { CurrentUser, CurrentUserType } from '@/common/decorators/current-user.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import type { CurrentUserType } from '@/common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 
 @ApiTags('parent-auth')
@@ -42,7 +43,11 @@ export class ParentAuthController {
       // 3. 生成令牌
       const tokens = await this.authService.generateTokens(user.id, user.role);
 
-      // 4. 返回响应
+      // 4. 保存刷新令牌到用户会话
+      const refreshTTL = 604800; // 7天
+      await this.usersService.saveRefreshToken(user.id, tokens.refreshToken, refreshTTL);
+
+      // 5. 返回响应
       this.logger.log(`WeChat login successful for user: ${user.id}`);
 
       return {

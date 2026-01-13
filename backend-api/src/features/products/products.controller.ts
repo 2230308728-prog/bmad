@@ -1,9 +1,11 @@
-import { Controller, Get, Query, UsePipes, ValidationPipe, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Query, Param, UsePipes, ValidationPipe, Logger, NotFoundException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { GetProductsDto } from './dto/get-products.dto';
 import { SearchProductsDto } from './dto/search-products.dto';
 import { PaginatedProductsDto } from './dto/paginated-products.dto';
+import { ProductDetailDto } from './dto/product-detail.dto';
+import { ParsePositiveIntPipe } from '../../common/pipes/parse-positive-int.pipe';
 
 /**
  * Products Controller
@@ -61,6 +63,55 @@ export class ProductsController {
 
       // NestJS 会自动将未捕获的异常转换为适当的 HTTP 响应
       // 这里我们重新抛出，让全局异常过滤器处理
+      throw error;
+    }
+  }
+
+  /**
+   * 获取产品详情
+   * @param id 产品 ID
+   * @returns 产品详情
+   */
+  @Get(':id')
+  @ApiOperation({
+    summary: '获取产品详情',
+    description: '根据产品 ID 查询已发布产品的详细信息'
+  })
+  @ApiParam({ name: 'id', type: Number, description: '产品 ID', example: 1 })
+  @ApiResponse({
+    status: 200,
+    description: '成功返回产品详情',
+    type: ProductDetailDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: '无效的产品 ID'
+  })
+  @ApiResponse({
+    status: 404,
+    description: '产品不存在或未发布'
+  })
+  @ApiResponse({
+    status: 500,
+    description: '服务器内部错误'
+  })
+  async findOne(@Param('id', ParsePositiveIntPipe) id: number) {
+    try {
+      const product = await this.productsService.findOne(id);
+
+      if (!product) {
+        throw new NotFoundException('产品不存在');
+      }
+
+      return { data: product };
+    } catch (error) {
+      // 记录错误详情
+      this.logger.error(
+        `Failed to fetch product detail for id ${id}:`,
+        error,
+      );
+
+      // 重新抛出，让全局异常过滤器处理
       throw error;
     }
   }

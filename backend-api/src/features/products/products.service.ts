@@ -5,6 +5,7 @@ import { PrismaService } from '../../lib/prisma.service';
 import { GetProductsDto } from './dto/get-products.dto';
 import { SearchProductsDto } from './dto/search-products.dto';
 import { ProductListItemDto } from './dto/product-list-item.dto';
+import { ProductDetailDto } from './dto/product-detail.dto';
 import { ProductStatus } from '@prisma/client';
 import { CacheService } from '../../redis/cache.service';
 import * as crypto from 'crypto';
@@ -401,6 +402,116 @@ export class ProductsService {
         totalPages: Math.ceil(total / pageSize),
       },
     };
+  }
+
+  /**
+   * 查询产品详情（带缓存）
+   * @param id 产品 ID
+   * @returns 产品详情或 null（产品不存在或未发布）
+   */
+  async findOne(id: number): Promise<ProductDetailDto | null> {
+    // 生成缓存键
+    const cacheKey = `products:detail:${id}`;
+
+    try {
+      // 尝试从缓存获取
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger.debug(`Cache hit for product detail: ${id}`);
+        return cached as ProductDetailDto;
+      }
+    } catch (error) {
+      // Redis 连接失败时降级到直接查询数据库
+      this.logger.warn(`Cache get failed for product ${id}:`, error);
+    }
+
+    // 查询数据库
+    const result = await this.findOneFromDatabase(id);
+
+    // 如果找到产品，尝试存入缓存
+    if (result) {
+      try {
+        await this.cacheManager.set(cacheKey, result, 600); // TTL: 10分钟
+        this.productCacheKeys.add(cacheKey); // 追踪缓存键
+        this.logger.debug(`Cached product detail for id: ${id}`);
+      } catch (error) {
+        this.logger.warn(`Cache set failed for product ${id}:`, error);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 从数据库查询产品详情
+   * @param id 产品 ID
+   * @returns 产品详情或 null
+   */
+  private async findOneFromDatabase(id: number): Promise<ProductDetailDto | null> {
+    // 使用 findUnique 查询产品，包含 category 关联
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    // 验证产品存在且状态为 PUBLISHED
+    if (!product || product.status !== 'PUBLISHED') {
+      return null;
+    }
+
+    // 异步递增浏览次数（不阻塞响应）
+    this.incrementViewCount(id).catch((error) => {
+      this.logger.warn(`Failed to increment view count for product ${id}:`, error);
+    });
+
+    // 转换为 DTO 格式
+    return {
+      id: product.id,
+      title: product.title,
+      description: product.description,
+      price: product.price.toString(),
+      originalPrice: product.originalPrice?.toString(),
+      images: product.images,
+      location: product.location,
+      duration: product.duration,
+      stock: product.stock,
+      featured: product.featured,
+      category: {
+        id: product.category.id,
+        name: product.category.name,
+      },
+      minAge: product.minAge,
+      maxAge: product.maxAge,
+      viewCount: product.viewCount,
+      bookingCount: product.bookingCount,
+      createdAt: product.createdAt,
+    };
+  }
+
+  /**
+   * 递增产品浏览次数
+   * @param id 产品 ID
+   */
+  private async incrementViewCount(id: number): Promise<void> {
+    try {
+      await this.prisma.product.update({
+        where: { id },
+        data: {
+          viewCount: {
+            increment: 1,
+          },
+        },
+      });
+
+      this.logger.debug(`Incremented view count for product: ${id}`);
+    } catch (error) {
+      this.logger.warn(`Failed to increment view count for product ${id}:`, error);
+      // 不抛出异常，降级处理
+    }
   }
 
   /**

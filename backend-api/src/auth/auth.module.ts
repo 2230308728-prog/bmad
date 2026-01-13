@@ -1,8 +1,9 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { UsersModule } from '@/features/users/users.module';
 
 /**
  * Auth Module - JWT 认证基础设施
@@ -34,6 +35,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         };
       },
     }),
+    forwardRef(() => UsersModule), // 使用 forwardRef 避免循环依赖
   ],
   providers: [AuthService, JwtStrategy],
   exports: [AuthService, JwtModule],

@@ -3,6 +3,7 @@ import { ParentAuthController } from './parent-auth.controller';
 import { WechatService } from './wechat.service';
 import { UsersService } from './users.service';
 import { AuthService } from '@/auth/auth.service';
+import { CurrentUserType } from '@/common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 import { UnauthorizedException } from '@nestjs/common';
 
@@ -18,6 +19,8 @@ describe('ParentAuthController', () => {
 
   const mockUsersService = {
     findOrCreateParent: jest.fn(),
+    findById: jest.fn(),
+    saveRefreshToken: jest.fn(),
   };
 
   const mockAuthService = {
@@ -228,6 +231,49 @@ describe('ParentAuthController', () => {
       );
       expect(mockUsersService.findOrCreateParent).not.toHaveBeenCalled();
       expect(mockAuthService.generateTokens).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getProfile', () => {
+    it('should return user profile when called with valid parent user', async () => {
+      // Arrange
+      const mockUser: CurrentUserType = {
+        id: 1,
+        role: Role.PARENT,
+      };
+
+      const expectedProfile = {
+        id: 1,
+        nickname: '测试家长',
+        avatarUrl: 'https://example.com/avatar.jpg',
+        role: Role.PARENT,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockUsersService.findById.mockResolvedValue(expectedProfile);
+
+      // Act
+      const result = await controller.getProfile(mockUser);
+
+      // Assert
+      expect(result).toEqual(expectedProfile);
+      expect(mockUsersService.findById).toHaveBeenCalledWith(1);
+    });
+
+    it('should propagate error when user not found', async () => {
+      // Arrange
+      const mockUser: CurrentUserType = {
+        id: 999,
+        role: Role.PARENT,
+      };
+
+      const notFoundError = new Error('User not found');
+      mockUsersService.findById.mockRejectedValue(notFoundError);
+
+      // Act & Assert
+      await expect(controller.getProfile(mockUser)).rejects.toThrow('User not found');
+      expect(mockUsersService.findById).toHaveBeenCalledWith(999);
     });
   });
 });
