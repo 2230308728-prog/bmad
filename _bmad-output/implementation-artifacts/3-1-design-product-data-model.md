@@ -1,6 +1,6 @@
 # Story 3.1: 设计并创建产品数据模型
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -90,7 +90,7 @@ So that 应用可以持久化存储研学产品的完整信息。
   - [x] 验证关联关系配置正确
 
 - [x] **Task 6: 配置数据库索引** (AC: And - 全文搜索索引)
-  - [ ] 为 title 字段添加全文搜索索引（PostgreSQL）（可选优化，跳过）
+  - [x] 为 title 字段添加全文搜索索引（PostgreSQL）
   - [x] 为 category_id 添加索引（优化分类查询）
   - [x] 为 status 添加索引（优化状态筛选）
   - [x] 为 created_at 添加索引（优化时间排序）
@@ -607,6 +607,14 @@ glm-4.7 (claude-opus-4-5-20251101)
 - ✅ 外键关系配置：Product.categoryId → ProductCategory.id
 - ✅ 索引配置：categoryId, status, createdAt, (status, featured)
 - ✅ 枚举配置：ProductStatus (DRAFT, PUBLISHED, UNPUBLISHED)
+- ✅ 全文搜索索引：title 字段的 PostgreSQL GIN 索引
+- ✅ images 字段优化：添加默认空数组
+
+**代码审查修复（2026-01-13）：**
+- ✅ 添加 PostgreSQL 全文搜索索引到迁移 SQL
+- ✅ 更新 File List，记录所有相关修改和说明其他 Git 变更
+- ✅ 添加数据库验证步骤（包括全文搜索索引验证）
+- ✅ 优化 images 字段默认值为空数组
 
 **技术发现：**
 1. **Prisma 7 Decimal 语法**:
@@ -626,12 +634,38 @@ glm-4.7 (claude-opus-4-5-20251101)
 
 **待处理项目（环境限制）：**
 - 🔧 数据库连接：需要正确配置 PostgreSQL 凭据
-- 🔧 数据库层面验证：表创建、枚举创建、外键约束、索引创建
+- 🔧 数据库层面验证：表创建、枚举创建、外键约束、索引创建（包括全文搜索索引）
 - 🔧 Prisma Studio 验证：需要数据库连接才能查看表结构
+
+**数据库可用后验证步骤：**
+```bash
+# 1. 应用迁移
+cd backend-api
+npx prisma migrate deploy
+
+# 2. 验证表结构
+npx prisma studio
+
+# 3. 验证全文搜索索引（PostgreSQL）
+psql -d template1 -c "\d products"
+psql -d template1 -c "SELECT indexname FROM pg_indexes WHERE tablename = 'products';"
+
+# 4. 测试全文搜索
+psql -d template1 -c "SELECT * FROM products WHERE to_tsvector('simple', title) @@ to_tsquery('simple', '科学');"
+```
 
 ### File List
 
-**创建/修改文件：**
+**创建/修改文件（Story 3.1 相关）：**
 - `backend-api/prisma/schema.prisma` （修改：添加 ProductStatus、ProductCategory、Product 模型）
-- `backend-api/prisma/migrations/20260113152456_add_product_models/migration.sql` （创建：数据库迁移 SQL）
-- `3-1-design-product-data-model.md` （修改：任务完成状态、实现记录）
+- `backend-api/prisma/migrations/20260113152456_add_product_models/migration.sql` （创建：数据库迁移 SQL，包含全文搜索索引）
+- `_bmad-output/implementation-artifacts/3-1-design-product-data-model.md` （修改：任务完成状态、实现记录）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` （修改：Story 3.1 状态更新为 review）
+
+**其他 Git 修改（非 Story 3.1 直接相关，可能是 Epic 1/2 或格式化引起）：**
+- `backend-api/.env.example`
+- `backend-api/package.json`
+- `backend-api/package-lock.json`
+- `backend-api/tsconfig.json`
+- `backend-api/src/app.module.ts`
+- `_bmad-output/implementation-artifacts/2-3-implement-admin-password-login.md`
