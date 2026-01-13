@@ -68,7 +68,7 @@ development_status:
   3-2-implement-product-list-query-api: done
   3-3-implement-product-search-filter-api: done
   3-4-implement-product-detail-api: done
-  3-5-implement-admin-product-crud-api: backlog
+  3-5-implement-admin-product-crud-api: done
   3-6-implement-product-status-stock-management: backlog
   3-7-implement-product-image-upload: backlog
   epic-3-retrospective: optional
