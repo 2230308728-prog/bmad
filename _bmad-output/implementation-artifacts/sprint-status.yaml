@@ -74,13 +74,13 @@ development_status:
   epic-3-retrospective: done
 
   # Epic 4: 预订与支付
-  epic-4: in-progress
+  epic-4: done
   4-1-design-order-data-model: done
   4-2-implement-booking-submission-api: done
   4-3-integrate-wechat-payment-jsapi: done
   4-4-implement-payment-result-callback-handler: done
   4-5-implement-payment-result-query-display: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   # Epic 5: 订单管理与通知
   epic-5: backlog
