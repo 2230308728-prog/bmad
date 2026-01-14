@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
+import { Logger, HttpException } from '@nestjs/common';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus } from '@prisma/client';
 import type { CurrentUserType } from '../../common/decorators/current-user.decorator';
+import { Response } from 'express';
 
 describe('OrdersController', () => {
   let controller: OrdersController;
@@ -12,12 +13,19 @@ describe('OrdersController', () => {
 
   const mockOrdersService = {
     create: jest.fn(),
+    checkPaymentQueryRateLimit: jest.fn(),
+    checkPaymentStatus: jest.fn(),
   };
 
   const mockUser: CurrentUserType = {
     id: 1,
     role: 'PARENT',
   };
+
+  // Mock Response object for @Res({ passthrough: true }) decorator
+  const mockResponse = {
+    setHeader: jest.fn(),
+  } as unknown as Response;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -103,6 +111,67 @@ describe('OrdersController', () => {
       mockOrdersService.create.mockRejectedValue(error);
 
       await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(error);
+    });
+  });
+
+  describe('getPaymentStatus', () => {
+    const mockPaymentSuccessResponse = {
+      orderId: 1,
+      orderNo: 'ORD20240114123456789',
+      status: OrderStatus.PAID,
+      paidAt: '2024-01-14T12:30:00Z',
+      paidAmount: '299.00',
+      transactionId: 'wx1234567890',
+    };
+
+    const mockPaymentPendingResponse = {
+      status: OrderStatus.PENDING,
+      message: '支付处理中，请稍后查询',
+    };
+
+    it('should return payment success status', async () => {
+      mockOrdersService.checkPaymentQueryRateLimit.mockResolvedValue(false);
+      mockOrdersService.checkPaymentStatus.mockResolvedValue(mockPaymentSuccessResponse);
+
+      const result = await controller.getPaymentStatus(mockUser, '1', mockResponse);
+
+      expect(result).toEqual({ data: mockPaymentSuccessResponse });
+      expect(mockOrdersService.checkPaymentQueryRateLimit).toHaveBeenCalledWith(1);
+      expect(mockOrdersService.checkPaymentStatus).toHaveBeenCalledWith(1, 1);
+    });
+
+    it('should return payment pending status', async () => {
+      mockOrdersService.checkPaymentQueryRateLimit.mockResolvedValue(false);
+      mockOrdersService.checkPaymentStatus.mockResolvedValue(mockPaymentPendingResponse);
+
+      const result = await controller.getPaymentStatus(mockUser, '1', mockResponse);
+
+      expect(result).toEqual({ data: mockPaymentPendingResponse });
+    });
+
+    it('should throw HttpException when rate limit exceeded', async () => {
+      mockOrdersService.checkPaymentQueryRateLimit.mockResolvedValue(true);
+
+      await expect(controller.getPaymentStatus(mockUser, '1', mockResponse)).rejects.toThrow(
+        new HttpException('查询频率超限，请稍后重试', 429),
+      );
+      expect(mockOrdersService.checkPaymentStatus).not.toHaveBeenCalled();
+      // Verify Retry-After header was set
+      expect(mockResponse.setHeader).toHaveBeenCalledWith('Retry-After', '60');
+    });
+
+    it('should throw HttpException for invalid order ID', async () => {
+      await expect(controller.getPaymentStatus(mockUser, 'invalid', mockResponse)).rejects.toThrow(
+        new HttpException('Invalid order ID', 400),
+      );
+    });
+
+    it('should propagate service errors', async () => {
+      mockOrdersService.checkPaymentQueryRateLimit.mockResolvedValue(false);
+      const error = new Error('Order not found');
+      mockOrdersService.checkPaymentStatus.mockRejectedValue(error);
+
+      await expect(controller.getPaymentStatus(mockUser, '1', mockResponse)).rejects.toThrow(error);
     });
   });
 });

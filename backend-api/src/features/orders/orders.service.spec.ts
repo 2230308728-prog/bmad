@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../lib/prisma.service';
 import { CacheService } from '../../redis/cache.service';
+import { WechatPayService } from '../payments/wechat-pay.service';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, PaymentStatus, ProductStatus } from '@prisma/client';
@@ -11,12 +12,21 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let prismaService: PrismaService;
   let cacheService: CacheService;
+  let wechatPayService: WechatPayService;
 
   const mockCacheService = {
     getStock: jest.fn(),
     setStock: jest.fn(),
     decrby: jest.fn(),
     incrby: jest.fn(),
+    get: jest.fn(),
+    set: jest.fn(),
+    incr: jest.fn(),
+    del: jest.fn(),
+  };
+
+  const mockWechatPayService = {
+    queryOrder: jest.fn(),
   };
 
   const mockPrismaService = {
@@ -38,12 +48,17 @@ describe('OrdersService', () => {
           provide: CacheService,
           useValue: mockCacheService,
         },
+        {
+          provide: WechatPayService,
+          useValue: mockWechatPayService,
+        },
       ],
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
     prismaService = module.get<PrismaService>(PrismaService);
     cacheService = module.get<CacheService>(CacheService);
+    wechatPayService = module.get<WechatPayService>(WechatPayService);
 
     // Clear all mocks before each test
     jest.clearAllMocks();
@@ -227,6 +242,276 @@ describe('OrdersService', () => {
 
       expect(mockCacheService.setStock).not.toHaveBeenCalled();
       expect(mockCacheService.getStock).toHaveBeenCalledWith('product:stock:1');
+    });
+  });
+
+  describe('checkPaymentQueryRateLimit', () => {
+    it('should allow first query and set counter to 1', async () => {
+      mockCacheService.get.mockResolvedValue(null);
+
+      const result = await service.checkPaymentQueryRateLimit(1);
+
+      expect(result).toBe(false);
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        expect.stringMatching(/payment-query:1:\d+/),
+        '1',
+        60,
+      );
+    });
+
+    it('should allow queries under limit', async () => {
+      mockCacheService.get.mockResolvedValue('5');
+
+      const result = await service.checkPaymentQueryRateLimit(1);
+
+      expect(result).toBe(false);
+      expect(mockCacheService.incr).toHaveBeenCalledWith(
+        expect.stringMatching(/payment-query:1:\d+/),
+      );
+    });
+
+    it('should block queries over limit', async () => {
+      mockCacheService.get.mockResolvedValue('10');
+
+      const result = await service.checkPaymentQueryRateLimit(1);
+
+      expect(result).toBe(true);
+      expect(mockCacheService.incr).not.toHaveBeenCalled();
+    });
+
+    it('should block queries when Redis incr fails (returns null)', async () => {
+      mockCacheService.get.mockResolvedValue('5');
+      mockCacheService.incr.mockResolvedValue(null); // Redis operation fails
+
+      const result = await service.checkPaymentQueryRateLimit(1);
+
+      expect(result).toBe(true);
+      expect(mockCacheService.incr).toHaveBeenCalledWith(
+        expect.stringMatching(/payment-query:1:\d+/),
+      );
+    });
+  });
+
+  describe('checkPaymentStatus', () => {
+    const mockOrderWithItems = {
+      id: 1,
+      orderNo: 'ORD20240114123456789',
+      userId: 1,
+      totalAmount: new Prisma.Decimal(299),
+      actualAmount: new Prisma.Decimal(299),
+      status: OrderStatus.PENDING,
+      paymentStatus: PaymentStatus.PENDING,
+      paidAt: null,
+      items: [
+        {
+          productId: 10,
+          quantity: 1,
+        },
+      ],
+      payments: [],
+    };
+
+    it('should throw NotFoundException when order does not exist', async () => {
+      (mockPrismaService as any).order = { findFirst: jest.fn().mockResolvedValue(null) };
+
+      await expect(service.checkPaymentStatus(1, 1)).rejects.toThrow(
+        new NotFoundException('订单不存在'),
+      );
+    });
+
+    it('should throw ForbiddenException when order does not belong to user', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue({ ...mockOrderWithItems, userId: 2 }),
+      };
+
+      await expect(service.checkPaymentStatus(1, 1)).rejects.toThrow('无权访问此订单');
+    });
+
+    it('should return PAID status when order is already paid', async () => {
+      const paidOrder = {
+        ...mockOrderWithItems,
+        status: OrderStatus.PAID,
+        paymentStatus: PaymentStatus.SUCCESS,
+        paidAt: new Date('2024-01-14T12:00:00Z'),
+        payments: [
+          {
+            transactionId: 'wx1234567890',
+          },
+        ],
+      };
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(paidOrder),
+      };
+
+      const result = await service.checkPaymentStatus(1, 1);
+
+      expect(result.status).toBe('PAID');
+      expect(result.transactionId).toBe('wx1234567890');
+      expect(mockWechatPayService.queryOrder).not.toHaveBeenCalled();
+    });
+
+    it('should return CANCELLED status when order is cancelled', async () => {
+      const cancelledOrder = {
+        ...mockOrderWithItems,
+        status: OrderStatus.CANCELLED,
+      };
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(cancelledOrder),
+      };
+
+      const result = await service.checkPaymentStatus(1, 1);
+
+      expect(result.status).toBe('CANCELLED');
+      expect(result.message).toBe('订单已取消');
+      expect(mockWechatPayService.queryOrder).not.toHaveBeenCalled();
+    });
+
+    it('should query WeChat Pay API and return PENDING for USERPAYING status', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(mockOrderWithItems),
+      };
+      mockWechatPayService.queryOrder.mockResolvedValue({
+        trade_state: 'USERPAYING',
+      });
+
+      const result = await service.checkPaymentStatus(1, 1);
+
+      expect(result.status).toBe('PENDING');
+      expect(result.message).toBe('支付处理中，请稍后查询');
+    });
+
+    it('should query WeChat Pay API, update order to CANCELLED for CLOSED status', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(mockOrderWithItems),
+      };
+      mockWechatPayService.queryOrder.mockResolvedValue({
+        trade_state: 'CLOSED',
+      });
+      (mockPrismaService as any).product = { update: jest.fn() };
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        return await callback({
+          order: {
+            update: jest.fn().mockResolvedValue({}),
+          },
+        });
+      });
+      mockCacheService.incrby.mockResolvedValue(1);
+
+      const result = await service.checkPaymentStatus(1, 1);
+
+      expect(result.status).toBe('CANCELLED');
+      expect(result.message).toBe('支付已关闭');
+      expect(mockCacheService.incrby).toHaveBeenCalledWith('product:stock:10', 1);
+    });
+
+    it('should query WeChat Pay API, update order to PAID for SUCCESS status', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(mockOrderWithItems),
+      };
+      (mockPrismaService as any).product = { update: jest.fn() };
+      (mockPrismaService as any).paymentRecord = { create: jest.fn() };
+      mockWechatPayService.queryOrder.mockResolvedValue({
+        trade_state: 'SUCCESS',
+        transaction_id: 'wx1234567890',
+        out_trade_no: 'ORD20240114123456789',
+        trade_type: 'JSAPI',
+        success_time: '2024-01-14T12:00:00+08:00',
+        amount: { total: 29900 },
+      });
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        return await callback({
+          order: {
+            update: jest.fn().mockResolvedValue({}),
+          },
+          paymentRecord: {
+            create: jest.fn().mockResolvedValue({}),
+          },
+          product: {
+            update: jest.fn().mockResolvedValue({}),
+          },
+        });
+      });
+      mockCacheService.del.mockResolvedValue(undefined);
+
+      const result = await service.checkPaymentStatus(1, 1);
+
+      expect(result.status).toBe('PAID');
+      expect(result.transactionId).toBe('wx1234567890');
+      expect(result.paidAmount).toBe('299.00');
+    });
+
+    it('should return error message when WeChat Pay API fails', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(mockOrderWithItems),
+      };
+      mockWechatPayService.queryOrder.mockRejectedValue(new Error('WeChat API error'));
+
+      const result = await service.checkPaymentStatus(1, 1);
+
+      expect(result.status).toBe('PENDING');
+      expect(result.message).toBe('无法获取支付状态，请稍后重试');
+    });
+
+    it('should throw BadRequestException when WeChat response lacks transaction_id', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(mockOrderWithItems),
+      };
+      (mockPrismaService as any).product = { update: jest.fn() };
+      mockWechatPayService.queryOrder.mockResolvedValue({
+        trade_state: 'SUCCESS',
+        transaction_id: '', // Empty transaction_id
+        out_trade_no: 'ORD20240114123456789',
+        trade_type: 'JSAPI',
+        success_time: '2024-01-14T12:00:00+08:00',
+        amount: { total: 29900 },
+      });
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        return await callback({
+          order: { update: jest.fn() },
+          paymentRecord: { create: jest.fn() },
+          product: { update: jest.fn() },
+        });
+      });
+
+      await expect(service.checkPaymentStatus(1, 1)).rejects.toThrow(
+        new BadRequestException('微信支付响应数据无效：缺少交易号'),
+      );
+    });
+
+    it('should throw BadRequestException when WeChat response lacks success_time', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(mockOrderWithItems),
+      };
+      mockWechatPayService.queryOrder.mockResolvedValue({
+        trade_state: 'SUCCESS',
+        transaction_id: 'wx1234567890',
+        out_trade_no: 'ORD20240114123456789',
+        trade_type: 'JSAPI',
+        success_time: '', // Empty success_time
+        amount: { total: 29900 },
+      });
+
+      await expect(service.checkPaymentStatus(1, 1)).rejects.toThrow(
+        new BadRequestException('微信支付响应数据无效：缺少支付时间'),
+      );
+    });
+
+    it('should throw BadRequestException when WeChat response has invalid amount', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(mockOrderWithItems),
+      };
+      mockWechatPayService.queryOrder.mockResolvedValue({
+        trade_state: 'SUCCESS',
+        transaction_id: 'wx1234567890',
+        out_trade_no: 'ORD20240114123456789',
+        trade_type: 'JSAPI',
+        success_time: '2024-01-14T12:00:00+08:00',
+        amount: { total: -100 }, // Invalid amount
+      });
+
+      await expect(service.checkPaymentStatus(1, 1)).rejects.toThrow(
+        new BadRequestException('微信支付响应数据无效：金额异常'),
+      );
     });
   });
 });

@@ -1,8 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../lib/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { WechatPayService, WechatPayOrderQueryResult } from '../../features/payments/wechat-pay.service';
 
 /**
  * Orders Service
@@ -15,6 +16,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cacheService: CacheService,
+    private readonly wechatPayService: WechatPayService,
   ) {}
 
   /**
@@ -186,5 +188,308 @@ export class OrdersService {
     const stockKey = `product:stock:${productId}`;
     await this.cacheService.incrby(stockKey, quantity);
     this.logger.debug(`Redis 库存回滚: productId=${productId}, quantity=${quantity}`);
+  }
+
+  /**
+   * 检查支付状态查询频率限制
+   * @param orderId 订单 ID
+   * @returns 是否超过限制（true = 超过限制）
+   */
+  async checkPaymentQueryRateLimit(orderId: number): Promise<boolean> {
+    const currentMinute = Math.floor(Date.now() / 60000); // 当前分钟时间戳
+    const rateLimitKey = `payment-query:${orderId}:${currentMinute}`;
+
+    // 获取当前分钟的查询次数
+    const count = await this.cacheService.get(rateLimitKey);
+
+    if (count === null) {
+      // 首次查询，设置计数为 1，TTL 60 秒
+      await this.cacheService.set(rateLimitKey, '1', 60);
+      return false;
+    }
+
+    const queryCount = parseInt(count || '0', 10);
+
+    if (queryCount >= 10) {
+      this.logger.warn(`支付状态查询频率超限: orderId=${orderId}, count=${queryCount}`);
+      return true;
+    }
+
+    // 递增计数（检查 incr 是否返回 null，表示 Redis 操作失败）
+    const newCount = await this.cacheService.incr(rateLimitKey);
+    if (newCount === null) {
+      this.logger.error(`Redis incr 操作失败: orderId=${orderId}, key=${rateLimitKey}`);
+      // Redis 操作失败时，为了安全起见，限制请求
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 检查订单支付状态
+   * @param orderId 订单 ID
+   * @param userId 当前用户 ID
+   * @returns 支付状态响应
+   */
+  async checkPaymentStatus(orderId: number, userId: number) {
+    // 1. 查询订单并验证所有权（包含支付记录以获取 transactionId）
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId },
+      include: {
+        items: true,
+        payments: {
+          where: { status: PaymentStatus.SUCCESS },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!order) {
+      this.logger.warn(`订单不存在: orderId=${orderId}`);
+      throw new NotFoundException('订单不存在');
+    }
+
+    if (order.userId !== userId) {
+      this.logger.warn(`订单不属于当前用户: orderId=${orderId}, userId=${userId}, orderUserId=${order.userId}`);
+      throw new ForbiddenException('无权访问此订单');
+    }
+
+    // 获取最新的支付记录
+    const latestPayment = order.payments[0];
+    const transactionId = latestPayment?.transactionId;
+
+    // 2. 如果订单已是 PAID 状态，直接返回成功
+    if (order.status === OrderStatus.PAID) {
+      this.logger.log(`订单已支付: orderNo=${order.orderNo}`);
+      return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        status: OrderStatus.PAID,
+        paidAt: order.paidAt?.toISOString(),
+        paidAmount: order.actualAmount?.toString(),
+        transactionId: transactionId || undefined,
+      };
+    }
+
+    // 3. 如果订单已是 CANCELLED/REFUNDED/COMPLETED 状态，直接返回
+    if (order.status === OrderStatus.CANCELLED) {
+      return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        status: OrderStatus.CANCELLED,
+        message: '订单已取消',
+      };
+    }
+
+    if (order.status === OrderStatus.REFUNDED) {
+      return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        status: OrderStatus.REFUNDED,
+        message: '订单已退款',
+      };
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        status: OrderStatus.COMPLETED,
+        paidAt: order.paidAt?.toISOString(),
+        paidAmount: order.actualAmount?.toString(),
+      };
+    }
+
+    // 4. 如果订单不是 PENDING 状态，直接返回当前状态
+    if (order.status !== OrderStatus.PENDING) {
+      return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        status: order.status,
+      };
+    }
+
+    // 5. PENDING 状态：主动查询微信支付状态
+    try {
+      const wechatResult = await this.wechatPayService.queryOrder(order.orderNo);
+
+      // 6. 根据微信返回状态处理
+      if (wechatResult.trade_state === 'SUCCESS') {
+        // 支付成功：更新订单状态（复用回调逻辑）
+        await this.processPaymentSuccess(order, wechatResult);
+
+        return {
+          orderId: order.id,
+          orderNo: order.orderNo,
+          status: OrderStatus.PAID,
+          paidAt: new Date(wechatResult.success_time).toISOString(),
+          paidAmount: (wechatResult.amount.total / 100).toFixed(2),
+          transactionId: wechatResult.transaction_id,
+        };
+      }
+
+      if (wechatResult.trade_state === 'USERPAYING') {
+        // 支付中
+        return {
+          status: OrderStatus.PENDING,
+          message: '支付处理中，请稍后查询',
+        };
+      }
+
+      if (wechatResult.trade_state === 'PAYERROR' || wechatResult.trade_state === 'CLOSED') {
+        // 支付失败或关闭：更新订单状态，释放库存
+        await this.processPaymentFailure(order);
+
+        return {
+          orderId: order.id,
+          orderNo: order.orderNo,
+          status: OrderStatus.CANCELLED,
+          message: wechatResult.trade_state === 'CLOSED' ? '支付已关闭' : '支付失败',
+        };
+      }
+
+      // 其他状态（NOTPAY, REFUND, REVOKED）
+      return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        status: OrderStatus.PENDING,
+        message: '等待支付',
+      };
+    } catch (error) {
+      this.logger.error(`查询微信支付状态失败: orderNo=${order.orderNo}`, error);
+
+      // 对于验证错误（BadRequestException），直接向上抛出
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      // 微信 API 调用失败，返回订单当前状态
+      return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        status: order.status,
+        message: '无法获取支付状态，请稍后重试',
+      };
+    }
+  }
+
+  /**
+   * 处理支付成功（复用 Story 4.4 逻辑）
+   * @param order 订单
+   * @param wechatResult 微信支付查询结果
+   */
+  private async processPaymentSuccess(order: any, wechatResult: WechatPayOrderQueryResult): Promise<void> {
+    // 验证微信支付响应数据完整性
+    this.validateWechatPayResponse(wechatResult);
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // 1. 更新订单状态（不包含 transactionId，它在 PaymentRecord 中）
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            status: OrderStatus.PAID,
+            paymentStatus: PaymentStatus.SUCCESS,
+            paidAt: new Date(wechatResult.success_time),
+          },
+        });
+
+        // 2. 创建支付记录（transactionId 在这里存储）
+        await tx.paymentRecord.create({
+          data: {
+            orderId: order.id,
+            transactionId: wechatResult.transaction_id,
+            outTradeNo: wechatResult.out_trade_no,
+            channel: 'WECHAT_JSAPI',
+            amount: order.actualAmount,
+            status: PaymentStatus.SUCCESS,
+            prepayId: null,
+            tradeType: wechatResult.trade_type,
+            notifyData: wechatResult as any,
+            notifiedAt: new Date(),
+          },
+        });
+
+        // 3. 更新产品预订计数
+        for (const item of order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              bookingCount: {
+                increment: item.quantity,
+              },
+            },
+          });
+
+          // 4. 清除产品相关缓存
+          await this.cacheService.del(`product:detail:${item.productId}`);
+        }
+
+        this.logger.log(
+          `支付成功处理完成（主动查询）: orderNo=${order.orderNo}, transactionId=${wechatResult.transaction_id}`,
+        );
+      });
+    } catch (error) {
+      this.logger.error(`处理支付成功失败: orderNo=${order.orderNo}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 验证微信支付响应数据完整性
+   * @param wechatResult 微信支付查询结果
+   * @throws BadRequestException 当响应数据不完整或无效时
+   */
+  private validateWechatPayResponse(wechatResult: WechatPayOrderQueryResult): void {
+    if (!wechatResult.transaction_id || wechatResult.transaction_id.trim() === '') {
+      this.logger.error(`微信支付响应缺少 transaction_id: orderNo=${wechatResult.out_trade_no}`);
+      throw new BadRequestException('微信支付响应数据无效：缺少交易号');
+    }
+
+    if (!wechatResult.success_time || wechatResult.success_time.trim() === '') {
+      this.logger.error(`微信支付响应缺少 success_time: orderNo=${wechatResult.out_trade_no}`);
+      throw new BadRequestException('微信支付响应数据无效：缺少支付时间');
+    }
+
+    if (!wechatResult.amount || typeof wechatResult.amount.total !== 'number' || wechatResult.amount.total <= 0) {
+      this.logger.error(`微信支付响应金额无效: orderNo=${wechatResult.out_trade_no}, amount=${JSON.stringify(wechatResult.amount)}`);
+      throw new BadRequestException('微信支付响应数据无效：金额异常');
+    }
+  }
+
+  /**
+   * 处理支付失败（复用 Story 4.4 逻辑）
+   * @param order 订单
+   */
+  private async processPaymentFailure(order: any): Promise<void> {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // 1. 更新订单状态
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            status: OrderStatus.CANCELLED,
+            paymentStatus: PaymentStatus.CANCELLED,
+            cancelledAt: new Date(),
+          },
+        });
+
+        // 2. 释放 Redis 预扣库存
+        for (const item of order.items) {
+          const stockKey = `product:stock:${item.productId}`;
+          await this.cacheService.incrby(stockKey, item.quantity);
+          this.logger.debug(
+            `释放预扣库存: productId=${item.productId}, quantity=${item.quantity}`,
+          );
+        }
+      });
+
+      this.logger.log(`支付失败处理完成（主动查询）: orderNo=${order.orderNo}`);
+    } catch (error) {
+      this.logger.error(`处理支付失败失败: orderNo=${order.orderNo}`, error);
+      throw error;
+    }
   }
 }
