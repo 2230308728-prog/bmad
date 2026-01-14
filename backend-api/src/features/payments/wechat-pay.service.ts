@@ -6,6 +6,76 @@ import { join } from 'path';
 import { randomBytes } from 'crypto';
 
 /**
+ * 微信支付 JSAPI 支付参数
+ */
+export interface JsapiPaymentParams {
+  timeStamp: string;
+  nonceStr: string;
+  package: string;
+  signType: string;
+  paySign: string;
+}
+
+/**
+ * 微信支付订单查询结果
+ */
+export interface WechatPayOrderQueryResult {
+  appid: string;
+  mchid: string;
+  out_trade_no: string;
+  transaction_id: string;
+  trade_type: string;
+  trade_state: 'SUCCESS' | 'REFUND' | 'NOTPAY' | 'CLOSED' | 'REVOKED' | 'USERPAYING' | 'PAYERROR';
+  trade_state_desc: string;
+  bank_type: string;
+  attach: string;
+  success_time: string;
+  payer: {
+    openid: string;
+  };
+  amount: {
+    total: number;
+    payer_total: number;
+    currency: string;
+    payer_currency: string;
+  };
+}
+
+/**
+ * 微信支付回调通知数据
+ */
+export interface WechatPayNotifyData {
+  appid: string;
+  mchid: string;
+  out_trade_no: string;
+  transaction_id: string;
+  trade_type: string;
+  trade_state: string;
+  trade_state_desc: string;
+  bank_type: string;
+  attach: string;
+  success_time: string;
+  payer: {
+    openid: string;
+  };
+  amount: {
+    total: number;
+    payer_total: number;
+    currency: string;
+    payer_currency: string;
+  };
+  scene_info: {
+    device_id: string;
+  };
+  promote_info: string;
+}
+
+/**
+ * 微信支付随机字符串长度（微信支付要求）
+ */
+const WECHAT_NONCE_LENGTH = 32;
+
+/**
  * WechatPayService
  * 封装微信支付 API v3 核心功能
  * 使用 JSAPI 支付方式
@@ -13,7 +83,19 @@ import { randomBytes } from 'crypto';
 @Injectable()
 export class WechatPayService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WechatPayService.name);
-  private wxpay: any | null = null;
+  /**
+   * 微信支付 SDK 实例
+   * 注意：使用 any 类型是因为 wechatpay-node-v3 的类型定义与实际使用不完全匹配
+   * SDK 要求 publicKey 但 API v3 实际不需要（只需私钥签名）
+   */
+  private wxpay: {
+    transactions_jsapi: (params: any) => Promise<any>;
+    query: (params: any) => Promise<any>;
+    close: (outTradeNo: string) => Promise<any>;
+    verifySign: (params: any) => Promise<boolean>;
+    decipher_gcm: (ciphertext: string, associatedData: string, nonce: string, key: string) => any;
+    sha256WithRsa: (data: string) => string;
+  } | null = null;
   private appId: string;
   private mchId: string;
   private apiV3Key: string;
@@ -51,12 +133,14 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // 创建微信支付实例（不需要 publicKey，使用私钥初始化）
+      // 创建微信支付实例
+      // 注意：SDK 类型定义要求 publicKey，但微信支付 API v3 实际只需要私钥进行签名
+      // publicKey 仅用于验证服务器证书（可选功能），因此传空 Buffer 作为占位
       this.wxpay = new WxPay({
         appid: this.appId,
         mchid: this.mchId,
         serial_no: this.serialNo,
-        publicKey: Buffer.from(''), // 占位，实际不需要
+        publicKey: Buffer.from(''), // 占位：API v3 不需要公钥，仅需私钥签名
         privateKey: privateKey,
         key: this.apiV3Key,
       });
@@ -117,8 +201,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
 
       // 检查响应状态
       if (result.status !== 200 || !result.data) {
-        this.logger.error(`JSAPI 订单创建失败 [orderNo: ${outTradeNo}]: ${JSON.stringify(result)}`);
-        throw new Error('微信支付下单失败');
+        const errorMsg = `微信支付 API 返回错误: status=${result.status}, data=${JSON.stringify(result.data || {})}`;
+        this.logger.error(`JSAPI 订单创建失败 [orderNo: ${outTradeNo}]: ${errorMsg}`);
+        throw new Error('微信支付下单失败，请稍后重试');
       }
 
       const prepayId = result.data.prepay_id;
@@ -135,10 +220,10 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * 生成随机字符串
-   * @param length 字符串长度
+   * @param length 字符串长度（默认为微信支付要求的 32 位）
    * @returns 随机字符串
    */
-  private generateNonceStr(length = 32): string {
+  private generateNonceStr(length: number = WECHAT_NONCE_LENGTH): string {
     return randomBytes(length / 2).toString('hex');
   }
 
@@ -147,13 +232,7 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
    * @param prepayId 预支付交易会话标识
    * @returns JSAPI 支付参数
    */
-  generateJsapiParams(prepayId: string): {
-    timeStamp: string;
-    nonceStr: string;
-    package: string;
-    signType: string;
-    paySign: string;
-  } {
+  generateJsapiParams(prepayId: string): JsapiPaymentParams {
     if (!this.wxpay) {
       throw new Error('微信支付服务不可用');
     }
@@ -164,13 +243,15 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       const packageStr = `prepay_id=${prepayId}`;
       const signType = 'RSA';
 
-      // 构建签名字符串
+      // 构建签名字符串（微信支付 JSAPI 签名规范）
+      // 格式：appId\n timeStamp\n nonceStr\n packageStr\n （注意末尾的 \n）
+      // 末尾的空字符串是微信签名规范要求的，不能省略
       const signStr = [
         this.appId,
         timeStamp,
         nonceStr,
         packageStr,
-        '',
+        '', // 末尾空字符串，符合微信签名规范
       ].join('\n');
 
       // 使用私钥签名
@@ -196,7 +277,7 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
    * @param outTradeNo 商户订单号
    * @returns 订单信息
    */
-  async queryOrder(outTradeNo: string): Promise<any> {
+  async queryOrder(outTradeNo: string): Promise<WechatPayOrderQueryResult> {
     if (!this.wxpay) {
       throw new Error('微信支付服务不可用');
     }
@@ -207,8 +288,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       });
 
       if (result.status !== 200 || !result.data) {
-        this.logger.error(`订单查询失败 [orderNo: ${outTradeNo}]: ${JSON.stringify(result)}`);
-        throw new Error('查询订单失败');
+        const errorMsg = `微信支付 API 返回错误: status=${result.status}, data=${JSON.stringify(result.data || {})}`;
+        this.logger.error(`订单查询失败 [orderNo: ${outTradeNo}]: ${errorMsg}`);
+        throw new Error('查询订单失败，请稍后重试');
       }
 
       const tradeState = result.data.trade_state;
@@ -270,7 +352,7 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
    * @param nonce 加密随机串
    * @returns 解密后的数据
    */
-  decipherNotify(ciphertext: string, associatedData: string, nonce: string): any {
+  decipherNotify(ciphertext: string, associatedData: string, nonce: string): WechatPayNotifyData {
     if (!this.wxpay) {
       throw new Error('微信支付服务不可用');
     }

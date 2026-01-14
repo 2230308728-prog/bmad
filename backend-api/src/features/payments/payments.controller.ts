@@ -139,9 +139,8 @@ export class PaymentsController {
       }
 
       // 4. 调用微信支付统一下单 API
-      // 金额单位：分（需要将元转为分）
-      const totalAmountInCents = Prisma.Decimal.mul(order.totalAmount, 100).toNumber();
-      const totalAmountInCentsInt = Math.round(totalAmountInCents);
+      // 金额单位：分（需要将元转为分，四舍五入）
+      const totalAmountInCents = Math.round(Prisma.Decimal.mul(order.totalAmount, 100).toNumber());
 
       // 生成商品描述（使用产品名称快照，如果是多个产品则显示"多个产品"）
       const description =
@@ -152,7 +151,7 @@ export class PaymentsController {
       const prepayId = await this.wechatPayService.createJsapiOrder(
         description,
         order.orderNo,
-        totalAmountInCentsInt,
+        totalAmountInCents,
         createPaymentDto.openid,
       );
 

@@ -26,6 +26,8 @@ describe('WechatPayService', () => {
 
     // Clear all mocks before each test
     jest.clearAllMocks();
+    // Reset service state
+    jest.resetModules();
   });
 
   it('should be defined', () => {
@@ -33,27 +35,26 @@ describe('WechatPayService', () => {
   });
 
   describe('onModuleInit', () => {
-    it('should initialize wxpay when config is valid', () => {
+    it('should log warning when config is incomplete', () => {
+      mockConfigService.get.mockReturnValue('');
+
+      service.onModuleInit();
+
+      expect(service.isAvailable()).toBe(false);
+    });
+
+    it('should log error when private key file not found', () => {
       mockConfigService.get.mockImplementation((key: string) => {
         const config: Record<string, string> = {
           WECHAT_PAY_APPID: 'test_appid',
           WECHAT_PAY_MCHID: 'test_mchid',
           WECHAT_PAY_SERIAL_NO: 'test_serial',
-          WECHAT_PAY_PRIVATE_KEY_PATH: './certs/test_key.pem',
+          WECHAT_PAY_PRIVATE_KEY_PATH: './certs/nonexistent_key.pem',
           WECHAT_PAY_APIV3_KEY: 'test_key',
           WECHAT_PAY_NOTIFY_URL: 'https://example.com/notify',
         };
         return config[key] || '';
       });
-
-      // Note: This test may fail if the private key file doesn't exist
-      // In real tests, you'd mock the fs module or use a test key file
-      service.onModuleInit();
-      // Due to missing key file, service will log error and set wxpay to null
-    });
-
-    it('should log warning when config is incomplete', () => {
-      mockConfigService.get.mockReturnValue('');
 
       service.onModuleInit();
 

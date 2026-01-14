@@ -73,8 +73,9 @@ describe('PaymentsController', () => {
   });
 
   describe('createPayment', () => {
+    const validOpenid = 'oXYZ_abcdefg1234567890hijklmnop'; // 32 chars, valid format
     const createPaymentDto: CreatePaymentDto = {
-      openid: 'test_openid_123',
+      openid: validOpenid,
     };
 
     it('should create payment successfully', async () => {
@@ -101,7 +102,7 @@ describe('PaymentsController', () => {
         '上海科技馆探索之旅',
         'ORD20240114123456789',
         29900, // 299 * 100
-        'test_openid_123',
+        validOpenid,
       );
     });
 
@@ -160,7 +161,7 @@ describe('PaymentsController', () => {
         '2个产品',
         'ORD20240114123456789',
         30000,
-        'test_openid_123',
+        validOpenid,
       );
     });
   });
