@@ -12,6 +12,8 @@ import { OssModule } from './oss/oss.module';
 import { CustomThrottlerGuard } from './common/guards/throttler.guard';
 import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './features/products/products.module';
+import { OrdersModule } from './features/orders/orders.module';
+import { CacheModule } from './cache/cache.module';
 
 @Module({
   imports: [
@@ -32,10 +34,12 @@ import { ProductsModule } from './features/products/products.module';
     PrismaModule,
     UsersModule,
     RedisModule,
+    CacheModule,
     HealthModule,
     OssModule,
     AuthModule,
     ProductsModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [

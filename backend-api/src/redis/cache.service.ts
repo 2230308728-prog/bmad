@@ -2,12 +2,20 @@ import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 
+/**
+ * Extended Cache interface with stores property for accessing Redis client
+ * This is a workaround to access the underlying Redis client for atomic operations
+ */
+interface ExtendedCache extends Omit<Cache, 'stores'> {
+  stores: Map<string, unknown>;
+}
+
 @Injectable()
 export class CacheService implements OnModuleInit {
   private readonly logger = new Logger(CacheService.name);
   private redisAvailable = true;
 
-  constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {
+  constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache & { stores?: Map<string, unknown> }) {
     // 不在构造函数中调用异步方法
   }
 
@@ -141,6 +149,119 @@ export class CacheService implements OnModuleInit {
     } catch {
       this.redisAvailable = false;
       return { available: false, responseTime: Date.now() - startTime };
+    }
+  }
+
+  /**
+   * 原子递减操作（用于库存预扣）
+   * @param key 键
+   * @param value 递减值
+   * @returns 递减后的值，Redis 不可用时返回 null
+   */
+  async decrby(key: string, value: number): Promise<number | null> {
+    try {
+      // Access the first store in the stores Map
+      if (this.cacheManager.stores) {
+        for (const [, store] of this.cacheManager.stores) {
+          const cacheStore = store as any;
+          if (cacheStore.client && typeof cacheStore.client.decrby === 'function') {
+            const result = await cacheStore.client.decrby(key, value);
+            this.logger.debug(`Redis DECRBY [key: ${key}, value: ${value}, result: ${result}]`);
+            return result;
+          }
+        }
+      }
+      this.logger.warn('Redis client 不支持 decrby 操作');
+      return null;
+    } catch (error) {
+      this.logger.error(
+        `Redis DECRBY 失败 [key: ${key}, value: ${value}]: ${(error as Error).message}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * 原子递增操作（用于库存回滚）
+   * @param key 键
+   * @param value 递增值
+   * @returns 递增后的值，Redis 不可用时返回 null
+   */
+  async incrby(key: string, value: number): Promise<number | null> {
+    try {
+      // Access the first store in the stores Map
+      if (this.cacheManager.stores) {
+        for (const [, store] of this.cacheManager.stores) {
+          const cacheStore = store as any;
+          if (cacheStore.client && typeof cacheStore.client.incrby === 'function') {
+            const result = await cacheStore.client.incrby(key, value);
+            this.logger.debug(`Redis INCRBY [key: ${key}, value: ${value}, result: ${result}]`);
+            return result;
+          }
+        }
+      }
+      this.logger.warn('Redis client 不支持 incrby 操作');
+      return null;
+    } catch (error) {
+      this.logger.error(
+        `Redis INCRBY 失败 [key: ${key}, value: ${value}]: ${(error as Error).message}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * 获取键的当前值
+   * @param key 键
+   * @returns 当前值，Redis 不可用时返回 null
+   */
+  async getStock(key: string): Promise<number | null> {
+    try {
+      // Access the first store in the stores Map
+      if (this.cacheManager.stores) {
+        for (const [, store] of this.cacheManager.stores) {
+          const cacheStore = store as any;
+          if (cacheStore.client && typeof cacheStore.client.get === 'function') {
+            const result = await cacheStore.client.get(key);
+            return result !== null ? parseInt(result, 10) : null;
+          }
+        }
+      }
+      // Fallback to cacheManager.get
+      const value = await this.cacheManager.get<number>(key);
+      return value ?? null;
+    } catch (error) {
+      this.logger.error(
+        `获取库存失败 [key: ${key}]: ${(error as Error).message}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * 设置库存初始值
+   * @param key 键
+   * @param value 值
+   */
+  async setStock(key: string, value: number): Promise<void> {
+    try {
+      // Access the first store in the stores Map
+      if (this.cacheManager.stores) {
+        for (const [, store] of this.cacheManager.stores) {
+          const cacheStore = store as any;
+          if (cacheStore.client && typeof cacheStore.client.set === 'function') {
+            await cacheStore.client.set(key, value.toString());
+            this.logger.debug(`设置库存 [key: ${key}, value: ${value}]`);
+            return;
+          }
+        }
+      }
+      // Fallback to cacheManager.set
+      await this.cacheManager.set(key, value);
+    } catch (error) {
+      this.logger.error(
+        `设置库存失败 [key: ${key}, value: ${value}]: ${(error as Error).message}`,
+      );
     }
   }
 }
