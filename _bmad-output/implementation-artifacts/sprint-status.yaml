@@ -77,8 +77,8 @@ development_status:
   epic-4: in-progress
   4-1-design-order-data-model: done
   4-2-implement-booking-submission-api: done
-  4-3-integrate-wechat-payment-jsapi: review
-  4-4-implement-payment-result-callback-handler: backlog
+  4-3-integrate-wechat-payment-jsapi: done
+  4-4-implement-payment-result-callback-handler: done
   4-5-implement-payment-result-query-display: backlog
   epic-4-retrospective: optional
 
