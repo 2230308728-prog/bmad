@@ -314,6 +314,7 @@ export class AdminRefundsService {
           // 退款状态保持 APPROVED，需要管理员手动重试
         } else {
           const totalAmount = payments[0].amount;
+          const paymentTime = payments[0].updatedAt; // 使用支付记录的更新时间作为支付完成时间
 
           // 调用微信支付退款接口
           const refundResult = await this.wechatPayService.refund(
@@ -322,6 +323,7 @@ export class AdminRefundsService {
             Number(refund.amount),
             Number(totalAmount),
             refund.reason || '管理员批准退款',
+            paymentTime, // 传递支付时间用于验证365天期限
           );
 
           // 更新退款状态为 PROCESSING
@@ -531,6 +533,7 @@ export class AdminRefundsService {
       }
 
       const totalAmount = payments[0].amount;
+      const paymentTime = payments[0].updatedAt; // 使用支付记录的更新时间作为支付完成时间
 
       // 调用微信支付退款接口
       const result = await this.wechatPayService.refund(
@@ -539,6 +542,7 @@ export class AdminRefundsService {
         Number(refund.amount),
         Number(totalAmount),
         refund.reason || '管理员重试退款',
+        paymentTime, // 传递支付时间用于验证365天期限
       );
 
       // 更新退款状态为 PROCESSING

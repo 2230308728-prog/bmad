@@ -231,6 +231,92 @@ describe('WechatPayService', () => {
         service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款'),
       ).rejects.toThrow('微信退款申请失败: Network error');
     });
+
+    it('should throw error when refund amount exceeds total amount (AC #32)', async () => {
+      const mockWxPay = (service as any).wxpay;
+
+      // 尝试退款 30000 分，但订单总金额只有 29900 分
+      await expect(
+        service.refund('ORD123', 'REF123', 30000, 29900, '用户申请退款'),
+      ).rejects.toThrow('退款金额不能超过订单原支付金额');
+
+      // 验证没有调用微信支付 API
+      expect(mockWxPay.refund).not.toHaveBeenCalled();
+    });
+
+    it('should allow refund when amount equals total amount', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.refund.mockResolvedValue({
+        status: 200,
+        data: {
+          refund_id: 'REFUND_WX_123',
+          out_refund_no: 'REF123',
+          status: 'PROCESSING',
+          amount: { total: 29900, refund: 29900, currency: 'CNY' },
+        },
+      });
+
+      // 全额退款应该被允许
+      await expect(
+        service.refund('ORD123', 'REF123', 29900, 29900, '用户申请退款'),
+      ).resolves.toBeDefined();
+    });
+
+    it('should throw error when refund exceeds 365 days (AC #33)', async () => {
+      const mockWxPay = (service as any).wxpay;
+
+      // 创建一个 366 天前的支付时间
+      const paymentTime = new Date();
+      paymentTime.setDate(paymentTime.getDate() - 366);
+
+      await expect(
+        service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款', paymentTime),
+      ).rejects.toThrow('退款必须在支付完成后365天内进行');
+
+      // 验证没有调用微信支付 API
+      expect(mockWxPay.refund).not.toHaveBeenCalled();
+    });
+
+    it('should allow refund within 365 days', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.refund.mockResolvedValue({
+        status: 200,
+        data: {
+          refund_id: 'REFUND_WX_123',
+          out_refund_no: 'REF123',
+          status: 'PROCESSING',
+          amount: { total: 29900, refund: 100, currency: 'CNY' },
+        },
+      });
+
+      // 创建一个 364 天前的支付时间
+      const paymentTime = new Date();
+      paymentTime.setDate(paymentTime.getDate() - 364);
+
+      await expect(
+        service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款', paymentTime),
+      ).resolves.toBeDefined();
+    });
+
+    it('should skip 365-day validation when paymentTime is not provided', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.refund.mockResolvedValue({
+        status: 200,
+        data: {
+          refund_id: 'REFUND_WX_123',
+          out_refund_no: 'REF123',
+          status: 'PROCESSING',
+          amount: { total: 29900, refund: 100, currency: 'CNY' },
+        },
+      });
+
+      // 不提供 paymentTime，应该跳过365天验证
+      await expect(
+        service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款'),
+      ).resolves.toBeDefined();
+
+      expect(mockWxPay.refund).toHaveBeenCalled();
+    });
   });
 
   describe('queryRefund', () => {

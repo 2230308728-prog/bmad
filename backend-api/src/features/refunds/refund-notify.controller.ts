@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Logger, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { WechatPayService } from '../payments/wechat-pay.service';
+import { WechatPayService, WechatRefundNotifyData } from '../payments/wechat-pay.service';
 import { PrismaService } from '../../lib/prisma.service';
 import { RefundStatus } from '@prisma/client';
 import { RefundNotifyRequestDto } from './dto/refund-notify.dto';
@@ -89,7 +89,7 @@ export class RefundNotifyController {
         notifyDto.resource.ciphertext,
         notifyDto.resource.associated_data,
         notifyDto.resource.nonce,
-      ) as any;
+      ) as WechatRefundNotifyData;
 
       const refundNo = decryptedData.out_refund_no;
       const wechatRefundId = decryptedData.refund_id;

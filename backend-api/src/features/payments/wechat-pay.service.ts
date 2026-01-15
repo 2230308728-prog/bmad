@@ -281,8 +281,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
 
       // 检查响应状态
       if (result.status !== 200 || !result.data) {
-        const errorMsg = `微信支付 API 返回错误: status=${result.status}, data=${JSON.stringify(result.data || {})}`;
-        this.logger.error(`JSAPI 订单创建失败 [orderNo: ${outTradeNo}]: ${errorMsg}`);
+        this.logger.error(
+          `JSAPI 订单创建失败 [orderNo: ${outTradeNo}]: 微信支付 API 返回错误`,
+        );
         throw new Error('微信支付下单失败，请稍后重试');
       }
 
@@ -368,8 +369,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       });
 
       if (result.status !== 200 || !result.data) {
-        const errorMsg = `微信支付 API 返回错误: status=${result.status}, data=${JSON.stringify(result.data || {})}`;
-        this.logger.error(`订单查询失败 [orderNo: ${outTradeNo}]: ${errorMsg}`);
+        this.logger.error(
+          `订单查询失败 [orderNo: ${outTradeNo}]: 微信支付 API 返回错误`,
+        );
         throw new Error('查询订单失败，请稍后重试');
       }
 
@@ -478,6 +480,7 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
    * @param amount 退款金额（单位：分）
    * @param totalAmount 订单总金额（单位：分）
    * @param reason 退款原因
+   * @param paymentTime 支付完成时间（用于验证365天期限）
    * @returns 退款结果
    */
   async refund(
@@ -486,9 +489,31 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
     amount: number,
     totalAmount: number,
     reason: string,
+    paymentTime?: Date,
   ): Promise<WechatRefundResult> {
     if (!this.wxpay) {
       throw new Error('微信支付服务不可用');
+    }
+
+    // 验证退款金额不能超过订单原支付金额（AC #32）
+    if (amount > totalAmount) {
+      this.logger.error(
+        `退款金额超过订单金额 [orderNo: ${orderNo}, refundNo: ${refundNo}, amount: ${amount}, totalAmount: ${totalAmount}]`,
+      );
+      throw new Error('退款金额不能超过订单原支付金额');
+    }
+
+    // 验证退款在支付完成后365天内（AC #33，微信限制）
+    if (paymentTime) {
+      const daysSincePayment = Math.floor(
+        (Date.now() - paymentTime.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      if (daysSincePayment > 365) {
+        this.logger.error(
+          `退款超过365天期限 [orderNo: ${orderNo}, refundNo: ${refundNo}, daysSincePayment: ${daysSincePayment}]`,
+        );
+        throw new Error('退款必须在支付完成后365天内进行（微信限制）');
+      }
     }
 
     try {
@@ -506,8 +531,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
 
       // 检查响应状态
       if (result.status !== 200 || !result.data) {
-        const errorMsg = `微信支付 API 返回错误: status=${result.status}, data=${JSON.stringify(result.data || {})}`;
-        this.logger.error(`退款申请失败 [orderNo: ${orderNo}, refundNo: ${refundNo}]: ${errorMsg}`);
+        this.logger.error(
+          `退款申请失败 [orderNo: ${orderNo}, refundNo: ${refundNo}]: 微信支付 API 返回错误`,
+        );
         throw new Error('微信退款申请失败，请稍后重试');
       }
 
@@ -541,8 +567,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       });
 
       if (result.status !== 200 || !result.data) {
-        const errorMsg = `微信支付 API 返回错误: status=${result.status}, data=${JSON.stringify(result.data || {})}`;
-        this.logger.error(`退款查询失败 [refundNo: ${outRefundNo}]: ${errorMsg}`);
+        this.logger.error(
+          `退款查询失败 [refundNo: ${outRefundNo}]: 微信支付 API 返回错误`,
+        );
         throw new Error('查询退款失败，请稍后重试');
       }
 
