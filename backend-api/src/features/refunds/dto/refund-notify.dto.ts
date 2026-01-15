@@ -109,7 +109,7 @@ class RefundResourceDto {
 
   @ApiProperty({
     description: '金额信息',
-    type: 'object',
+    type: () => RefundAmountDto,
   })
   @IsObject()
   @ValidateNested()

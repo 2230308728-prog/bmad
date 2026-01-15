@@ -23,7 +23,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import type { CurrentUserType } from '../../common/decorators/current-user.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Response } from 'express';
+import type { Response } from 'express';
 
 /**
  * Orders Controller

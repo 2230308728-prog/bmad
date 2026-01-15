@@ -91,7 +91,7 @@ export class RefundNotifyController {
         notifyDto.resource.ciphertext,
         notifyDto.resource.associated_data,
         notifyDto.resource.nonce,
-      ) as WechatRefundNotifyData;
+      ) as unknown as WechatRefundNotifyData;
 
       const refundNo = decryptedData.out_refund_no;
       const wechatRefundId = decryptedData.refund_id;

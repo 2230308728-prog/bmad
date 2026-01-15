@@ -9,9 +9,7 @@ import { AdminQueryRefundsDto } from './dto/admin';
 /**
  * Extended Order type with items and payments relations
  */
-interface OrderWithItems extends Prisma.OrderGetPayload<{ include: { items: true; payments?: true } }> {
-  bookingDate?: Date | null;
-}
+interface OrderWithItems extends Prisma.OrderGetPayload<{ include: { items: true; payments?: true } }> {}
 
 /**
  * 管理员退款服务
@@ -117,8 +115,8 @@ export class AdminRefundsService {
       appliedAt: refund.createdAt.toISOString(),
       user: {
         id: refund.user.id,
-        name: refund.user.name,
-        phone: refund.user.phone, // 管理员可见完整手机号
+        name: refund.user.name ?? '未知用户',
+        phone: refund.user.phone ?? '未填写',
       },
       order: {
         orderNo: refund.order.orderNo,
@@ -169,7 +167,7 @@ export class AdminRefundsService {
 
     // 获取第一个订单项的产品信息
     const firstItem = (refund.order as OrderWithItems).items?.[0];
-    let product = null;
+    let product: { id: number; title: string; images: string[] } | undefined = undefined;
     if (firstItem) {
       const productData = await this.prisma.product.findUnique({
         where: { id: firstItem.productId },
@@ -198,16 +196,16 @@ export class AdminRefundsService {
       description: refund.description,
       images: refund.images,
       appliedAt: refund.createdAt.toISOString(),
-      approvedAt: refund.approvedAt?.toISOString(),
+      approvedAt: refund.approvedAt?.toISOString() ?? null,
       adminNote: refund.adminNote,
       rejectedReason: refund.rejectedReason,
-      rejectedAt: refund.rejectedAt?.toISOString(),
-      refundedAt: refund.refundedAt?.toISOString(),
+      rejectedAt: refund.rejectedAt?.toISOString() ?? null,
+      refundedAt: refund.refundedAt?.toISOString() ?? null,
       wechatRefundId: refund.wechatRefundId,
       user: {
         id: refund.user.id,
-        name: refund.user.name,
-        phone: refund.user.phone, // 管理员可见完整手机号
+        name: refund.user.name ?? '未知用户',
+        phone: refund.user.phone ?? '未填写',
         role: refund.user.role,
       },
       order: {

@@ -33,13 +33,16 @@ export class UpdateOrderStatusDto {
 /**
  * 状态转换规则定义
  * PENDING → CANCELLED（允许）
- * PAID → COMPLETED（允许）
- * PAID → REFUNDED（允许，需创建退款记录）
+ * PAID → CONFIRMED, COMPLETED, REFUNDING（允许）
+ * CONFIRMED → COMPLETED（允许）
+ * REFUNDING → REFUNDED（允许）
  * 其他转换：不允许
  */
 export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.PENDING]: [OrderStatus.CANCELLED],
-  [OrderStatus.PAID]: [OrderStatus.COMPLETED, OrderStatus.REFUNDED],
+  [OrderStatus.PAID]: [OrderStatus.CONFIRMED, OrderStatus.COMPLETED, OrderStatus.REFUNDING],
+  [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED],
+  [OrderStatus.REFUNDING]: [OrderStatus.REFUNDED],
   [OrderStatus.COMPLETED]: [],
   [OrderStatus.CANCELLED]: [],
   [OrderStatus.REFUNDED]: [],

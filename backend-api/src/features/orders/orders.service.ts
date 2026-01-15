@@ -204,7 +204,7 @@ export class OrdersService {
     const rateLimitKey = `payment-query:${orderId}:${currentMinute}`;
 
     // 获取当前分钟的查询次数
-    const count = await this.cacheService.get(rateLimitKey);
+    const count = await this.cacheService.get<string>(rateLimitKey);
 
     if (count === null) {
       // 首次查询，设置计数为 1，TTL 60 秒
@@ -212,7 +212,7 @@ export class OrdersService {
       return false;
     }
 
-    const queryCount = parseInt(count || '0', 10);
+    const queryCount = parseInt(count ?? '0', 10);
 
     if (queryCount >= 10) {
       this.logger.warn(`支付状态查询频率超限: orderId=${orderId}, count=${queryCount}`);

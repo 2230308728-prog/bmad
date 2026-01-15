@@ -7,6 +7,7 @@ import {
   Request,
   Logger,
 } from '@nestjs/common';
+import type { RequestWithUser } from '@/types/request';
 import {
   ApiTags,
   ApiOperation,
@@ -108,7 +109,7 @@ export class NotificationsController {
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiResponse({ status: 403, description: '权限不足' })
   async subscribeNotifications(
-    @Request() req,
+    @Request() req: RequestWithUser,
     @Body() subscribeDto: SubscribeNotificationsDto,
   ): Promise<NotificationPreferenceResponseDto> {
     const userId = req.user.userId;
@@ -145,7 +146,7 @@ export class NotificationsController {
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiResponse({ status: 403, description: '权限不足' })
   async getNotificationPreferences(
-    @Request() req,
+    @Request() req: RequestWithUser,
   ): Promise<NotificationPreferenceResponseDto> {
     const userId = req.user.userId;
     this.logger.log(`Getting notification preferences for user ${userId}`);

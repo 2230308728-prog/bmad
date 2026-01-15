@@ -225,7 +225,7 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
         publicKey: Buffer.from(''), // 占位：API v3 不需要公钥，仅需私钥签名
         privateKey: privateKey,
         key: this.apiV3Key,
-      });
+      }) as unknown as typeof this.wxpay;
 
       this.logger.log('微信支付服务初始化成功');
     } catch (error) {

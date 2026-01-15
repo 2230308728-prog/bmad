@@ -7,6 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // 用户角色枚举
@@ -351,12 +352,12 @@ enum NotificationType {
 
 // 用户通知偏好模型
 model UserNotificationPreference {
-  id                Int             @id @default(autoincrement())
-  userId            Int             @unique @map("user_id")
-  notificationTypes String[]        @map("notification_types")
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
-  user              User            @relation(fields: [userId], references: [id])
+  id                Int                @id @default(autoincrement())
+  userId            Int                @unique @map("user_id")
+  notificationTypes NotificationType[] @map("notification_types")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  user              User               @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("user_notification_preferences")

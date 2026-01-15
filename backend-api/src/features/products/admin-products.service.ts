@@ -86,7 +86,7 @@ export class AdminProductsService {
         stock: createProductDto.stock,
         minAge: createProductDto.minAge,
         maxAge: createProductDto.maxAge,
-        duration: createProductDto.duration,
+        duration: createProductDto.duration ?? '待定',
         location: createProductDto.location,
         images: createProductDto.images || [],
         featured: createProductDto.featured ?? false,
@@ -175,7 +175,9 @@ export class AdminProductsService {
     const updateData: Prisma.ProductUpdateInput = {};
     if (updateProductDto.title !== undefined) updateData.title = updateProductDto.title;
     if (updateProductDto.description !== undefined) updateData.description = updateProductDto.description;
-    if (updateProductDto.categoryId !== undefined) updateData.categoryId = updateProductDto.categoryId;
+    if (updateProductDto.categoryId !== undefined) {
+      updateData.category = { connect: { id: updateProductDto.categoryId } };
+    }
     if (updateProductDto.price !== undefined) updateData.price = updateProductDto.price;
     if (updateProductDto.originalPrice !== undefined) updateData.originalPrice = updateProductDto.originalPrice;
     if (updateProductDto.stock !== undefined) updateData.stock = updateProductDto.stock;
@@ -382,10 +384,10 @@ export class AdminProductsService {
     // 转换 Decimal 为字符串，并添加 lowStock 标志
     return {
       ...updatedProduct,
-      price: updatedProduct.price.toString(),
-      originalPrice: updatedProduct.originalPrice?.toString(),
+      price: updatedProduct.price.toFixed(2),
+      originalPrice: updatedProduct.originalPrice?.toFixed(2) ?? null,
       lowStock,
-    };
+    } as ProductWithLowStock;
   }
 
   /**

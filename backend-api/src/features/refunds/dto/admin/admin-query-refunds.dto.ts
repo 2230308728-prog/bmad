@@ -110,6 +110,8 @@ export class AdminRefundSummaryResponseDto {
       name: '张三',
       phone: '13800138000',
     },
+    nullable: false,
+    additionalProperties: false,
   })
   user!: {
     id: number;
@@ -124,6 +126,8 @@ export class AdminRefundSummaryResponseDto {
       orderNo: 'ORD20240114123456789',
       productName: '上海科技馆探索之旅',
     },
+    nullable: false,
+    additionalProperties: false,
   })
   order!: {
     orderNo: string;

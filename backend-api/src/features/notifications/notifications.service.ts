@@ -78,7 +78,7 @@ export class NotificationsService {
     const cacheKey = 'wechat:access_token';
 
     // 先尝试从 Redis 缓存获取
-    const cachedToken = await this.cache.get(cacheKey);
+    const cachedToken = await this.cache.get<string>(cacheKey);
     if (cachedToken) {
       this.logger.debug('Retrieved access_token from cache');
       return cachedToken;
@@ -476,12 +476,12 @@ export class NotificationsService {
     const preference = await this.prisma.userNotificationPreference.upsert({
       where: { userId },
       update: {
-        notificationTypes: notificationTypes as string[],
+        notificationTypes: notificationTypes,
         updatedAt: new Date(),
       },
       create: {
         userId,
-        notificationTypes: notificationTypes as string[],
+        notificationTypes: notificationTypes,
       },
     });
 

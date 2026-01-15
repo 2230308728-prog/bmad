@@ -508,7 +508,7 @@ export class AdminUsersService {
       paymentStatus: order.paymentStatus,
       totalAmount: order.totalAmount.toString(),
       actualAmount: order.actualAmount.toString(),
-      bookingDate: order.bookingDate,
+      bookingDate: order.bookingDate ?? undefined,
       items: order.items.map((item) => ({
         id: item.id,
         productId: item.productId,
@@ -517,7 +517,7 @@ export class AdminUsersService {
         quantity: item.quantity,
         subtotal: item.subtotal.toString(),
       })),
-      paidAt: order.paidAt,
+      paidAt: order.paidAt ?? undefined,
       createdAt: order.createdAt,
     }));
 
@@ -725,9 +725,9 @@ export class AdminUsersService {
       orderNo: refund.order.orderNo,
       amount: refund.amount.toString(),
       status: refund.status,
-      reason: refund.reason,
+      reason: refund.reason ?? undefined,
       requestedAt: refund.createdAt,
-      processedAt: refund.refundedAt,
+      processedAt: refund.refundedAt ?? undefined,
     }));
   }
 }
