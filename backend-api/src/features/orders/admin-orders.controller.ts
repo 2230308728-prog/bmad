@@ -13,6 +13,7 @@ import {
   ValidationPipe,
   HttpException,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader } from '@nestjs/swagger';
 import { AdminOrdersService } from './admin-orders.service';
 import { AdminQueryOrdersDto } from './dto/admin/admin-query-orders.dto';
@@ -29,7 +30,7 @@ import { CurrentUser, type CurrentUserType } from '../../common/decorators/curre
  */
 @ApiTags('Admin Orders')
 @Controller('admin/orders')
-@UseGuards(RolesGuard)
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(Role.ADMIN)
 export class AdminOrdersController {
   private readonly logger = new Logger(AdminOrdersController.name);

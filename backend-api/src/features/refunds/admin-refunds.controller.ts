@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   ValidationPipe,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import {
   ApiTags,
   ApiOperation,
@@ -40,7 +41,7 @@ import {
  */
 @ApiTags('Admin Refunds')
 @ApiBearerAuth()
-@UseGuards(RolesGuard)
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(Role.ADMIN)
 @Controller('admin/refunds')
 export class AdminRefundsController {
