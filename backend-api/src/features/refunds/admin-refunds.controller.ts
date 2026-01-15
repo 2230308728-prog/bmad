@@ -31,6 +31,7 @@ import {
   ApproveRefundDto,
   RejectRefundDto,
   RefundStatsResponseDto,
+  RetryRefundResponseDto,
 } from './dto/admin';
 
 /**
@@ -173,5 +174,31 @@ export class AdminRefundsController {
       rejectDto.rejectedReason,
       user.id,
     );
+  }
+
+  /**
+   * 手动重试退款
+   * 用于重试失败的退款申请
+   */
+  @Post(':id/retry')
+  @ApiOperation({
+    summary: '手动重试退款',
+    description: '管理员手动重试失败的退款申请，调用微信支付退款接口',
+  })
+  @ApiParam({ name: 'id', example: 1, description: '退款 ID' })
+  @ApiResponse({
+    status: 200,
+    description: '退款重试成功',
+    type: RetryRefundResponseDto,
+  })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @ApiResponse({ status: 403, description: '权限不足（需要 ADMIN 角色）' })
+  @ApiResponse({ status: 404, description: '退款记录不存在' })
+  @ApiResponse({ status: 400, description: '退款状态不允许重试（非 FAILED 状态）' })
+  async retry(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: CurrentUserType,
+  ): Promise<RetryRefundResponseDto> {
+    return this.adminRefundsService.retry(id, user.id);
   }
 }

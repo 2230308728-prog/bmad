@@ -22,3 +22,7 @@ export {
 export {
   RefundStatsResponseDto,
 } from './refund-stats.dto';
+
+export {
+  RetryRefundResponseDto,
+} from './retry-refund.dto';

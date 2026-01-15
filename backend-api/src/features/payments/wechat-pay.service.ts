@@ -71,6 +71,84 @@ export interface WechatPayNotifyData {
 }
 
 /**
+ * 微信支付退款申请结果
+ */
+export interface WechatRefundResult {
+  refund_id: string;
+  out_refund_no: string;
+  transaction_id: string;
+  out_trade_no: string;
+  channel: string;
+  user_received_account: string;
+  success_time: string;
+  create_time: string;
+  status: 'SUCCESS' | 'ABNORMAL' | 'PROCESSING';
+  amount: {
+    total: number;
+    refund: number;
+    payer_total: number;
+    payer_refund: number;
+    settlement_refund: number;
+    settlement_total: number;
+    currency: string;
+    refund_fee: number;
+    payer_refund_fee: number;
+    settlement_refund_fee: number;
+  };
+}
+
+/**
+ * 微信支付退款查询结果
+ */
+export interface WechatRefundQueryResult {
+  refund_id: string;
+  out_refund_no: string;
+  transaction_id: string;
+  out_trade_no: string;
+  channel: string;
+  user_received_account: string;
+  success_time: string;
+  create_time: string;
+  status: 'SUCCESS' | 'ABNORMAL' | 'PROCESSING';
+  amount: {
+    total: number;
+    refund: number;
+    payer_total: number;
+    payer_refund: number;
+    settlement_refund: number;
+    settlement_total: number;
+    currency: string;
+  };
+}
+
+/**
+ * 微信支付退款回调通知数据
+ */
+export interface WechatRefundNotifyData {
+  refund_id: string;
+  out_refund_no: string;
+  transaction_id: string;
+  out_trade_no: string;
+  channel: string;
+  user_received_account: string;
+  success_time: string;
+  create_time: string;
+  status: 'SUCCESS' | 'ABNORMAL' | 'PROCESSING';
+  amount: {
+    total: number;
+    refund: number;
+    payer_total: number;
+    payer_refund: number;
+    settlement_refund: number;
+    settlement_total: number;
+    currency: string;
+    refund_fee: number;
+    payer_refund_fee: number;
+    settlement_refund_fee: number;
+  };
+}
+
+/**
  * 微信支付随机字符串长度（微信支付要求）
  */
 const WECHAT_NONCE_LENGTH = 32;
@@ -95,6 +173,8 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
     verifySign: (params: any) => Promise<boolean>;
     decipher_gcm: (ciphertext: string, associatedData: string, nonce: string, key: string) => any;
     sha256WithRsa: (data: string) => string;
+    refund: (params: any) => Promise<any>;
+    query_refund: (params: any) => Promise<any>;
   } | null = null;
   private appId: string;
   private mchId: string;
@@ -387,6 +467,93 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`订单关闭成功 [orderNo: ${outTradeNo}]`);
     } catch (error) {
       this.logger.error(`订单关闭失败 [orderNo: ${outTradeNo}]: ${(error as Error).message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 申请退款
+   * @param orderNo 商户订单号
+   * @param refundNo 商户退款单号
+   * @param amount 退款金额（单位：分）
+   * @param totalAmount 订单总金额（单位：分）
+   * @param reason 退款原因
+   * @returns 退款结果
+   */
+  async refund(
+    orderNo: string,
+    refundNo: string,
+    amount: number,
+    totalAmount: number,
+    reason: string,
+  ): Promise<WechatRefundResult> {
+    if (!this.wxpay) {
+      throw new Error('微信支付服务不可用');
+    }
+
+    try {
+      const result = await this.wxpay.refund({
+        out_trade_no: orderNo,
+        out_refund_no: refundNo,
+        reason,
+        notify_url: this.notifyUrl.replace('/notify', '/refund/notify'),
+        amount: {
+          refund: amount,
+          total: totalAmount,
+          currency: 'CNY',
+        },
+      });
+
+      // 检查响应状态
+      if (result.status !== 200 || !result.data) {
+        const errorMsg = `微信支付 API 返回错误: status=${result.status}, data=${JSON.stringify(result.data || {})}`;
+        this.logger.error(`退款申请失败 [orderNo: ${orderNo}, refundNo: ${refundNo}]: ${errorMsg}`);
+        throw new Error('微信退款申请失败，请稍后重试');
+      }
+
+      const refundResult: WechatRefundResult = result.data;
+      this.logger.log(
+        `退款申请成功 [orderNo: ${orderNo}, refundNo: ${refundNo}, refundId: ${refundResult.refund_id}, status: ${refundResult.status}]`,
+      );
+
+      return refundResult;
+    } catch (error) {
+      this.logger.error(
+        `退款申请失败 [orderNo: ${orderNo}, refundNo: ${refundNo}]: ${(error as Error).message}`,
+      );
+      throw new Error(`微信退款申请失败: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * 查询退款
+   * @param outRefundNo 商户退款单号
+   * @returns 退款信息
+   */
+  async queryRefund(outRefundNo: string): Promise<WechatRefundQueryResult> {
+    if (!this.wxpay) {
+      throw new Error('微信支付服务不可用');
+    }
+
+    try {
+      const result = await this.wxpay.query_refund({
+        out_refund_no: outRefundNo,
+      });
+
+      if (result.status !== 200 || !result.data) {
+        const errorMsg = `微信支付 API 返回错误: status=${result.status}, data=${JSON.stringify(result.data || {})}`;
+        this.logger.error(`退款查询失败 [refundNo: ${outRefundNo}]: ${errorMsg}`);
+        throw new Error('查询退款失败，请稍后重试');
+      }
+
+      const refundResult: WechatRefundQueryResult = result.data;
+      this.logger.log(
+        `退款查询成功 [refundNo: ${outRefundNo}, refundId: ${refundResult.refund_id}, status: ${refundResult.status}]`,
+      );
+
+      return refundResult;
+    } catch (error) {
+      this.logger.error(`退款查询失败 [refundNo: ${outRefundNo}]: ${(error as Error).message}`);
       throw error;
     }
   }

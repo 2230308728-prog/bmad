@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../lib/prisma.service';
 import { CacheService } from '../../redis/cache.service';
+import { WechatPayService } from '../payments/wechat-pay.service';
 import { AdminRefundsService } from './admin-refunds.service';
 import { AdminQueryRefundsDto } from './dto/admin';
 import { RefundStatus, OrderStatus } from '@prisma/client';
@@ -10,6 +11,7 @@ describe('AdminRefundsService', () => {
   let service: AdminRefundsService;
   let prismaService: PrismaService;
   let cacheService: CacheService;
+  let wechatPayService: WechatPayService;
 
   const mockPrismaService = {
     $transaction: jest.fn(),
@@ -26,10 +28,19 @@ describe('AdminRefundsService', () => {
     product: {
       findUnique: jest.fn(),
     },
+    payment: {
+      findMany: jest.fn(),
+    },
   };
 
   const mockCacheService = {
     del: jest.fn(),
+  };
+
+  const mockWechatPayService = {
+    isAvailable: jest.fn(() => true),
+    refund: jest.fn(),
+    queryRefund: jest.fn(),
   };
 
   const mockUser = {
@@ -103,12 +114,17 @@ describe('AdminRefundsService', () => {
           provide: CacheService,
           useValue: mockCacheService,
         },
+        {
+          provide: WechatPayService,
+          useValue: mockWechatPayService,
+        },
       ],
     }).compile();
 
     service = module.get<AdminRefundsService>(AdminRefundsService);
     prismaService = module.get<PrismaService>(PrismaService);
     cacheService = module.get<CacheService>(CacheService);
+    wechatPayService = module.get<WechatPayService>(WechatPayService);
 
     jest.clearAllMocks();
   });
@@ -239,6 +255,28 @@ describe('AdminRefundsService', () => {
         };
       });
 
+      // Mock payment.findMany for WeChat refund integration
+      (mockPrismaService.payment.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 1,
+          amount: { toString: () => '299.00' },
+          status: 'SUCCESS',
+        },
+      ]);
+
+      // Mock WechatPayService.refund
+      (mockWechatPayService.refund as jest.Mock).mockResolvedValue({
+        refund_id: 'REFUND_WX_123',
+        status: 'PROCESSING',
+      });
+
+      // Mock refundRecord.update for PROCESSING status
+      (mockPrismaService.refundRecord.update as jest.Mock).mockResolvedValue({
+        ...mockRefund,
+        status: RefundStatus.PROCESSING,
+        wechatRefundId: 'REFUND_WX_123',
+      });
+
       // Second call - in findOne after approval
       (mockPrismaService.refundRecord.findUnique as jest.Mock)
         .mockResolvedValueOnce({
@@ -257,6 +295,7 @@ describe('AdminRefundsService', () => {
 
       expect(mockPrismaService.$transaction).toHaveBeenCalled();
       expect(mockCacheService.del).toHaveBeenCalled();
+      expect(mockWechatPayService.refund).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when refund does not exist', async () => {

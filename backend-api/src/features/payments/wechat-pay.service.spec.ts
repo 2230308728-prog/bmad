@@ -2,6 +2,25 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { WechatPayService } from './wechat-pay.service';
 
+// Mock fs module before importing WechatPayService
+jest.mock('fs', () => ({
+  readFileSync: jest.fn(() => Buffer.from('mocked_private_key_content')),
+}));
+
+// Mock wechatpay-node-v3
+jest.mock('wechatpay-node-v3', () => {
+  return jest.fn().mockImplementation(() => ({
+    transactions_jsapi: jest.fn(),
+    query: jest.fn(),
+    close: jest.fn(),
+    verifySign: jest.fn(),
+    decipher_gcm: jest.fn(),
+    sha256WithRsa: jest.fn(),
+    refund: jest.fn(),
+    query_refund: jest.fn(),
+  }));
+});
+
 describe('WechatPayService', () => {
   let service: WechatPayService;
   let configService: ConfigService;
@@ -26,8 +45,6 @@ describe('WechatPayService', () => {
 
     // Clear all mocks before each test
     jest.clearAllMocks();
-    // Reset service state
-    jest.resetModules();
   });
 
   it('should be defined', () => {
@@ -43,22 +60,36 @@ describe('WechatPayService', () => {
       expect(service.isAvailable()).toBe(false);
     });
 
-    it('should log error when private key file not found', () => {
-      mockConfigService.get.mockImplementation((key: string) => {
-        const config: Record<string, string> = {
-          WECHAT_PAY_APPID: 'test_appid',
-          WECHAT_PAY_MCHID: 'test_mchid',
-          WECHAT_PAY_SERIAL_NO: 'test_serial',
-          WECHAT_PAY_PRIVATE_KEY_PATH: './certs/nonexistent_key.pem',
-          WECHAT_PAY_APIV3_KEY: 'test_key',
-          WECHAT_PAY_NOTIFY_URL: 'https://example.com/notify',
-        };
-        return config[key] || '';
-      });
+    it('should initialize successfully with complete config', async () => {
+      // Create a fresh module with complete config
+      const completeMockConfigService = {
+        get: jest.fn((key: string) => {
+          const config: Record<string, string> = {
+            WECHAT_PAY_APPID: 'test_appid',
+            WECHAT_PAY_MCHID: 'test_mchid',
+            WECHAT_PAY_SERIAL_NO: 'test_serial',
+            WECHAT_PAY_PRIVATE_KEY_PATH: './certs/test_key.pem',
+            WECHAT_PAY_APIV3_KEY: 'test_key',
+            WECHAT_PAY_NOTIFY_URL: 'https://example.com/notify',
+          };
+          return config[key] || '';
+        }),
+      };
 
-      service.onModuleInit();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          WechatPayService,
+          {
+            provide: ConfigService,
+            useValue: completeMockConfigService,
+          },
+        ],
+      }).compile();
 
-      expect(service.isAvailable()).toBe(false);
+      const freshService = module.get<WechatPayService>(WechatPayService);
+      freshService.onModuleInit();
+
+      expect(freshService.isAvailable()).toBe(true);
     });
   });
 
@@ -99,6 +130,190 @@ describe('WechatPayService', () => {
   describe('closeOrder', () => {
     it('should throw error when service is not available', async () => {
       await expect(service.closeOrder('ORD123')).rejects.toThrow('微信支付服务不可用');
+    });
+  });
+
+  describe('refund', () => {
+    beforeEach(() => {
+      // Initialize service before each refund test
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          WECHAT_PAY_APPID: 'test_appid',
+          WECHAT_PAY_MCHID: 'test_mchid',
+          WECHAT_PAY_SERIAL_NO: 'test_serial',
+          WECHAT_PAY_PRIVATE_KEY_PATH: './certs/test_key.pem',
+          WECHAT_PAY_APIV3_KEY: 'test_key',
+          WECHAT_PAY_NOTIFY_URL: 'https://example.com/notify',
+        };
+        return config[key] || '';
+      });
+      service.onModuleInit();
+    });
+
+    it('should throw error when service is not available', async () => {
+      // Reset service to unavailable state
+      jest.resetModules();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          WechatPayService,
+          {
+            provide: ConfigService,
+            useValue: { get: jest.fn(() => '') },
+          },
+        ],
+      }).compile();
+      const unavailableService = module.get<WechatPayService>(WechatPayService);
+
+      await expect(
+        unavailableService.refund('ORD123', 'REF123', 100, 29900, '用户申请退款'),
+      ).rejects.toThrow('微信支付服务不可用');
+    });
+
+    it('should successfully create refund when service is available', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.refund.mockResolvedValue({
+        status: 200,
+        data: {
+          refund_id: 'REFUND_WX_123',
+          out_refund_no: 'REF123',
+          transaction_id: 'TXN123',
+          out_trade_no: 'ORD123',
+          channel: 'ORIGINAL',
+          user_received_account: '用户微信零钱',
+          success_time: '2024-01-15T10:30:00+08:00',
+          create_time: '2024-01-15T10:29:00+08:00',
+          status: 'PROCESSING',
+          amount: {
+            total: 29900,
+            refund: 100,
+            payer_total: 29900,
+            payer_refund: 100,
+            currency: 'CNY',
+          },
+        },
+      });
+
+      const result = await service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款');
+
+      expect(result.refund_id).toBe('REFUND_WX_123');
+      expect(result.out_refund_no).toBe('REF123');
+      expect(result.status).toBe('PROCESSING');
+      expect(mockWxPay.refund).toHaveBeenCalledWith({
+        out_trade_no: 'ORD123',
+        out_refund_no: 'REF123',
+        reason: '用户申请退款',
+        notify_url: 'https://example.com/refund/notify',
+        amount: {
+          refund: 100,
+          total: 29900,
+          currency: 'CNY',
+        },
+      });
+    });
+
+    it('should handle refund API error', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.refund.mockResolvedValue({
+        status: 500,
+        data: { code: 'SYSTEM_ERROR', message: '系统错误' },
+      });
+
+      await expect(
+        service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款'),
+      ).rejects.toThrow('微信退款申请失败');
+    });
+
+    it('should handle network error', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.refund.mockRejectedValue(new Error('Network error'));
+
+      await expect(
+        service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款'),
+      ).rejects.toThrow('微信退款申请失败: Network error');
+    });
+  });
+
+  describe('queryRefund', () => {
+    beforeEach(() => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        const config: Record<string, string> = {
+          WECHAT_PAY_APPID: 'test_appid',
+          WECHAT_PAY_MCHID: 'test_mchid',
+          WECHAT_PAY_SERIAL_NO: 'test_serial',
+          WECHAT_PAY_PRIVATE_KEY_PATH: './certs/test_key.pem',
+          WECHAT_PAY_APIV3_KEY: 'test_key',
+          WECHAT_PAY_NOTIFY_URL: 'https://example.com/notify',
+        };
+        return config[key] || '';
+      });
+      service.onModuleInit();
+    });
+
+    it('should throw error when service is not available', async () => {
+      jest.resetModules();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          WechatPayService,
+          {
+            provide: ConfigService,
+            useValue: { get: jest.fn(() => '') },
+          },
+        ],
+      }).compile();
+      const unavailableService = module.get<WechatPayService>(WechatPayService);
+
+      await expect(unavailableService.queryRefund('REF123')).rejects.toThrow('微信支付服务不可用');
+    });
+
+    it('should successfully query refund when service is available', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.query_refund.mockResolvedValue({
+        status: 200,
+        data: {
+          refund_id: 'REFUND_WX_123',
+          out_refund_no: 'REF123',
+          transaction_id: 'TXN123',
+          out_trade_no: 'ORD123',
+          channel: 'ORIGINAL',
+          user_received_account: '用户微信零钱',
+          success_time: '2024-01-15T10:30:00+08:00',
+          create_time: '2024-01-15T10:29:00+08:00',
+          status: 'SUCCESS',
+          amount: {
+            total: 29900,
+            refund: 100,
+            payer_total: 29900,
+            payer_refund: 100,
+            currency: 'CNY',
+          },
+        },
+      });
+
+      const result = await service.queryRefund('REF123');
+
+      expect(result.refund_id).toBe('REFUND_WX_123');
+      expect(result.out_refund_no).toBe('REF123');
+      expect(result.status).toBe('SUCCESS');
+      expect(mockWxPay.query_refund).toHaveBeenCalledWith({
+        out_refund_no: 'REF123',
+      });
+    });
+
+    it('should handle query refund API error', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.query_refund.mockResolvedValue({
+        status: 500,
+        data: { code: 'SYSTEM_ERROR', message: '系统错误' },
+      });
+
+      await expect(service.queryRefund('REF123')).rejects.toThrow('查询退款失败');
+    });
+
+    it('should handle query refund network error', async () => {
+      const mockWxPay = (service as any).wxpay;
+      mockWxPay.query_refund.mockRejectedValue(new Error('Network error'));
+
+      await expect(service.queryRefund('REF123')).rejects.toThrow('Network error');
     });
   });
 });

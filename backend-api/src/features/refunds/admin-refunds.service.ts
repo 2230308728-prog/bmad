@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../lib/prisma.service';
 import { CacheService } from '../../redis/cache.service';
+import { WechatPayService } from '../payments/wechat-pay.service';
 import { RefundStatus, OrderStatus, Prisma } from '@prisma/client';
 import { AdminQueryRefundsDto } from './dto/admin';
 
@@ -22,6 +23,7 @@ export class AdminRefundsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cacheService: CacheService,
+    private readonly wechatPayService: WechatPayService,
   ) {}
 
   /**
@@ -288,10 +290,61 @@ export class AdminRefundsService {
 
     this.logger.log(`退款已批准: refundNo=${result.refundNo}, adminId=${adminId}`);
 
-    // NOTE: 微信退款流程将在 Story 5.6 中实现
-    // 当前实现：退款状态已更新为 APPROVED，订单状态已更新为 REFUNDED
-    // 后续实现：调用 WechatPayService.refund() 执行实际退款到用户微信账户
-    // 退款状态转换流程：APPROVED -> PROCESSING -> SUCCESS/FAILED/COMPLETED
+    // 调用微信支付退款服务
+    try {
+      // 检查微信支付服务是否可用
+      if (!this.wechatPayService.isAvailable()) {
+        this.logger.warn(
+          `微信支付服务不可用，退款已批准但未提交到微信 [refundNo: ${result.refundNo}]`,
+        );
+        // 退款状态保持 APPROVED，需要管理员手动重试
+      } else {
+        // 查询支付记录获取订单总金额
+        const payments = await this.prisma.payment.findMany({
+          where: {
+            orderId: refund.orderId,
+            status: 'SUCCESS',
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        });
+
+        if (payments.length === 0) {
+          this.logger.error(`找不到成功的支付记录: orderId=${refund.orderId}`);
+          // 退款状态保持 APPROVED，需要管理员手动重试
+        } else {
+          const totalAmount = payments[0].amount;
+
+          // 调用微信支付退款接口
+          const refundResult = await this.wechatPayService.refund(
+            refund.order.orderNo,
+            refund.refundNo,
+            Number(refund.amount),
+            Number(totalAmount),
+            refund.reason || '管理员批准退款',
+          );
+
+          // 更新退款状态为 PROCESSING
+          await this.prisma.refundRecord.update({
+            where: { id: refundId },
+            data: {
+              status: RefundStatus.PROCESSING,
+              wechatRefundId: refundResult.refund_id,
+            },
+          });
+
+          this.logger.log(
+            `微信退款申请成功 [refundNo: ${refund.refundNo}, wechatRefundId: ${refundResult.refund_id}, status: PROCESSING]`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `微信退款申请失败 [refundNo: ${refund.refundNo}]: ${(error as Error).message}`,
+      );
+      // 退款状态保持 APPROVED，需要管理员手动重试
+      // 不抛出异常，因为退款已批准成功
+    }
 
     // 清除相关 Redis 缓存
     try {
@@ -427,5 +480,107 @@ export class AdminRefundsService {
       totalAmount: totalAmount.toFixed(2),
       pendingAmount: pendingAmount.toFixed(2),
     };
+  }
+
+  /**
+   * 手动重试退款
+   * @param refundId 退款 ID
+   * @param adminId 管理员 ID
+   * @returns 重试结果
+   */
+  async retry(refundId: number, adminId: number) {
+    // 查询退款记录
+    const refund = await this.prisma.refundRecord.findUnique({
+      where: { id: refundId },
+      include: {
+        order: true,
+      },
+    });
+
+    if (!refund) {
+      this.logger.warn(`退款记录不存在: refundId=${refundId}`);
+      throw new NotFoundException('退款记录不存在');
+    }
+
+    // 验证退款状态为 FAILED
+    if (refund.status !== RefundStatus.FAILED) {
+      this.logger.warn(`退款状态不允许重试: refundId=${refundId}, status=${refund.status}`);
+      throw new BadRequestException('只有失败的退款可以重试');
+    }
+
+    // 检查微信支付服务是否可用
+    if (!this.wechatPayService.isAvailable()) {
+      this.logger.error('微信支付服务不可用，无法重试退款');
+      throw new BadRequestException('微信支付服务不可用，请稍后重试');
+    }
+
+    try {
+      // 查询支付记录获取订单总金额
+      const payments = await this.prisma.payment.findMany({
+        where: {
+          orderId: refund.orderId,
+          status: 'SUCCESS',
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      });
+
+      if (payments.length === 0) {
+        this.logger.error(`找不到成功的支付记录: orderId=${refund.orderId}`);
+        throw new BadRequestException('找不到成功的支付记录');
+      }
+
+      const totalAmount = payments[0].amount;
+
+      // 调用微信支付退款接口
+      const result = await this.wechatPayService.refund(
+        refund.order.orderNo,
+        refund.refundNo,
+        Number(refund.amount),
+        Number(totalAmount),
+        refund.reason || '管理员重试退款',
+      );
+
+      // 更新退款状态为 PROCESSING
+      await this.prisma.refundRecord.update({
+        where: { id: refundId },
+        data: {
+          status: RefundStatus.PROCESSING,
+          wechatRefundId: result.refund_id,
+        },
+      });
+
+      this.logger.log(
+        `退款重试成功 [refundNo: ${refund.refundNo}, refundId: ${refundId}, wechatRefundId: ${result.refund_id}, adminId: ${adminId}]`,
+      );
+
+      // 清除相关 Redis 缓存
+      try {
+        await this.cacheService.del(`refund:${refundId}`);
+        await this.cacheService.del(`refund:list:*`);
+        await this.cacheService.del(`order:${refund.orderId}`);
+        this.logger.log(`已清除退款 ${refundId} 的相关缓存`);
+      } catch (error) {
+        this.logger.error(`清除缓存失败:`, error);
+        // 缓存清除失败不影响退款重试操作
+      }
+
+      return {
+        success: true,
+        message: '退款重试成功，等待微信回调',
+        wechatRefundId: result.refund_id,
+        status: 'PROCESSING',
+      };
+    } catch (error) {
+      this.logger.error(
+        `退款重试失败 [refundNo: ${refund.refundNo}, refundId: ${refundId}]: ${(error as Error).message}`,
+      );
+
+      // 保持 FAILED 状态，但记录错误
+      return {
+        success: false,
+        message: `退款重试失败: ${(error as Error).message}`,
+      };
+    }
   }
 }

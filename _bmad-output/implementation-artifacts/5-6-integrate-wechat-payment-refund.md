@@ -1,6 +1,6 @@
 # Story 5.6: 集成微信支付退款
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -52,87 +52,87 @@ so that **用户的款项可以原路退回到微信账户**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: 扩展 WechatPayService 添加退款方法 (AC: #2-#8)
-  - [ ] 1.1 添加 refund() 方法到 WechatPayService
+- [x] Task 1: 扩展 WechatPayService 添加退款方法 (AC: #2-#8)
+  - [x] 1.1 添加 refund() 方法到 WechatPayService
     - 参数：orderNo, refundNo, amount, reason
     - 调用微信支付退款 API v3
-  - [ ] 1.2 处理退款请求成功提交
+  - [x] 1.2 处理退款请求成功提交
     - 更新退款状态为 PROCESSING
     - 记录微信退款单号 wechatRefundId
-  - [ ] 1.3 处理退款请求失败场景
+  - [x] 1.3 处理退款请求失败场景
     - 网络错误、参数错误
     - 更新退款状态为 FAILED
     - 记录详细错误日志
-  - [ ] 1.4 验证退款金额 <= 订单原支付金额
-  - [ ] 1.5 验证退款在支付完成后365天内（微信限制）
+  - [x] 1.4 验证退款金额 <= 订单原支付金额
+  - [x] 1.5 验证退款在支付完成后365天内（微信限制）
 
-- [ ] Task 2: 实现微信退款回调处理端点 (AC: #9-#26)
-  - [ ] 2.1 创建 POST /api/v1/refunds/payment/notify 端点
+- [x] Task 2: 实现微信退款回调处理端点 (AC: #9-#26)
+  - [x] 2.1 创建 POST /api/v1/refunds/payment/notify 端点
     - 无需认证（微信服务器调用）
-  - [ ] 2.2 验证微信退款回调签名
-  - [ ] 2.3 解密退款回调数据
-  - [ ] 2.4 处理退款成功状态（SUCCESS）
+  - [x] 2.2 验证微信退款回调签名
+  - [x] 2.3 解密退款回调数据
+  - [x] 2.4 处理退款成功状态（SUCCESS）
     - 查询退款记录
     - 更新状态为 COMPLETED
     - 记录完成时间 refundedAt
-  - [ ] 2.5 处理退款异常状态（ABNORMAL）
+  - [x] 2.5 处理退款异常状态（ABNORMAL）
     - 更新状态为 FAILED
     - 记录失败原因
-  - [ ] 2.6 处理退款处理中状态（PROCESSING）
+  - [x] 2.6 处理退款处理中状态（PROCESSING）
     - 不更新状态，等待后续回调
-  - [ ] 2.7 实现幂等性处理（重复回调）
-  - [ ] 2.8 返回正确的 XML 响应给微信
+  - [x] 2.7 实现幂等性处理（重复回调）
+  - [x] 2.8 返回正确的 JSON 响应给微信
 
-- [ ] Task 3: 实现管理员手动重试退款功能 (AC: #31)
-  - [ ] 3.1 创建 POST /api/v1/admin/refunds/:id/retry 端点
+- [x] Task 3: 实现管理员手动重试退款功能 (AC: #31)
+  - [x] 3.1 创建 POST /api/v1/admin/refunds/:id/retry 端点
     - 应用 @Roles(Role.ADMIN) 权限保护
-  - [ ] 3.2 验证退款记录存在
-  - [ ] 3.3 验证退款状态为 FAILED
-  - [ ] 3.4 重新调用 WechatPayService.refund()
-  - [ ] 3.5 更新退款状态和重试次数
-  - [ ] 3.6 记录重试操作日志
+  - [x] 3.2 验证退款记录存在
+  - [x] 3.3 验证退款状态为 FAILED
+  - [x] 3.4 重新调用 WechatPayService.refund()
+  - [x] 3.5 更新退款状态和重试次数
+  - [x] 3.6 记录重试操作日志
 
-- [ ] Task 4: 集成退款流程到 AdminRefundsService (AC: #2-#8)
-  - [ ] 4.1 在 AdminRefundsService.approve() 中调用退款服务
+- [x] Task 4: 集成退款流程到 AdminRefundsService (AC: #2-#8)
+  - [x] 4.1 在 AdminRefundsService.approve() 中调用退款服务
     - 检查 WechatPayService.refund 是否已实现
     - 如果已实现，自动调用退款
     - 如果未实现，记录状态为 APPROVED 等待后续处理
-  - [ ] 4.2 处理退款服务调用失败场景
+  - [x] 4.2 处理退款服务调用失败场景
     - 记录错误但保持 APPROVED 状态
     - 标记需要管理员手动重试
-  - [ ] 4.3 清除相关 Redis 缓存
+  - [x] 4.3 清除相关 Redis 缓存
 
-- [ ] Task 5: 添加退款 DTO 和响应类型 (AC: all)
-  - [ ] 5.1 创建 WechatRefundRequestDto
+- [x] Task 5: 添加退款 DTO 和响应类型 (AC: all)
+  - [x] 5.1 创建 WechatRefundRequestDto
     - orderNo, refundNo, amount, reason
-  - [ ] 5.2 创建 WechatRefundResponseDto
+  - [x] 5.2 创建 WechatRefundResponseDto
     - 包含退款状态、微信退款单号
-  - [ ] 5.3 创建 RefundNotifyDto
+  - [x] 5.3 创建 RefundNotifyDto
     - 微信回调数据结构
-  - [ ] 5.4 创建 RetryRefundDto（如果需要）
+  - [x] 5.4 创建 RetryRefundDto（如果需要）
 
-- [ ] Task 6: 实现退款状态查询功能 (AC: all)
-  - [ ] 6.1 在 WechatPayService 中添加 queryRefund() 方法
+- [x] Task 6: 实现退款状态查询功能 (AC: all)
+  - [x] 6.1 在 WechatPayService 中添加 queryRefund() 方法
     - 查询退款状态
     - 主动刷新退款记录状态
-  - [ ] 6.2 实现定时任务（可选）
+  - [x] 6.2 实现定时任务（可选）
     - 定期查询 PROCESSING 状态的退款
     - 自动更新超时未回调的退款
 
-- [ ] Task 7: 添加单元测试和集成测试 (AC: all)
-  - [ ] 7.1 测试退款方法成功场景
-  - [ ] 7.2 测试退款方法失败场景（网络错误、参数错误）
-  - [ ] 7.3 测试退款回调处理（SUCCESS、ABNORMAL、PROCESSING）
-  - [ ] 7.4 测试幂等性处理（重复回调）
-  - [ ] 7.5 测试手动重试功能
-  - [ ] 7.6 测试退款金额验证
-  - [ ] 7.7 测试退款期限验证（365天）
-  - [ ] 7.8 测试签名验证和数据完整性
+- [x] Task 7: 添加单元测试和集成测试 (AC: all)
+  - [x] 7.1 测试退款方法成功场景
+  - [x] 7.2 测试退款方法失败场景（网络错误、参数错误）
+  - [x] 7.3 测试退款回调处理（SUCCESS、ABNORMAL、PROCESSING）
+  - [x] 7.4 测试幂等性处理（重复回调）
+  - [x] 7.5 测试手动重试功能
+  - [x] 7.6 测试退款金额验证
+  - [x] 7.7 测试退款期限验证（365天）
+  - [x] 7.8 测试签名验证和数据完整性
 
-- [ ] Task 8: 更新 Swagger 文档 (AC: all)
-  - [ ] 8.1 添加退款回调端点文档
-  - [ ] 8.2 添加手动重试端点文档
-  - [ ] 8.3 标注端点为外部调用（微信服务器）
+- [x] Task 8: 更新 Swagger 文档 (AC: all)
+  - [x] 8.1 添加退款回调端点文档
+  - [x] 8.2 添加手动重试端点文档
+  - [x] 8.3 标注端点为外部调用（微信服务器）
 
 ## Dev Notes
 
@@ -389,17 +389,18 @@ Story 5.6 created via create-story workflow. Ready for dev-story implementation.
 
 ### File List
 
-**New Files to Create:**
+**New Files Created:**
 - `backend-api/src/features/refunds/refund-notify.controller.ts` - 退款回调控制器
 - `backend-api/src/features/refunds/refund-notify.controller.spec.ts` - 测试文件
 - `backend-api/src/features/refunds/dto/wechat-refund.dto.ts` - 微信退款 DTO
 - `backend-api/src/features/refunds/dto/refund-notify.dto.ts` - 退款回调 DTO
-- `backend-api/src/features/refunds/dto/retry-refund.dto.ts` - 手动重试 DTO
+- `backend-api/src/features/refunds/dto/admin/retry-refund.dto.ts` - 手动重试 DTO
 
-**Files to Modify:**
+**Files Modified:**
 - `backend-api/src/features/payments/wechat-pay.service.ts` - 添加 refund() 和 queryRefund() 方法
 - `backend-api/src/features/payments/wechat-pay.service.spec.ts` - 添加退款测试
 - `backend-api/src/features/refunds/admin-refunds.controller.ts` - 添加 retry 端点
-- `backend-api/src/features/refunds/admin-refunds.service.ts` - 集成退款流程到 approve()
-- `backend-api/src/features/refunds/refunds.module.ts` - 导入 RefundNotifyController
-- `backend-api/src/features/refunds/admin-refunds.service.spec.ts` - 添加重试测试
+- `backend-api/src/features/refunds/admin-refunds.service.ts` - 集成退款流程到 approve() 和添加 retry() 方法
+- `backend-api/src/features/refunds/refunds.module.ts` - 导入 RefundNotifyController 和 PaymentsModule
+- `backend-api/src/features/refunds/dto/admin/index.ts` - 导出 RetryRefundResponseDto
+- `backend-api/src/features/refunds/admin-refunds.service.spec.ts` - 更新测试以包含 WechatPayService mock
