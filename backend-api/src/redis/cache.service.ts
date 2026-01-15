@@ -211,6 +211,15 @@ export class CacheService implements OnModuleInit {
   }
 
   /**
+   * 原子递增操作（递增 1，用于频率限制计数）
+   * @param key 键
+   * @returns 递增后的值，Redis 不可用时返回 null
+   */
+  async incr(key: string): Promise<number | null> {
+    return this.incrby(key, 1);
+  }
+
+  /**
    * 获取键的当前值
    * @param key 键
    * @returns 当前值，Redis 不可用时返回 null

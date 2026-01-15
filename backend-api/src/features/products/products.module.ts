@@ -5,13 +5,14 @@ import { AdminProductsController } from './admin-products.controller';
 import { AdminProductsService } from './admin-products.service';
 import { PrismaModule } from '../../prisma.module';
 import { RedisModule } from '../../redis/redis.module';
+import { OssModule } from '../../oss/oss.module';
 
 /**
  * Products Module
  * 产品功能模块
  */
 @Module({
-  imports: [PrismaModule, RedisModule],
+  imports: [PrismaModule, RedisModule, OssModule],
   controllers: [ProductsController, AdminProductsController],
   providers: [ProductsService, AdminProductsService],
   exports: [ProductsService],

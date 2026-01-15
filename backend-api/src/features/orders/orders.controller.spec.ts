@@ -13,6 +13,8 @@ describe('OrdersController', () => {
 
   const mockOrdersService = {
     create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
     checkPaymentQueryRateLimit: jest.fn(),
     checkPaymentStatus: jest.fn(),
   };
@@ -172,6 +174,158 @@ describe('OrdersController', () => {
       mockOrdersService.checkPaymentStatus.mockRejectedValue(error);
 
       await expect(controller.getPaymentStatus(mockUser, '1', mockResponse)).rejects.toThrow(error);
+    });
+  });
+
+  describe('findAll', () => {
+    const mockOrderListResponse = {
+      data: [
+        {
+          id: 1,
+          orderNo: 'ORD20240114123456789',
+          status: OrderStatus.PAID,
+          totalAmount: '299.00',
+          productName: '上海科技馆探索之旅',
+          createdAt: '2024-01-14T12:00:00Z',
+        },
+        {
+          id: 2,
+          orderNo: 'ORD20240113987654321',
+          status: OrderStatus.PENDING,
+          totalAmount: '199.00',
+          productName: '自然博物馆奇妙夜',
+          createdAt: '2024-01-13T10:30:00Z',
+        },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 20,
+    };
+
+    it('should return paginated order list', async () => {
+      mockOrdersService.findAll.mockResolvedValue(mockOrderListResponse);
+
+      const result = await controller.findAll(mockUser, {});
+
+      expect(result).toEqual(mockOrderListResponse);
+      expect(mockOrdersService.findAll).toHaveBeenCalledWith(1, {});
+    });
+
+    it('should pass query parameters to service', async () => {
+      mockOrdersService.findAll.mockResolvedValue(mockOrderListResponse);
+
+      const queryDto = {
+        page: 2,
+        pageSize: 10,
+        status: OrderStatus.PAID,
+        sortBy: 'totalAmount' as const,
+        sortOrder: 'asc' as const,
+      };
+
+      await controller.findAll(mockUser, queryDto);
+
+      expect(mockOrdersService.findAll).toHaveBeenCalledWith(1, queryDto);
+    });
+
+    it('should propagate service errors', async () => {
+      const error = new Error('Database error');
+      mockOrdersService.findAll.mockRejectedValue(error);
+
+      await expect(controller.findAll(mockUser, {})).rejects.toThrow(error);
+    });
+  });
+
+  describe('findOne', () => {
+    const mockOrderDetailResponse = {
+      data: {
+        id: 1,
+        orderNo: 'ORD20240114123456789',
+        status: OrderStatus.PAID,
+        totalAmount: '299.00',
+        actualAmount: '299.00',
+        remark: '请提前预约',
+        contactName: '张三',
+        contactPhone: '138****8000',
+        childName: '小明',
+        childAge: 8,
+        bookingDate: '2024-02-15',
+        paidAt: '2024-01-14T12:30:00Z',
+        createdAt: '2024-01-14T12:00:00Z',
+        items: [
+          {
+            id: 1,
+            productName: '上海科技馆探索之旅',
+            productPrice: '299.00',
+            quantity: 1,
+            subtotal: '299.00',
+          },
+        ],
+        payments: [
+          {
+            id: 1,
+            transactionId: 'wx1234567890',
+            channel: 'WECHAT_JSAPI',
+            amount: '299.00',
+            status: 'SUCCESS',
+            createdAt: '2024-01-14T12:30:00Z',
+          },
+        ],
+        refunds: [],
+      },
+    };
+
+    it('should return order detail with masked phone', async () => {
+      mockOrdersService.findOne.mockResolvedValue(mockOrderDetailResponse.data);
+
+      const result = await controller.findOne(mockUser, '1');
+
+      expect(result).toEqual(mockOrderDetailResponse);
+      expect(mockOrdersService.findOne).toHaveBeenCalledWith(1, 1);
+    });
+
+    it('should throw HttpException for invalid order ID', async () => {
+      await expect(controller.findOne(mockUser, 'invalid')).rejects.toThrow(
+        new HttpException('Invalid order ID', 400),
+      );
+      expect(mockOrdersService.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should propagate NotFoundException from service', async () => {
+      const error = new Error('订单不存在');
+      mockOrdersService.findOne.mockRejectedValue(error);
+
+      await expect(controller.findOne(mockUser, '1')).rejects.toThrow(error);
+    });
+
+    it('should propagate ForbiddenException from service', async () => {
+      const error = new Error('无权访问此订单');
+      mockOrdersService.findOne.mockRejectedValue(error);
+
+      await expect(controller.findOne(mockUser, '1')).rejects.toThrow(error);
+    });
+
+    it('should include refund records when present', async () => {
+      const responseWithRefunds = {
+        ...mockOrderDetailResponse,
+        data: {
+          ...mockOrderDetailResponse.data,
+          refunds: [
+            {
+              id: 1,
+              refundNo: 'REF20240114123456789',
+              refundAmount: '299.00',
+              reason: '家长原因退款',
+              status: 'PENDING',
+              createdAt: '2024-01-14T14:00:00Z',
+            },
+          ],
+        },
+      };
+      mockOrdersService.findOne.mockResolvedValue(responseWithRefunds.data);
+
+      const result = await controller.findOne(mockUser, '1');
+
+      expect(result.data.refunds).toHaveLength(1);
     });
   });
 });

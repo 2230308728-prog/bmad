@@ -182,6 +182,7 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
   private serialNo: string;
   private privateKeyPath: string;
   private notifyUrl: string;
+  private refundNotifyUrl: string; // 退款回调URL（独立配置）
 
   constructor(private readonly configService: ConfigService) {
     this.appId = this.configService.get<string>('WECHAT_PAY_APPID', '');
@@ -190,6 +191,7 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
     this.privateKeyPath = this.configService.get<string>('WECHAT_PAY_PRIVATE_KEY_PATH', '');
     this.apiV3Key = this.configService.get<string>('WECHAT_PAY_APIV3_KEY', '');
     this.notifyUrl = this.configService.get<string>('WECHAT_PAY_NOTIFY_URL', '');
+    this.refundNotifyUrl = this.configService.get<string>('WECHAT_PAY_REFUND_NOTIFY_URL', '');
   }
 
   /**
@@ -495,6 +497,22 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       throw new Error('微信支付服务不可用');
     }
 
+    // 验证订单金额必须大于0（边界检查）
+    if (totalAmount <= 0) {
+      this.logger.error(
+        `订单金额无效 [orderNo: ${orderNo}, refundNo: ${refundNo}, totalAmount: ${totalAmount}]`,
+      );
+      throw new Error('订单金额必须大于0');
+    }
+
+    // 验证退款金额必须大于0（边界检查）
+    if (amount <= 0) {
+      this.logger.error(
+        `退款金额无效 [orderNo: ${orderNo}, refundNo: ${refundNo}, amount: ${amount}]`,
+      );
+      throw new Error('退款金额必须大于0');
+    }
+
     // 验证退款金额不能超过订单原支付金额（AC #32）
     if (amount > totalAmount) {
       this.logger.error(
@@ -508,6 +526,8 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       const daysSincePayment = Math.floor(
         (Date.now() - paymentTime.getTime()) / (1000 * 60 * 60 * 24),
       );
+      // 365.001 天会被向下取整为 365，但实际已超过365天
+      // 使用严格大于确保第366天开始才拒绝
       if (daysSincePayment > 365) {
         this.logger.error(
           `退款超过365天期限 [orderNo: ${orderNo}, refundNo: ${refundNo}, daysSincePayment: ${daysSincePayment}]`,

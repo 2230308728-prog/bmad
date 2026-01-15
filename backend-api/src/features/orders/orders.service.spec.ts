@@ -514,4 +514,253 @@ describe('OrdersService', () => {
       );
     });
   });
+
+  describe('findAll', () => {
+    const mockOrders = [
+      {
+        id: 1,
+        orderNo: 'ORD20240114123456789',
+        userId: 1,
+        totalAmount: new Prisma.Decimal(299),
+        status: OrderStatus.PAID,
+        createdAt: new Date('2024-01-14T12:00:00Z'),
+        items: [
+          {
+            productName: '上海科技馆探索之旅',
+          },
+        ],
+      },
+      {
+        id: 2,
+        orderNo: 'ORD20240113987654321',
+        userId: 1,
+        totalAmount: new Prisma.Decimal(199),
+        status: OrderStatus.PENDING,
+        createdAt: new Date('2024-01-13T10:30:00Z'),
+        items: [
+          {
+            productName: '自然博物馆奇妙夜',
+          },
+        ],
+      },
+    ];
+
+    it('should return paginated order list without filters', async () => {
+      (mockPrismaService as any).order = {
+        findMany: jest.fn().mockResolvedValue(mockOrders),
+        count: jest.fn().mockResolvedValue(2),
+      };
+
+      const result = await service.findAll(1, { page: 1, pageSize: 20 });
+
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(20);
+      expect(result.data[0]).toHaveProperty('id', 1);
+      expect(result.data[0]).toHaveProperty('orderNo', 'ORD20240114123456789');
+      expect(result.data[0]).toHaveProperty('productName', '上海科技馆探索之旅');
+    });
+
+    it('should filter orders by status', async () => {
+      (mockPrismaService as any).order = {
+        findMany: jest.fn().mockResolvedValue([mockOrders[0]]),
+        count: jest.fn().mockResolvedValue(1),
+      };
+
+      const result = await service.findAll(1, { page: 1, pageSize: 20, status: OrderStatus.PAID });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].status).toBe('PAID');
+      expect((mockPrismaService as any).order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: OrderStatus.PAID,
+          }),
+        }),
+      );
+    });
+
+    it('should apply pagination correctly', async () => {
+      (mockPrismaService as any).order = {
+        findMany: jest.fn().mockResolvedValue(mockOrders),
+        count: jest.fn().mockResolvedValue(50),
+      };
+
+      const result = await service.findAll(1, { page: 2, pageSize: 10 });
+
+      expect(result.page).toBe(2);
+      expect(result.pageSize).toBe(10);
+      expect((mockPrismaService as any).order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 10,
+          take: 10,
+        }),
+      );
+    });
+
+    it('should sort by createdAt desc by default', async () => {
+      (mockPrismaService as any).order = {
+        findMany: jest.fn().mockResolvedValue(mockOrders),
+        count: jest.fn().mockResolvedValue(2),
+      };
+
+      await service.findAll(1, { page: 1, pageSize: 20 });
+
+      expect((mockPrismaService as any).order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+    });
+
+    it('should sort by totalAmount asc when specified', async () => {
+      (mockPrismaService as any).order = {
+        findMany: jest.fn().mockResolvedValue(mockOrders),
+        count: jest.fn().mockResolvedValue(2),
+      };
+
+      await service.findAll(1, { page: 1, pageSize: 20, sortBy: 'totalAmount', sortOrder: 'asc' });
+
+      expect((mockPrismaService as any).order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: { totalAmount: 'asc' },
+        }),
+      );
+    });
+
+    it('should handle empty order list', async () => {
+      (mockPrismaService as any).order = {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      };
+
+      const result = await service.findAll(1, { page: 1, pageSize: 20 });
+
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+  });
+
+  describe('findOne', () => {
+    const mockOrderDetail = {
+      id: 1,
+      orderNo: 'ORD20240114123456789',
+      userId: 1,
+      totalAmount: new Prisma.Decimal(299),
+      actualAmount: new Prisma.Decimal(299),
+      status: OrderStatus.PAID,
+      paymentStatus: PaymentStatus.SUCCESS,
+      remark: '请提前预约',
+      contactName: '张三',
+      contactPhone: '13800138000',
+      childName: '小明',
+      childAge: 8,
+      bookingDate: new Date('2024-02-15'),
+      paidAt: new Date('2024-01-14T12:30:00Z'),
+      createdAt: new Date('2024-01-14T12:00:00Z'),
+      items: [
+        {
+          id: 1,
+          productName: '上海科技馆探索之旅',
+          productPrice: new Prisma.Decimal(299),
+          quantity: 1,
+          subtotal: new Prisma.Decimal(299),
+        },
+      ],
+      payments: [
+        {
+          id: 1,
+          transactionId: 'wx1234567890',
+          channel: 'WECHAT_JSAPI',
+          amount: new Prisma.Decimal(299),
+          status: PaymentStatus.SUCCESS,
+          createdAt: new Date('2024-01-14T12:30:00Z'),
+        },
+      ],
+      refunds: [],
+    };
+
+    it('should return order detail with masked phone number', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(mockOrderDetail),
+      };
+
+      const result = await service.findOne(1, 1);
+
+      expect(result).toHaveProperty('id', 1);
+      expect(result).toHaveProperty('orderNo', 'ORD20240114123456789');
+      expect(result).toHaveProperty('contactPhone', '138****8000');
+      expect(result).toHaveProperty('items');
+      expect(result).toHaveProperty('payments');
+      expect(result.items).toHaveLength(1);
+      expect(result.payments).toHaveLength(1);
+    });
+
+    it('should throw NotFoundException when order does not exist', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(null),
+      };
+
+      await expect(service.findOne(1, 1)).rejects.toThrow(
+        new NotFoundException('订单不存在'),
+      );
+    });
+
+    it('should throw NotFoundException when order belongs to different user', async () => {
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(null),
+      };
+
+      await expect(service.findOne(1, 2)).rejects.toThrow(
+        new NotFoundException('订单不存在'),
+      );
+    });
+
+    it('should include refund records when present', async () => {
+      const orderWithRefund = {
+        ...mockOrderDetail,
+        refunds: [
+          {
+            id: 1,
+            refundNo: 'REF20240114123456789',
+            refundAmount: new Prisma.Decimal(299),
+            reason: '家长原因退款',
+            status: 'PENDING',
+            createdAt: new Date('2024-01-14T14:00:00Z'),
+          },
+        ],
+      };
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(orderWithRefund),
+      };
+
+      const result = await service.findOne(1, 1);
+
+      expect(result.refunds).toHaveLength(1);
+      expect(result.refunds[0]).toHaveProperty('refundNo', 'REF20240114123456789');
+    });
+
+    it('should mask phone number correctly', async () => {
+      const orderWithShortPhone = { ...mockOrderDetail, contactPhone: '123' };
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(orderWithShortPhone),
+      };
+
+      const result = await service.findOne(1, 1);
+
+      expect(result.contactPhone).toBe('123');
+    });
+
+    it('should handle null phone number', async () => {
+      const orderWithNullPhone = { ...mockOrderDetail, contactPhone: null };
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(orderWithNullPhone),
+      };
+
+      const result = await service.findOne(1, 1);
+
+      expect(result.contactPhone).toBe('');
+    });
+  });
 });

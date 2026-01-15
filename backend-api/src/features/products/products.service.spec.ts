@@ -6,6 +6,7 @@ import { ProductsService } from './products.service';
 import { GetProductsDto } from './dto/get-products.dto';
 import { ProductStatus } from '@prisma/client';
 import { CacheService } from '../../redis/cache.service';
+import { CacheKeyManagerService } from '../../cache/cache-key-manager.service';
 
 // Mock Cache interface
 interface MockCache {
@@ -26,6 +27,11 @@ describe('ProductsService', () => {
 
   const mockCacheService = {
     del: jest.fn(),
+  };
+
+  const mockCacheKeyManagerService = {
+    registerKey: jest.fn().mockResolvedValue(undefined),
+    invalidateProductCache: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockPrismaService = {
@@ -52,6 +58,10 @@ describe('ProductsService', () => {
         {
           provide: CacheService,
           useValue: mockCacheService,
+        },
+        {
+          provide: CacheKeyManagerService,
+          useValue: mockCacheKeyManagerService,
         },
       ],
     }).compile();
@@ -285,25 +295,36 @@ describe('ProductsService', () => {
   });
 
   describe('clearProductsCache', () => {
-    it('should clear all tracked cache keys', async () => {
-      // Access private method for testing
-      (service as any).productCacheKeys.add('products:list:1:20:all:created');
-      (service as any).productCacheKeys.add('products:list:1:20:1:price_asc');
-
+    it('should clear all product cache via CacheKeyManager', async () => {
       await service.clearProductsCache();
 
-      expect(cacheService.del).toHaveBeenCalledTimes(2);
-      expect(cacheService.del).toHaveBeenCalledWith('products:list:1:20:all:created');
-      expect(cacheService.del).toHaveBeenCalledWith('products:list:1:20:1:price_asc');
+      expect(mockCacheKeyManagerService.invalidateProductCache).toHaveBeenCalledWith();
     });
 
     it('should handle cache clear failure gracefully', async () => {
-      mockCacheService.del.mockRejectedValue(new Error('Cache clear failed'));
-
-      (service as any).productCacheKeys.add('products:list:1:20:all:created');
+      mockCacheKeyManagerService.invalidateProductCache.mockRejectedValue(
+        new Error('Cache clear failed')
+      );
 
       // Should not throw
       await expect(service.clearProductsCache()).resolves.not.toThrow();
+    });
+  });
+
+  describe('clearProductCache', () => {
+    it('should clear specific product cache via CacheKeyManager', async () => {
+      await service.clearProductCache(123);
+
+      expect(mockCacheKeyManagerService.invalidateProductCache).toHaveBeenCalledWith(123);
+    });
+
+    it('should handle specific product cache clear failure gracefully', async () => {
+      mockCacheKeyManagerService.invalidateProductCache.mockRejectedValue(
+        new Error('Cache clear failed')
+      );
+
+      // Should not throw
+      await expect(service.clearProductCache(123)).resolves.not.toThrow();
     });
   });
 

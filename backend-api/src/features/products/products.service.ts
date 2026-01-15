@@ -8,6 +8,7 @@ import { ProductListItemDto } from './dto/product-list-item.dto';
 import { ProductDetailDto } from './dto/product-detail.dto';
 import { ProductStatus } from '@prisma/client';
 import { CacheService } from '../../redis/cache.service';
+import { CacheKeyManagerService, CacheKeyPattern } from '../../cache/cache-key-manager.service';
 import * as crypto from 'crypto';
 
 /**
@@ -17,13 +18,12 @@ import * as crypto from 'crypto';
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
-  // 追踪所有产品列表缓存键，用于批量清除
-  private readonly productCacheKeys = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly cacheService: CacheService,
+    private readonly cacheKeyManager: CacheKeyManagerService,
   ) {}
 
   /**
@@ -72,7 +72,11 @@ export class ProductsService {
     // 尝试存入缓存（失败不影响返回结果）
     try {
       await this.cacheManager.set(cacheKey, result, 300); // TTL: 5分钟
-      this.productCacheKeys.add(cacheKey); // 追踪缓存键
+      // 注册缓存键到标签系统
+      await this.cacheKeyManager.registerKey(cacheKey, [
+        CacheKeyPattern.PRODUCTS_LIST,
+        dto.categoryId ? `category:${dto.categoryId}` : 'products:all',
+      ]);
       this.logger.debug(`Cached result for key: ${cacheKey}`);
     } catch (error) {
       this.logger.warn(`Cache set failed for key ${cacheKey}:`, error);
@@ -224,7 +228,11 @@ export class ProductsService {
     // 尝试存入缓存（失败不影响返回结果）
     try {
       await this.cacheManager.set(cacheKey, result, 120); // TTL: 2分钟
-      this.productCacheKeys.add(cacheKey); // 追踪缓存键
+      // 注册缓存键到标签系统
+      await this.cacheKeyManager.registerKey(cacheKey, [
+        CacheKeyPattern.PRODUCTS_SEARCH,
+        dto.categoryId ? `category:${dto.categoryId}` : 'products:all',
+      ]);
       this.logger.debug(`Cached search result for key: ${cacheKey}`);
     } catch (error) {
       this.logger.warn(`Cache set failed for search key ${cacheKey}:`, error);
@@ -432,7 +440,11 @@ export class ProductsService {
     if (result) {
       try {
         await this.cacheManager.set(cacheKey, result, 600); // TTL: 10分钟
-        this.productCacheKeys.add(cacheKey); // 追踪缓存键
+        // 注册缓存键到标签系统
+        await this.cacheKeyManager.registerKey(cacheKey, [
+          `product:${id}`,
+          CacheKeyPattern.PRODUCTS_DETAIL,
+        ]);
         this.logger.debug(`Cached product detail for id: ${id}`);
       } catch (error) {
         this.logger.warn(`Cache set failed for product ${id}:`, error);
@@ -520,21 +532,26 @@ export class ProductsService {
    */
   async clearProductsCache(): Promise<void> {
     try {
-      // 使用 CacheService 删除所有追踪的产品缓存键
-      const deletePromises = Array.from(this.productCacheKeys).map((key) =>
-        this.cacheService.del(key),
-      );
-      await Promise.all(deletePromises);
+      // 使用 CacheKeyManager 按模式失效所有产品相关缓存
+      await this.cacheKeyManager.invalidateProductCache();
 
-      // 清空追踪集合
-      this.productCacheKeys.clear();
-
-      this.logger.log(
-        `Successfully cleared ${deletePromises.length} product cache entries`,
-      );
+      this.logger.log('Successfully cleared all product cache entries');
     } catch (error) {
       this.logger.warn('Failed to clear products cache:', error);
       // 即使失败也不影响业务流程
+    }
+  }
+
+  /**
+   * 清除特定产品的缓存
+   * @param productId 产品 ID
+   */
+  async clearProductCache(productId: number): Promise<void> {
+    try {
+      await this.cacheKeyManager.invalidateProductCache(productId);
+      this.logger.log(`Successfully cleared cache for product: ${productId}`);
+    } catch (error) {
+      this.logger.warn(`Failed to clear cache for product ${productId}:`, error);
     }
   }
 }

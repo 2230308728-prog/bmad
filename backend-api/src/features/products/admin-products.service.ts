@@ -1,9 +1,27 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../lib/prisma.service';
 import { ProductsService } from './products.service';
+import { OssService } from '../../oss/oss.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ProductStatus, Prisma } from '@prisma/client';
+import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+import { UpdateProductStockDto } from './dto/update-product-stock.dto';
+import { ProductStatus, Prisma, Product } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * 产品类型定义 - 用于方法返回值
+ */
+type ProductWithCategory = Prisma.ProductGetPayload<{ include: { category: true } }>;
+
+/**
+ * 带 lowStock 标志的产品类型
+ */
+export type ProductWithLowStock = ProductWithCategory & {
+  price: string;
+  originalPrice: string | null;
+  lowStock: boolean;
+};
 
 /**
  * Admin Products Service
@@ -16,6 +34,7 @@ export class AdminProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly productsService: ProductsService,
+    private readonly ossService: OssService,
   ) {}
 
   /**
@@ -147,6 +166,11 @@ export class AdminProductsService {
       throw new BadRequestException('最大年龄不能小于最小年龄');
     }
 
+    // 验证图片数量（最多 10 张）
+    if (updateProductDto.images !== undefined && updateProductDto.images.length > 10) {
+      throw new BadRequestException('产品最多支持 10 张图片');
+    }
+
     // 构建更新数据（只包含提供的字段，防止清空非空字段）
     const updateData: Prisma.ProductUpdateInput = {};
     if (updateProductDto.title !== undefined) updateData.title = updateProductDto.title;
@@ -240,5 +264,199 @@ export class AdminProductsService {
 
     // 清除产品缓存
     await this.productsService.clearProductsCache();
+  }
+
+  /**
+   * 更新产品状态
+   * @param id 产品 ID
+   * @param updateStatusDto 更新状态 DTO
+   * @returns 更新后的产品
+   */
+  async updateStatus(id: number, updateStatusDto: UpdateProductStatusDto) {
+    this.logger.log(`Updating product status: ${id} -> ${updateStatusDto.status}`);
+
+    // 验证产品存在
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`产品 ID ${id} 不存在`);
+    }
+
+    // 验证状态转换合法性：不允许从 PUBLISHED 直接变为 DRAFT
+    if (product.status === ProductStatus.PUBLISHED && updateStatusDto.status === ProductStatus.DRAFT) {
+      throw new BadRequestException('不允许从已发布状态直接变为草稿状态');
+    }
+
+    // 更新产品状态
+    const updatedProduct = await this.prisma.product.update({
+      where: { id },
+      data: {
+        status: updateStatusDto.status,
+      },
+      include: {
+        category: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    this.logger.log(`Product status updated successfully: ${id} -> ${updateStatusDto.status}`);
+
+    // 清除产品缓存
+    await this.productsService.clearProductsCache();
+
+    // 转换 Decimal 为字符串
+    return {
+      ...updatedProduct,
+      price: updatedProduct.price.toString(),
+      originalPrice: updatedProduct.originalPrice?.toString(),
+    };
+  }
+
+  /**
+   * 更新产品库存
+   * @param id 产品 ID
+   * @param updateStockDto 更新库存 DTO
+   * @returns 更新后的产品（含 lowStock 标志）
+   */
+  async updateStock(id: number, updateStockDto: UpdateProductStockDto): Promise<ProductWithLowStock> {
+    this.logger.log(`Updating product stock: ${id} -> ${updateStockDto.stock} (reason: ${updateStockDto.reason || 'N/A'})`);
+
+    // 验证产品存在
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`产品 ID ${id} 不存在`);
+    }
+
+    // 验证库存 >= 0
+    if (updateStockDto.stock < 0) {
+      throw new BadRequestException('库存数量不能小于 0');
+    }
+
+    const oldStock = product.stock;
+
+    // 使用 Prisma 事务：更新库存 + 创建历史记录
+    const updatedProduct = await this.prisma.$transaction(async (tx) => {
+      // 更新库存
+      const updated = await tx.product.update({
+        where: { id },
+        data: {
+          stock: updateStockDto.stock,
+        },
+        include: {
+          category: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      // 创建库存变更历史记录
+      await tx.productStockHistory.create({
+        data: {
+          productId: id,
+          oldStock: oldStock,
+          newStock: updateStockDto.stock,
+          reason: updateStockDto.reason,
+        },
+      });
+
+      return updated;
+    });
+
+    // 检查库存是否 < 10，记录警告日志
+    const lowStock = updatedProduct.stock < 10;
+    if (lowStock) {
+      this.logger.warn(`⚠️ Low stock warning: Product ${id} (${updatedProduct.title}) has ${updatedProduct.stock} units left`);
+    }
+
+    this.logger.log(`Product stock updated successfully: ${id} (${oldStock} -> ${updateStockDto.stock})`);
+
+    // 清除产品缓存
+    await this.productsService.clearProductsCache();
+
+    // 转换 Decimal 为字符串，并添加 lowStock 标志
+    return {
+      ...updatedProduct,
+      price: updatedProduct.price.toString(),
+      originalPrice: updatedProduct.originalPrice?.toString(),
+      lowStock,
+    };
+  }
+
+  /**
+   * 获取低库存产品列表
+   * @returns 低库存产品列表（stock < 10，按库存升序排序）
+   */
+  async getLowStockProducts() {
+    this.logger.log('Fetching low stock products (stock < 10)');
+
+    const products = await this.prisma.product.findMany({
+      where: {
+        stock: {
+          lt: 10,
+        },
+      },
+      orderBy: {
+        stock: 'asc', // 按库存数量升序排序
+      },
+      select: {
+        id: true,
+        title: true,
+        stock: true,
+        categoryId: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    this.logger.log(`Found ${products.length} low stock products`);
+
+    return products;
+  }
+
+  /**
+   * 生成图片上传签名 URL
+   * @param fileName 文件名
+   * @returns 上传 URL、文件名和文件路径
+   */
+  generateUploadUrl(fileName: string) {
+    this.logger.log(`Generating upload URL for file: ${fileName}`);
+
+    // 验证文件类型（已通过 DTO 验证，这里额外确保）
+    if (!this.ossService.validateFileType(fileName)) {
+      throw new BadRequestException('文件类型必须是以下之一: jpg, jpeg, png, webp');
+    }
+
+    // 生成唯一文件名（使用 UUID + 日期路径）
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const ext = fileName.split('.').pop();
+    // 防御性检查：确保文件扩展名存在
+    if (!ext || ext === fileName) {
+      throw new BadRequestException('文件名必须包含有效的扩展名（如 .jpg, .png）');
+    }
+    const uniqueFileName = `products/${year}/${month}/${day}/${uuidv4()}.${ext}`;
+
+    // 生成 OSS 直传签名 URL（15 分钟有效）
+    const signedUrl = this.ossService.generateSignedUrl(uniqueFileName);
+
+    this.logger.log(`Upload URL generated successfully for: ${uniqueFileName}`);
+
+    return {
+      uploadUrl: signedUrl,
+      fileName: fileName,
+      fileKey: uniqueFileName,
+    };
   }
 }

@@ -3,6 +3,7 @@ import {
   Post,
   Patch,
   Delete,
+  Get,
   Body,
   Param,
   UseGuards,
@@ -11,11 +12,14 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { AdminProductsService } from './admin-products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+import { UpdateProductStockDto } from './dto/update-product-stock.dto';
+import { GenerateUploadUrlDto } from './dto/generate-upload-url.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ParsePositiveIntPipe } from '../../common/pipes/parse-positive-int.pipe';
@@ -220,6 +224,227 @@ export class AdminProductsController {
       await this.adminProductsService.remove(id);
     } catch (error) {
       this.logger.error(`Failed to delete product ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新产品状态
+   * @param id 产品 ID
+   * @param updateStatusDto 更新状态 DTO
+   * @returns 更新后的产品
+   */
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: '更新产品状态',
+    description: '管理员更新产品状态（DRAFT | PUBLISHED | UNPUBLISHED），需要 ADMIN 角色权限。不允许从 PUBLISHED 直接变为 DRAFT。',
+  })
+  @ApiParam({ name: 'id', type: Number, description: '产品 ID', example: 1 })
+  @ApiBody({ type: UpdateProductStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: '产品状态更新成功',
+    schema: {
+      example: {
+        id: 1,
+        title: '上海科技馆探索之旅',
+        status: 'PUBLISHED',
+        categoryId: 1,
+        category: { id: 1, name: '自然科学' },
+        // ... 其他产品字段
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '无效的状态转换（如从 PUBLISHED 到 DRAFT）',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '权限不足',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '产品不存在',
+  })
+  @ApiResponse({
+    status: 500,
+    description: '服务器内部错误',
+  })
+  async updateStatus(
+    @Param('id', ParsePositiveIntPipe) id: number,
+    @Body() updateStatusDto: UpdateProductStatusDto,
+  ) {
+    try {
+      this.logger.log(`Updating product ${id} status to: ${updateStatusDto.status}`);
+      return await this.adminProductsService.updateStatus(id, updateStatusDto);
+    } catch (error) {
+      this.logger.error(`Failed to update product ${id} status:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新产品库存
+   * @param id 产品 ID
+   * @param updateStockDto 更新库存 DTO
+   * @returns 更新后的产品（含 lowStock 标志）
+   */
+  @Patch(':id/stock')
+  @ApiOperation({
+    summary: '更新产品库存',
+    description: '管理员更新产品库存数量，需要 ADMIN 角色权限。会自动创建库存变更历史记录。库存 < 10 时会返回 lowStock: true 标志。',
+  })
+  @ApiParam({ name: 'id', type: Number, description: '产品 ID', example: 1 })
+  @ApiBody({ type: UpdateProductStockDto })
+  @ApiResponse({
+    status: 200,
+    description: '产品库存更新成功',
+    schema: {
+      example: {
+        id: 1,
+        title: '上海科技馆探索之旅',
+        stock: 30,
+        lowStock: false,
+        // ... 其他产品字段
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '无效的库存值（stock < 0）',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '权限不足',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '产品不存在',
+  })
+  @ApiResponse({
+    status: 500,
+    description: '服务器内部错误',
+  })
+  async updateStock(
+    @Param('id', ParsePositiveIntPipe) id: number,
+    @Body() updateStockDto: UpdateProductStockDto,
+  ) {
+    try {
+      this.logger.log(`Updating product ${id} stock to: ${updateStockDto.stock}`);
+      return await this.adminProductsService.updateStock(id, updateStockDto);
+    } catch (error) {
+      this.logger.error(`Failed to update product ${id} stock:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取低库存产品列表
+   * @returns 低库存产品列表（stock < 10，按库存升序排序）
+   */
+  @Get('low-stock')
+  @ApiOperation({
+    summary: '获取低库存产品列表',
+    description: '管理员查询库存低于 10 的产品列表，按库存数量升序排序，需要 ADMIN 角色权限',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '成功获取低库存产品列表',
+    schema: {
+      example: [
+        {
+          id: 1,
+          title: '产品A',
+          stock: 2,
+          categoryId: 1,
+          category: { id: 1, name: '自然科学' },
+        },
+        {
+          id: 2,
+          title: '产品B',
+          stock: 5,
+          categoryId: 2,
+          category: { id: 2, name: '历史文化' },
+        },
+      ],
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '权限不足',
+  })
+  @ApiResponse({
+    status: 500,
+    description: '服务器内部错误',
+  })
+  async getLowStockProducts() {
+    try {
+      this.logger.log('Fetching low stock products');
+      return await this.adminProductsService.getLowStockProducts();
+    } catch (error) {
+      this.logger.error('Failed to fetch low stock products:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 生成图片上传签名 URL
+   * @param generateUploadUrlDto 生成上传 URL DTO
+   * @returns 上传 URL、文件名和文件路径
+   */
+  @Post('images/upload')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '生成图片上传签名 URL',
+    description: '管理员获取 OSS 直传签名 URL，用于前端直接上传图片到 OSS，需要 ADMIN 角色权限。签名 URL 15 分钟有效。',
+  })
+  @ApiBody({ type: GenerateUploadUrlDto })
+  @ApiResponse({
+    status: 200,
+    description: '签名 URL 生成成功',
+    schema: {
+      example: {
+        uploadUrl: 'https://bucket.oss-cn-shanghai.aliyuncs.com/products/2024/01/14/uuid.jpg?signature=...',
+        fileName: 'example.jpg',
+        fileKey: 'products/2024/01/14/uuid.jpg',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '无效的文件类型（仅允许 jpg, jpeg, png, webp）',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '权限不足',
+  })
+  @ApiResponse({
+    status: 500,
+    description: '服务器内部错误',
+  })
+  async generateUploadUrl(@Body() generateUploadUrlDto: GenerateUploadUrlDto) {
+    try {
+      this.logger.log(`Generating upload URL for: ${generateUploadUrlDto.fileName}`);
+      return this.adminProductsService.generateUploadUrl(generateUploadUrlDto.fileName);
+    } catch (error) {
+      this.logger.error(`Failed to generate upload URL for "${generateUploadUrlDto.fileName}":`, error);
       throw error;
     }
   }

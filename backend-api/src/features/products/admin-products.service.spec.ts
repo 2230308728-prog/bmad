@@ -3,6 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { AdminProductsService } from './admin-products.service';
 import { PrismaService } from '../../lib/prisma.service';
 import { ProductsService } from './products.service';
+import { OssService } from '../../oss/oss.service';
 import { ProductStatus } from '@prisma/client';
 
 describe('AdminProductsService', () => {
@@ -17,13 +18,20 @@ describe('AdminProductsService', () => {
     product: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
     },
     $queryRaw: jest.fn(),
+    $transaction: jest.fn(),
   };
 
   const mockProductsService = {
     clearProductsCache: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockOssService = {
+    validateFileType: jest.fn(),
+    generateSignedUrl: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -37,6 +45,10 @@ describe('AdminProductsService', () => {
         {
           provide: ProductsService,
           useValue: mockProductsService,
+        },
+        {
+          provide: OssService,
+          useValue: mockOssService,
         },
       ],
     }).compile();
@@ -404,6 +416,412 @@ describe('AdminProductsService', () => {
 
       await expect(service.remove(1)).rejects.toThrow('Connection timeout');
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateStatus', () => {
+    const existingProduct = {
+      id: 1,
+      title: '上海科技馆探索之旅',
+      description: '精彩的科技探索之旅',
+      categoryId: 1,
+      price: { toString: () => '299.00' },
+      originalPrice: null,
+      stock: 50,
+      minAge: 6,
+      maxAge: 12,
+      duration: null,
+      location: '上海浦东新区',
+      images: [],
+      featured: false,
+      status: ProductStatus.DRAFT,
+      viewCount: 0,
+      bookingCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      category: { id: 1, name: '自然科学' },
+    };
+
+    it('should successfully update status from DRAFT to PUBLISHED', async () => {
+      const updateStatusDto = { status: ProductStatus.PUBLISHED };
+      const updatedProduct = {
+        ...existingProduct,
+        status: ProductStatus.PUBLISHED,
+      };
+
+      mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
+      mockPrismaService.product.update.mockResolvedValue(updatedProduct);
+
+      const result = await service.updateStatus(1, updateStatusDto);
+
+      expect(result).toBeDefined();
+      expect(result.status).toBe(ProductStatus.PUBLISHED);
+      expect(mockPrismaService.product.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+      expect(mockPrismaService.product.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { status: ProductStatus.PUBLISHED },
+        include: {
+          category: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+      expect(mockProductsService.clearProductsCache).toHaveBeenCalled();
+    });
+
+    it('should successfully update status from PUBLISHED to UNPUBLISHED', async () => {
+      const publishedProduct = { ...existingProduct, status: ProductStatus.PUBLISHED };
+      const updateStatusDto = { status: ProductStatus.UNPUBLISHED };
+      const updatedProduct = {
+        ...publishedProduct,
+        status: ProductStatus.UNPUBLISHED,
+      };
+
+      mockPrismaService.product.findUnique.mockResolvedValue(publishedProduct);
+      mockPrismaService.product.update.mockResolvedValue(updatedProduct);
+
+      const result = await service.updateStatus(1, updateStatusDto);
+
+      expect(result.status).toBe(ProductStatus.UNPUBLISHED);
+    });
+
+    it('should throw NotFoundException if product does not exist', async () => {
+      const updateStatusDto = { status: ProductStatus.PUBLISHED };
+      mockPrismaService.product.findUnique.mockResolvedValue(null);
+
+      await expect(service.updateStatus(999, updateStatusDto)).rejects.toThrow(NotFoundException);
+      await expect(service.updateStatus(999, updateStatusDto)).rejects.toThrow('产品 ID 999 不存在');
+      expect(mockPrismaService.product.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException for invalid status transition (PUBLISHED to DRAFT)', async () => {
+      const publishedProduct = { ...existingProduct, status: ProductStatus.PUBLISHED };
+      const updateStatusDto = { status: ProductStatus.DRAFT };
+
+      mockPrismaService.product.findUnique.mockResolvedValue(publishedProduct);
+
+      await expect(service.updateStatus(1, updateStatusDto)).rejects.toThrow(BadRequestException);
+      await expect(service.updateStatus(1, updateStatusDto)).rejects.toThrow('不允许从已发布状态直接变为草稿状态');
+      expect(mockPrismaService.product.update).not.toHaveBeenCalled();
+    });
+
+    it('should allow status transition from DRAFT to UNPUBLISHED', async () => {
+      const updateStatusDto = { status: ProductStatus.UNPUBLISHED };
+      const updatedProduct = {
+        ...existingProduct,
+        status: ProductStatus.UNPUBLISHED,
+      };
+
+      mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
+      mockPrismaService.product.update.mockResolvedValue(updatedProduct);
+
+      const result = await service.updateStatus(1, updateStatusDto);
+
+      expect(result.status).toBe(ProductStatus.UNPUBLISHED);
+    });
+
+    it('should allow status transition from UNPUBLISHED to PUBLISHED', async () => {
+      const unpublishedProduct = { ...existingProduct, status: ProductStatus.UNPUBLISHED };
+      const updateStatusDto = { status: ProductStatus.PUBLISHED };
+      const updatedProduct = {
+        ...unpublishedProduct,
+        status: ProductStatus.PUBLISHED,
+      };
+
+      mockPrismaService.product.findUnique.mockResolvedValue(unpublishedProduct);
+      mockPrismaService.product.update.mockResolvedValue(updatedProduct);
+
+      const result = await service.updateStatus(1, updateStatusDto);
+
+      expect(result.status).toBe(ProductStatus.PUBLISHED);
+    });
+  });
+
+  describe('updateStock', () => {
+    const existingProduct = {
+      id: 1,
+      title: '上海科技馆探索之旅',
+      description: '精彩的科技探索之旅',
+      categoryId: 1,
+      price: { toString: () => '299.00' },
+      originalPrice: null,
+      stock: 50,
+      minAge: 6,
+      maxAge: 12,
+      duration: null,
+      location: '上海浦东新区',
+      images: [],
+      featured: false,
+      status: ProductStatus.PUBLISHED,
+      viewCount: 0,
+      bookingCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      category: { id: 1, name: '自然科学' },
+    };
+
+    it('should successfully update stock and create history record', async () => {
+      const updateStockDto = { stock: 30, reason: '销售出库' };
+      const updatedProduct = {
+        ...existingProduct,
+        stock: 30,
+      };
+
+      mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
+      mockPrismaService.$transaction.mockImplementation((callback) => {
+        return callback({
+          product: {
+            update: jest.fn().mockResolvedValue(updatedProduct),
+          },
+          productStockHistory: {
+            create: jest.fn().mockResolvedValue({
+              id: 1,
+              productId: 1,
+              oldStock: 50,
+              newStock: 30,
+              reason: '销售出库',
+              createdAt: new Date(),
+            }),
+          },
+        });
+      });
+
+      const result = await service.updateStock(1, updateStockDto);
+
+      expect(result).toBeDefined();
+      expect(result.stock).toBe(30);
+      expect(mockPrismaService.product.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+      expect(mockProductsService.clearProductsCache).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if product does not exist', async () => {
+      const updateStockDto = { stock: 30 };
+      mockPrismaService.product.findUnique.mockResolvedValue(null);
+
+      await expect(service.updateStock(999, updateStockDto)).rejects.toThrow(NotFoundException);
+      await expect(service.updateStock(999, updateStockDto)).rejects.toThrow('产品 ID 999 不存在');
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if stock < 0', async () => {
+      const updateStockDto = { stock: -1 };
+      mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
+
+      await expect(service.updateStock(1, updateStockDto)).rejects.toThrow(BadRequestException);
+      await expect(service.updateStock(1, updateStockDto)).rejects.toThrow('库存数量不能小于 0');
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('should log warning when stock < 10', async () => {
+      const updateStockDto = { stock: 5, reason: '低库存测试' };
+      const updatedProduct = {
+        ...existingProduct,
+        stock: 5,
+      };
+
+      mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
+      mockPrismaService.$transaction.mockImplementation((callback) => {
+        return callback({
+          product: {
+            update: jest.fn().mockResolvedValue(updatedProduct),
+          },
+          productStockHistory: {
+            create: jest.fn().mockResolvedValue({
+              id: 1,
+              productId: 1,
+              oldStock: 50,
+              newStock: 5,
+              reason: '低库存测试',
+              createdAt: new Date(),
+            }),
+          },
+        });
+      });
+
+      const result = await service.updateStock(1, updateStockDto);
+
+      expect(result.stock).toBe(5);
+      expect(result.lowStock).toBe(true);
+    });
+
+    it('should handle missing reason field', async () => {
+      const updateStockDto = { stock: 25 };
+      const updatedProduct = {
+        ...existingProduct,
+        stock: 25,
+      };
+
+      mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
+      mockPrismaService.$transaction.mockImplementation((callback) => {
+        return callback({
+          product: {
+            update: jest.fn().mockResolvedValue(updatedProduct),
+          },
+          productStockHistory: {
+            create: jest.fn().mockResolvedValue({
+              id: 1,
+              productId: 1,
+              oldStock: 50,
+              newStock: 25,
+              reason: null,
+              createdAt: new Date(),
+            }),
+          },
+        });
+      });
+
+      const result = await service.updateStock(1, updateStockDto);
+
+      expect(result.stock).toBe(25);
+    });
+  });
+
+  describe('getLowStockProducts', () => {
+    it('should return products with stock < 10 ordered by stock ASC', async () => {
+      const mockProducts = [
+        {
+          id: 1,
+          title: '产品A',
+          stock: 2,
+          categoryId: 1,
+          category: { id: 1, name: '自然科学' },
+        },
+        {
+          id: 2,
+          title: '产品B',
+          stock: 5,
+          categoryId: 2,
+          category: { id: 2, name: '历史文化' },
+        },
+        {
+          id: 3,
+          title: '产品C',
+          stock: 8,
+          categoryId: 1,
+          category: { id: 1, name: '自然科学' },
+        },
+      ];
+
+      mockPrismaService.product.findMany.mockResolvedValue(mockProducts);
+
+      const result = await service.getLowStockProducts();
+
+      expect(result).toHaveLength(3);
+      expect(result[0].stock).toBe(2);
+      expect(result[1].stock).toBe(5);
+      expect(result[2].stock).toBe(8);
+      expect(mockPrismaService.product.findMany).toHaveBeenCalledWith({
+        where: {
+          stock: { lt: 10 },
+        },
+        orderBy: {
+          stock: 'asc',
+        },
+        select: {
+          id: true,
+          title: true,
+          stock: true,
+          categoryId: true,
+          category: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+    });
+
+    it('should return empty array when no low stock products exist', async () => {
+      mockPrismaService.product.findMany.mockResolvedValue([]);
+
+      const result = await service.getLowStockProducts();
+
+      expect(result).toEqual([]);
+    });
+
+    it('should only include products with stock < 10', async () => {
+      const mockProducts = [
+        {
+          id: 1,
+          title: '产品A',
+          stock: 5,
+          categoryId: 1,
+          category: { id: 1, name: '自然科学' },
+        },
+      ];
+
+      mockPrismaService.product.findMany.mockResolvedValue(mockProducts);
+
+      const result = await service.getLowStockProducts();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].stock).toBeLessThan(10);
+    });
+  });
+
+  describe('generateUploadUrl', () => {
+    it('should successfully generate upload URL for valid image file', () => {
+      const fileName = 'example.jpg';
+      const signedUrl = 'https://bucket.oss-cn-shanghai.aliyuncs.com/products/2024/01/14/uuid.jpg?signature=...';
+
+      mockOssService.validateFileType.mockReturnValue(true);
+      mockOssService.generateSignedUrl.mockReturnValue(signedUrl);
+
+      const result = service.generateUploadUrl(fileName);
+
+      expect(result).toBeDefined();
+      expect(result.uploadUrl).toBe(signedUrl);
+      expect(result.fileName).toBe(fileName);
+      expect(result.fileKey).toContain('products/');
+      expect(result.fileKey).toContain('.jpg');
+      expect(mockOssService.validateFileType).toHaveBeenCalledWith(fileName);
+      expect(mockOssService.generateSignedUrl).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException for invalid file type', () => {
+      const fileName = 'document.pdf';
+
+      mockOssService.validateFileType.mockReturnValue(false);
+
+      expect(() => service.generateUploadUrl(fileName)).toThrow(BadRequestException);
+      expect(() => service.generateUploadUrl(fileName)).toThrow('文件类型必须是以下之一: jpg, jpeg, png, webp');
+      expect(mockOssService.generateSignedUrl).not.toHaveBeenCalled();
+    });
+
+    it('should generate unique file key with date path and UUID', () => {
+      const fileName = 'test.png';
+      const signedUrl = 'https://bucket.oss-cn-shanghai.aliyuncs.com/test.png?signature=...';
+
+      mockOssService.validateFileType.mockReturnValue(true);
+      mockOssService.generateSignedUrl.mockReturnValue(signedUrl);
+
+      const result = service.generateUploadUrl(fileName);
+
+      expect(result.fileKey).toMatch(/^products\/\d{4}\/\d{2}\/\d{2}\//);
+      expect(result.fileKey).toContain('.png');
+    });
+
+    it('should throw BadRequestException for file without extension', () => {
+      const fileName = 'noextension';
+
+      mockOssService.validateFileType.mockReturnValue(true);
+
+      expect(() => service.generateUploadUrl(fileName)).toThrow(BadRequestException);
+      expect(() => service.generateUploadUrl(fileName)).toThrow('文件名必须包含有效的扩展名（如 .jpg, .png）');
+      expect(mockOssService.generateSignedUrl).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException for file with trailing dot only', () => {
+      const fileName = 'filename.';
+
+      mockOssService.validateFileType.mockReturnValue(true);
+
+      expect(() => service.generateUploadUrl(fileName)).toThrow(BadRequestException);
+      expect(() => service.generateUploadUrl(fileName)).toThrow('文件名必须包含有效的扩展名（如 .jpg, .png）');
+      expect(mockOssService.generateSignedUrl).not.toHaveBeenCalled();
     });
   });
 });
