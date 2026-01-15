@@ -2,8 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdminUsersController } from './admin-users.controller';
 import { AdminUsersService } from './admin-users.service';
 import { QueryUsersDto } from './dto/admin/query-users.dto';
+import { QueryUserOrdersDto } from './dto/admin/query-user-orders.dto';
 import { UpdateUserStatusDto } from './dto/admin/update-user-status.dto';
-import { Role, UserStatus } from '@prisma/client';
+import { Role, UserStatus, OrderStatus, PaymentStatus } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '@/common/guards/roles.guard';
 
@@ -16,6 +17,9 @@ describe('AdminUsersController', () => {
     findOne: jest.fn(),
     updateStatus: jest.fn(),
     getStats: jest.fn(),
+    findUserOrders: jest.fn(),
+    getUserOrderSummary: jest.fn(),
+    findUserRefunds: jest.fn(),
   };
 
   const mockUser = {
@@ -311,6 +315,142 @@ describe('AdminUsersController', () => {
 
       expect(result).toEqual({ data: mockStats });
       expect(mockAdminUsersService.getStats).toHaveBeenCalled();
+    });
+  });
+
+  describe('findUserOrders', () => {
+    it('should return user orders', async () => {
+      const queryDto: QueryUserOrdersDto = {
+        page: 1,
+        pageSize: 20,
+      };
+
+      const mockOrderResult = {
+        data: [
+          {
+            id: 1,
+            orderNo: 'ORD20240114123456789',
+            status: OrderStatus.PAID,
+            paymentStatus: PaymentStatus.SUCCESS,
+            totalAmount: '299.00',
+            actualAmount: '299.00',
+            bookingDate: new Date('2024-02-15'),
+            items: [
+              {
+                id: 1,
+                productId: 1,
+                productName: '上海科技馆探索之旅',
+                productPrice: '299.00',
+                quantity: 1,
+                subtotal: '299.00',
+              },
+            ],
+            paidAt: new Date('2024-01-14'),
+            createdAt: new Date('2024-01-14'),
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      };
+
+      mockAdminUsersService.findUserOrders.mockResolvedValue(mockOrderResult);
+
+      const result = await controller.findUserOrders(mockUser, 1, queryDto);
+
+      expect(result).toEqual(mockOrderResult);
+      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(1, queryDto);
+    });
+
+    it('should filter by status', async () => {
+      const queryDto: QueryUserOrdersDto = {
+        page: 1,
+        pageSize: 20,
+        status: OrderStatus.PAID,
+      };
+
+      mockAdminUsersService.findUserOrders.mockResolvedValue({
+        data: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      });
+
+      await controller.findUserOrders(mockUser, 1, queryDto);
+
+      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(1, queryDto);
+    });
+
+    it('should filter by date range', async () => {
+      const queryDto: QueryUserOrdersDto = {
+        page: 1,
+        pageSize: 20,
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      };
+
+      mockAdminUsersService.findUserOrders.mockResolvedValue({
+        data: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      });
+
+      await controller.findUserOrders(mockUser, 1, queryDto);
+
+      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(1, queryDto);
+    });
+  });
+
+  describe('getUserOrderSummary', () => {
+    it('should return user order summary', async () => {
+      const mockSummary = {
+        totalOrders: 15,
+        paidOrders: 12,
+        completedOrders: 10,
+        cancelledOrders: 2,
+        refundedOrders: 1,
+        totalSpent: '4485.00',
+        avgOrderAmount: '299.00',
+        firstOrderDate: new Date('2023-12-01'),
+        lastOrderDate: new Date('2024-01-08'),
+        favoriteCategory: { id: 1, name: '自然科学', orderCount: 8 },
+        monthlyStats: [
+          { month: '2024-01', orders: 10, amount: '2990.00' },
+          { month: '2023-12', orders: 5, amount: '1495.00' },
+        ],
+      };
+
+      mockAdminUsersService.getUserOrderSummary.mockResolvedValue(mockSummary);
+
+      const result = await controller.getUserOrderSummary(mockUser, 1);
+
+      expect(result).toEqual({ data: mockSummary });
+      expect(mockAdminUsersService.getUserOrderSummary).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('findUserRefunds', () => {
+    it('should return user refund records', async () => {
+      const mockRefunds = [
+        {
+          id: 1,
+          orderId: 5,
+          orderNo: 'ORD20240114123456789',
+          amount: '299.00',
+          status: 'SUCCESS',
+          reason: '活动时间变更',
+          requestedAt: new Date('2024-01-14'),
+          processedAt: new Date('2024-01-15'),
+        },
+      ];
+
+      mockAdminUsersService.findUserRefunds.mockResolvedValue(mockRefunds);
+
+      const result = await controller.findUserRefunds(mockUser, 1);
+
+      expect(result).toEqual({ data: mockRefunds });
+      expect(mockAdminUsersService.findUserRefunds).toHaveBeenCalledWith(1);
     });
   });
 });

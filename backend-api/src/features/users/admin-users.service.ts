@@ -2,10 +2,14 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { PrismaService } from '@/lib/prisma.service';
 import { CacheService } from '@/redis/cache.service';
 import { QueryUsersDto } from './dto/admin/query-users.dto';
+import { QueryUserOrdersDto } from './dto/admin/query-user-orders.dto';
 import { UpdateUserStatusDto } from './dto/admin/update-user-status.dto';
 import { UserDetailResponseDto } from './dto/admin/user-detail-response.dto';
 import { UserStatsResponseDto } from './dto/admin/user-stats-response.dto';
-import { UserStatus, Role, OrderStatus, PaymentStatus } from '@prisma/client';
+import { UserOrderListResponseDto } from './dto/admin/user-order-list-response.dto';
+import { UserOrderSummaryResponseDto } from './dto/admin/user-order-summary-response.dto';
+import { UserRefundListResponseDto } from './dto/admin/user-refund-list-response.dto';
+import { UserStatus, Role, OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 
 /**
  * 管理员用户服务
@@ -14,6 +18,7 @@ import { UserStatus, Role, OrderStatus, PaymentStatus } from '@prisma/client';
 @Injectable()
 export class AdminUsersService {
   private readonly logger = new Logger(AdminUsersService.name);
+  private readonly CACHE_TTL_SECONDS = 300; // 5 minutes
 
   constructor(
     private readonly prisma: PrismaService,
@@ -37,13 +42,7 @@ export class AdminUsersService {
     } = queryDto;
 
     // 验证日期范围
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      if (start > end) {
-        throw new BadRequestException('开始日期不能晚于结束日期');
-      }
-    }
+    this.validateDateRange(startDate, endDate);
 
     // 计算分页参数
     const skip = (page - 1) * pageSize;
@@ -77,10 +76,11 @@ export class AdminUsersService {
         where.createdAt.gte = new Date(startDate);
       }
       if (endDate) {
-        // 结束日期设为当天的 23:59:59
+        // 使用下一天的 00:00:00 作为结束边界，避免时区问题
         const endDateObj = new Date(endDate);
-        endDateObj.setHours(23, 59, 59, 999);
-        where.createdAt.lte = endDateObj;
+        endDateObj.setDate(endDateObj.getDate() + 1);
+        endDateObj.setHours(0, 0, 0, 0);
+        where.createdAt.lt = endDateObj;
       }
     }
 
@@ -334,7 +334,7 @@ export class AdminUsersService {
     };
 
     // 缓存统计结果（TTL: 5分钟）
-    await this.cacheService.set('user:stats', stats, 300);
+    await this.cacheService.set('user:stats', stats, this.CACHE_TTL_SECONDS);
     this.logger.debug('用户统计数据已缓存');
 
     return stats;
@@ -404,5 +404,330 @@ export class AdminUsersService {
       return phone; // 手机号太短，不脱敏
     }
     return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4);
+  }
+
+  /**
+   * 验证日期范围
+   * @param startDate 开始日期
+   * @param endDate 结束日期
+   * @throws BadRequestException 如果日期范围无效
+   */
+  private validateDateRange(startDate?: string, endDate?: string): void {
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) {
+        throw new BadRequestException('开始日期不能晚于结束日期');
+      }
+    }
+  }
+
+  /**
+   * 查询用户订单列表（管理员视角）
+   * @param userId 用户 ID
+   * @param queryDto 查询参数
+   * @returns 分页订单列表
+   */
+  async findUserOrders(
+    userId: number,
+    queryDto: QueryUserOrdersDto,
+  ): Promise<{ data: UserOrderListResponseDto[]; total: number; page: number; pageSize: number }> {
+    const { page = 1, pageSize = 20, status, startDate, endDate } = queryDto;
+
+    // 验证用户存在
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      this.logger.warn(`用户不存在: userId=${userId}`);
+      throw new NotFoundException('用户不存在');
+    }
+
+    // 验证日期范围
+    this.validateDateRange(startDate, endDate);
+
+    // 计算分页参数
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+
+    // 构建 WHERE 条件
+    const where: import('@prisma/client').Prisma.OrderWhereInput = {
+      userId, // 只查询该用户的订单
+    };
+
+    // 状态筛选
+    if (status) {
+      where.status = status;
+    }
+
+    // 日期范围筛选
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        // 使用下一天的 00:00:00 作为结束边界，避免时区问题
+        const endDateObj = new Date(endDate);
+        endDateObj.setDate(endDateObj.getDate() + 1);
+        endDateObj.setHours(0, 0, 0, 0);
+        where.createdAt.lt = endDateObj;
+      }
+    }
+
+    // 并行查询订单数据和总数
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          items: {
+            select: {
+              id: true,
+              productId: true,
+              productName: true,
+              productPrice: true,
+              quantity: true,
+              subtotal: true,
+            },
+          },
+        },
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    // 构建响应数据
+    const data = orders.map((order) => ({
+      id: order.id,
+      orderNo: order.orderNo,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalAmount: order.totalAmount.toString(),
+      actualAmount: order.actualAmount.toString(),
+      bookingDate: order.bookingDate,
+      items: order.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.productName,
+        productPrice: item.productPrice.toString(),
+        quantity: item.quantity,
+        subtotal: item.subtotal.toString(),
+      })),
+      paidAt: order.paidAt,
+      createdAt: order.createdAt,
+    }));
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  /**
+   * 获取用户订单汇总统计（管理员视角）
+   * @param userId 用户 ID
+   * @returns 订单汇总统计
+   */
+  async getUserOrderSummary(userId: number): Promise<UserOrderSummaryResponseDto> {
+    // 验证用户存在
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      this.logger.warn(`用户不存在: userId=${userId}`);
+      throw new NotFoundException('用户不存在');
+    }
+
+    // 尝试从缓存获取
+    const cacheKey = `user:order-summary:${userId}`;
+    const cached = await this.cacheService.get<UserOrderSummaryResponseDto>(cacheKey);
+    if (cached) {
+      this.logger.debug(`返回缓存的用户订单汇总: userId=${userId}`);
+      return cached;
+    }
+
+    // 并行查询各项统计数据
+    let categoryStats: { category_id: number; category_name: string; order_count: bigint }[] = [];
+    let monthlyStats: { month: string; order_count: bigint; total_amount: string }[] = [];
+
+    const [
+      allOrders,
+      statusCounts,
+      paidOrdersForAmount,
+      firstOrder,
+      lastOrder,
+    ] = await Promise.all([
+      // 查询所有订单
+      this.prisma.order.findMany({
+        where: { userId },
+        select: { id: true, createdAt: true },
+      }),
+      // 按状态统计订单数
+      this.prisma.order.groupBy({
+        by: ['status'],
+        where: { userId },
+        _count: true,
+      }),
+      // 查询已支付订单（用于计算金额）
+      this.prisma.order.findMany({
+        where: { userId, paymentStatus: PaymentStatus.SUCCESS },
+        select: { actualAmount: true },
+      }),
+      // 查询首次订单
+      this.prisma.order.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true },
+      }),
+      // 查询最后订单
+      this.prisma.order.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    // 执行原始 SQL 查询（带错误处理）
+    try {
+      [categoryStats, monthlyStats] = await Promise.all([
+        // 统计最常预订的分类（使用 Prisma.sql 防止 SQL 注入）
+        this.prisma.$queryRaw<
+          { category_id: number; category_name: string; order_count: bigint }[]
+        >(
+          Prisma.sql`
+            SELECT
+              pc.id as category_id,
+              pc.name as category_name,
+              COUNT(DISTINCT o.id) as order_count
+            FROM orders o
+            INNER JOIN order_items oi ON o.id = oi.order_id
+            INNER JOIN products p ON oi.product_id = p.id
+            INNER JOIN product_categories pc ON p.category_id = pc.id
+            WHERE o.user_id = ${userId}
+            GROUP BY pc.id, pc.name
+            ORDER BY order_count DESC
+            LIMIT 1
+          `,
+        ),
+        // 生成最近6个月的订单趋势（使用 Prisma.sql 防止 SQL 注入）
+        this.prisma.$queryRaw<
+          { month: string; order_count: bigint; total_amount: string }[]
+        >(
+          Prisma.sql`
+            SELECT
+              TO_CHAR(DATE_TRUNC('month', o.created_at), 'YYYY-MM') as month,
+              COUNT(*) as order_count,
+              COALESCE(SUM(o.actual_amount), 0) as total_amount
+            FROM orders o
+            WHERE o.user_id = ${userId}
+              AND o.created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months')
+            GROUP BY DATE_TRUNC('month', o.created_at)
+            ORDER BY month DESC
+          `,
+        ),
+      ]);
+    } catch (error) {
+      this.logger.error(`查询用户订单统计失败: userId=${userId}`, error);
+      // 返回默认值，不影响整个接口
+      categoryStats = [];
+      monthlyStats = [];
+    }
+
+    // 计算各状态订单数
+    const totalOrders = allOrders.length;
+    const paidOrdersCount = statusCounts.find((s) => s.status === OrderStatus.PAID)?._count || 0;
+    const completedOrders = statusCounts.find((s) => s.status === OrderStatus.COMPLETED)?._count || 0;
+    const cancelledOrders = statusCounts.find((s) => s.status === OrderStatus.CANCELLED)?._count || 0;
+    const refundedOrders = statusCounts.find((s) => s.status === OrderStatus.REFUNDED)?._count || 0;
+
+    // 计算总消费金额
+    const totalSpent = paidOrdersForAmount.reduce((sum, order) => sum + Number(order.actualAmount), 0).toFixed(2);
+
+    // 计算平均订单金额
+    const avgOrderAmount = paidOrdersForAmount.length > 0
+      ? (Number(totalSpent) / paidOrdersForAmount.length).toFixed(2)
+      : '0.00';
+
+    // 构建响应数据
+    const summary: UserOrderSummaryResponseDto = {
+      totalOrders,
+      paidOrders: paidOrdersCount,
+      completedOrders,
+      cancelledOrders,
+      refundedOrders,
+      totalSpent,
+      avgOrderAmount,
+      firstOrderDate: firstOrder?.createdAt || null,
+      lastOrderDate: lastOrder?.createdAt || null,
+      favoriteCategory: categoryStats[0]
+        ? {
+            id: Number(categoryStats[0].category_id),
+            name: categoryStats[0].category_name,
+            orderCount: Number(categoryStats[0].order_count),
+          }
+        : { id: 0, name: '无', orderCount: 0 },
+      monthlyStats: monthlyStats.map((stat) => ({
+        month: stat.month,
+        orders: Number(stat.order_count),
+        amount: stat.total_amount,
+      })),
+    };
+
+    // 缓存统计结果（TTL: 5分钟）
+    await this.cacheService.set(cacheKey, summary, this.CACHE_TTL_SECONDS);
+    this.logger.debug(`用户订单汇总已缓存: userId=${userId}`);
+
+    return summary;
+  }
+
+  /**
+   * 查询用户退款记录列表（管理员视角）
+   * @param userId 用户 ID
+   * @returns 退款记录列表
+   */
+  async findUserRefunds(userId: number): Promise<UserRefundListResponseDto[]> {
+    // 验证用户存在
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      this.logger.warn(`用户不存在: userId=${userId}`);
+      throw new NotFoundException('用户不存在');
+    }
+
+    // 查询用户的所有退款记录
+    const refunds = await this.prisma.refundRecord.findMany({
+      where: { userId },
+      include: {
+        order: {
+          select: {
+            orderNo: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // 构建响应数据
+    return refunds.map((refund) => ({
+      id: refund.id,
+      orderId: refund.orderId,
+      orderNo: refund.order.orderNo,
+      amount: refund.amount.toString(),
+      status: refund.status,
+      reason: refund.reason,
+      requestedAt: refund.createdAt,
+      processedAt: refund.refundedAt,
+    }));
   }
 }

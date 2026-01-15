@@ -4,8 +4,9 @@ import { AdminUsersService } from './admin-users.service';
 import { PrismaService } from '@/lib/prisma.service';
 import { CacheService } from '@/redis/cache.service';
 import { QueryUsersDto } from './dto/admin/query-users.dto';
+import { QueryUserOrdersDto } from './dto/admin/query-user-orders.dto';
 import { UpdateUserStatusDto } from './dto/admin/update-user-status.dto';
-import { Role, UserStatus, PaymentStatus } from '@prisma/client';
+import { Role, UserStatus, PaymentStatus, OrderStatus } from '@prisma/client';
 
 describe('AdminUsersService', () => {
   let service: AdminUsersService;
@@ -22,7 +23,14 @@ describe('AdminUsersService', () => {
     },
     order: {
       findMany: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn(),
+      groupBy: jest.fn(),
     },
+    refundRecord: {
+      findMany: jest.fn(),
+    },
+    $queryRaw: jest.fn(),
   };
 
   const mockCacheService = {
@@ -205,7 +213,7 @@ describe('AdminUsersService', () => {
           where: expect.objectContaining({
             createdAt: expect.objectContaining({
               gte: expect.any(Date),
-              lte: expect.any(Date),
+              lt: expect.any(Date),
             }),
           }),
         }),
@@ -415,6 +423,258 @@ describe('AdminUsersService', () => {
       const result = service.findAll({ page: 1, pageSize: 20 });
       // The masking is applied internally, test through the public API
       expect(true).toBe(true); // Placeholder
+    });
+  });
+
+  describe('findUserOrders', () => {
+    const mockOrders = [
+      {
+        id: 1,
+        orderNo: 'ORD20240114123456789',
+        status: OrderStatus.PAID,
+        paymentStatus: PaymentStatus.SUCCESS,
+        totalAmount: { toString: () => '299.00' },
+        actualAmount: { toString: () => '299.00' },
+        bookingDate: new Date('2024-02-15'),
+        paidAt: new Date('2024-01-14'),
+        createdAt: new Date('2024-01-14'),
+        items: [
+          {
+            id: 1,
+            productId: 1,
+            productName: '上海科技馆探索之旅',
+            productPrice: { toString: () => '299.00' },
+            quantity: 1,
+            subtotal: { toString: () => '299.00' },
+          },
+        ],
+      },
+    ];
+
+    it('should return paginated user orders', async () => {
+      const queryDto: QueryUserOrdersDto = {
+        page: 1,
+        pageSize: 20,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockPrismaService.order.findMany.mockResolvedValue(mockOrders);
+      mockPrismaService.order.count.mockResolvedValue(1);
+
+      const result = await service.findUserOrders(1, queryDto);
+
+      expect(result).toBeDefined();
+      expect(result.data).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.data[0].orderNo).toBe('ORD20240114123456789');
+    });
+
+    it('should filter by status', async () => {
+      const queryDto: QueryUserOrdersDto = {
+        page: 1,
+        pageSize: 20,
+        status: OrderStatus.PAID,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockPrismaService.order.findMany.mockResolvedValue(mockOrders);
+      mockPrismaService.order.count.mockResolvedValue(1);
+
+      await service.findUserOrders(1, queryDto);
+
+      expect(mockPrismaService.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: OrderStatus.PAID,
+          }),
+        }),
+      );
+    });
+
+    it('should filter by date range', async () => {
+      const queryDto: QueryUserOrdersDto = {
+        page: 1,
+        pageSize: 20,
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockPrismaService.order.findMany.mockResolvedValue([]);
+      mockPrismaService.order.count.mockResolvedValue(0);
+
+      await service.findUserOrders(1, queryDto);
+
+      expect(mockPrismaService.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            createdAt: expect.objectContaining({
+              gte: expect.any(Date),
+              lt: expect.any(Date),
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.findUserOrders(999, { page: 1, pageSize: 20 })).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when date range is invalid', async () => {
+      const queryDto: QueryUserOrdersDto = {
+        page: 1,
+        pageSize: 20,
+        startDate: '2024-12-31',
+        endDate: '2024-01-01',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+
+      await expect(service.findUserOrders(1, queryDto)).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getUserOrderSummary', () => {
+    it('should return user order summary', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockCacheService.get.mockResolvedValue(null);
+      mockPrismaService.order.findMany
+        .mockResolvedValueOnce([{ id: 1, createdAt: new Date('2024-01-01') }]) // allOrders
+        .mockResolvedValueOnce([{ actualAmount: { toString: () => '299.00' } }]); // paidOrders
+      mockPrismaService.order.findFirst
+        .mockResolvedValueOnce({ createdAt: new Date('2024-01-01') }) // firstOrder
+        .mockResolvedValueOnce({ createdAt: new Date('2024-01-31') }); // lastOrder
+      mockPrismaService.order.groupBy.mockResolvedValue([
+        { status: OrderStatus.PAID, _count: 1 },
+      ]);
+      mockPrismaService.$queryRaw
+        .mockResolvedValueOnce([{ category_id: 1, category_name: '自然科学', order_count: BigInt(5) }])
+        .mockResolvedValueOnce([{ month: '2024-01', order_count: BigInt(10), total_amount: '2990.00' }]);
+      mockCacheService.set.mockResolvedValue(undefined);
+
+      const result = await service.getUserOrderSummary(1);
+
+      expect(result).toBeDefined();
+      expect(result.totalOrders).toBe(1);
+      expect(result.favoriteCategory.name).toBe('自然科学');
+    });
+
+    it('should return null for dates when user has no orders', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockCacheService.get.mockResolvedValue(null);
+      mockPrismaService.order.findMany
+        .mockResolvedValueOnce([]) // allOrders
+        .mockResolvedValueOnce([]); // paidOrders
+      mockPrismaService.order.findFirst
+        .mockResolvedValueOnce(null) // firstOrder
+        .mockResolvedValueOnce(null); // lastOrder
+      mockPrismaService.order.groupBy.mockResolvedValue([]);
+      mockPrismaService.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      mockCacheService.set.mockResolvedValue(undefined);
+
+      const result = await service.getUserOrderSummary(1);
+
+      expect(result.firstOrderDate).toBeNull();
+      expect(result.lastOrderDate).toBeNull();
+      expect(result.totalOrders).toBe(0);
+      expect(result.totalSpent).toBe('0.00');
+    });
+
+    it('should return cached summary when available', async () => {
+      const cachedSummary = {
+        totalOrders: 10,
+        paidOrders: 8,
+        completedOrders: 7,
+        cancelledOrders: 1,
+        refundedOrders: 1,
+        totalSpent: '2990.00',
+        avgOrderAmount: '299.00',
+        firstOrderDate: new Date('2024-01-01'),
+        lastOrderDate: new Date('2024-01-31'),
+        favoriteCategory: { id: 1, name: '自然科学', orderCount: 5 },
+        monthlyStats: [{ month: '2024-01', orders: 10, amount: '2990.00' }],
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockCacheService.get.mockResolvedValue(cachedSummary);
+
+      const result = await service.getUserOrderSummary(1);
+
+      expect(result).toEqual(cachedSummary);
+      expect(mockPrismaService.order.findMany).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.getUserOrderSummary(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should handle SQL query errors gracefully', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockCacheService.get.mockResolvedValue(null);
+      mockPrismaService.order.findMany
+        .mockResolvedValueOnce([{ id: 1, createdAt: new Date('2024-01-01') }])
+        .mockResolvedValueOnce([{ actualAmount: { toString: () => '299.00' } }]);
+      mockPrismaService.order.findFirst
+        .mockResolvedValueOnce({ createdAt: new Date('2024-01-01') })
+        .mockResolvedValueOnce({ createdAt: new Date('2024-01-31') });
+      mockPrismaService.order.groupBy.mockResolvedValue([{ status: OrderStatus.PAID, _count: 1 }]);
+      mockPrismaService.$queryRaw.mockRejectedValue(new Error('SQL error'));
+      mockCacheService.set.mockResolvedValue(undefined);
+
+      const result = await service.getUserOrderSummary(1);
+
+      expect(result).toBeDefined();
+      expect(result.favoriteCategory.name).toBe('无');
+      expect(result.favoriteCategory.orderCount).toBe(0);
+    });
+  });
+
+  describe('findUserRefunds', () => {
+    const mockRefunds = [
+      {
+        id: 1,
+        orderId: 5,
+        order: { orderNo: 'ORD20240114123456789' },
+        amount: { toString: () => '299.00' },
+        status: 'SUCCESS',
+        reason: '活动时间变更',
+        createdAt: new Date('2024-01-14'),
+        refundedAt: new Date('2024-01-15'),
+      },
+    ];
+
+    it('should return user refund records', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockPrismaService.refundRecord.findMany.mockResolvedValue(mockRefunds);
+
+      const result = await service.findUserRefunds(1);
+
+      expect(result).toBeDefined();
+      expect(result).toHaveLength(1);
+      expect(result[0].orderNo).toBe('ORD20240114123456789');
+      expect(result[0].amount).toBe('299.00');
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.findUserRefunds(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return empty array when user has no refunds', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
+      mockPrismaService.refundRecord.findMany.mockResolvedValue([]);
+
+      const result = await service.findUserRefunds(1);
+
+      expect(result).toHaveLength(0);
     });
   });
 });

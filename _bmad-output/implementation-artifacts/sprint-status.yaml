@@ -95,8 +95,8 @@ development_status:
 
   # Epic 6: 用户管理与分析
   epic-6: in-progress
-  6-1-implement-admin-user-info-query: review
-  6-2-implement-user-order-history-query: backlog
+  6-1-implement-admin-user-info-query: done
+  6-2-implement-user-order-history-query: in-progress
   6-3-implement-user-issue-handling: backlog
   6-4-implement-dashboard-order-user-stats: backlog
   6-5-implement-dashboard-popular-products-conversion: backlog

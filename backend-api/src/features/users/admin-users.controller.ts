@@ -13,14 +13,18 @@ import {
   HttpException,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminUsersService } from './admin-users.service';
 import { QueryUsersDto } from './dto/admin/query-users.dto';
+import { QueryUserOrdersDto } from './dto/admin/query-user-orders.dto';
 import { UpdateUserStatusDto } from './dto/admin/update-user-status.dto';
 import { UserListResponseDto } from './dto/admin/user-list-response.dto';
 import { UserDetailResponseDto } from './dto/admin/user-detail-response.dto';
 import { UserStatsResponseDto } from './dto/admin/user-stats-response.dto';
+import { UserOrderListResponseDto } from './dto/admin/user-order-list-response.dto';
+import { UserOrderSummaryResponseDto } from './dto/admin/user-order-summary-response.dto';
+import { UserRefundListResponseDto } from './dto/admin/user-refund-list-response.dto';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
@@ -310,6 +314,272 @@ export class AdminUsersController {
       return { data: result };
     } catch (error) {
       this.logger.error(`Failed to update user ${id} status:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 查询用户订单列表（管理员视角）
+   * @param user 当前用户（管理员）
+   * @param id 用户 ID
+   * @param queryDto 查询参数
+   * @returns 分页订单列表
+   */
+  @Get(':id/orders')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '查询用户订单历史（管理员）',
+    description: `管理员查询特定用户的订单历史，支持多条件筛选。
+
+**功能特性：**
+- 按创建时间倒序返回订单列表（默认）
+- 支持分页查询（默认第 1 页，每页 20 条，最多 50 条/页）
+- 支持订单状态筛选（PENDING、PAID、COMPLETED、CANCELLED、REFUNDING、REFUNDED）
+- 支持日期范围筛选（订单创建开始日期、结束日期）
+- 包含订单项和产品基本信息
+
+**数据权限：**
+- 管理员可以查看任何用户的订单历史
+- 不脱敏任何信息（管理员可查看完整数据）`,
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer JWT 令牌（访问令牌）',
+    required: true,
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '查询成功',
+    schema: {
+      example: {
+        data: [
+          {
+            id: 1,
+            orderNo: 'ORD20240114123456789',
+            status: 'PAID',
+            paymentStatus: 'SUCCESS',
+            totalAmount: '299.00',
+            actualAmount: '299.00',
+            bookingDate: '2024-02-15T00:00:00Z',
+            items: [
+              {
+                id: 1,
+                productId: 1,
+                productName: '上海科技馆探索之旅',
+                productPrice: '299.00',
+                quantity: 1,
+                subtotal: '299.00',
+              },
+            ],
+            paidAt: '2024-01-14T12:30:00Z',
+            createdAt: '2024-01-14T12:00:00Z',
+          },
+        ],
+        total: 15,
+        page: 1,
+        pageSize: 20,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '请求参数验证失败',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权（缺少或无效的 JWT 令牌）',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '权限不足（需要 ADMIN 角色）',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '用户不存在',
+  })
+  async findUserOrders(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id', ParseIntPipe) id: number,
+    @Query(ValidationPipe) queryDto: QueryUserOrdersDto,
+  ) {
+    try {
+      this.logger.log(`Admin ${user.id} querying orders for user ${id}`);
+      const result = await this.adminUsersService.findUserOrders(id, queryDto);
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to query orders for user ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 查询用户订单汇总统计（管理员视角）
+   * @param user 当前用户（管理员）
+   * @param id 用户 ID
+   * @returns 订单汇总统计
+   */
+  @Get(':id/order-summary')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '查询用户订单汇总统计（管理员）',
+    description: `管理员查询特定用户的订单汇总统计数据。
+
+**统计指标：**
+- totalOrders: 总订单数
+- paidOrders: 已支付订单数
+- completedOrders: 已完成订单数
+- cancelledOrders: 已取消订单数
+- refundedOrders: 已退款订单数
+- totalSpent: 总消费金额
+- avgOrderAmount: 平均订单金额
+- firstOrderDate: 首次订单日期
+- lastOrderDate: 最后订单日期
+- favoriteCategory: 最常预订的分类
+- monthlyStats: 最近6个月的订单趋势
+
+**数据用途：**
+- 了解用户的消费习惯
+- 分析用户的预订行为
+- 支持个性化推荐
+
+**缓存策略：**
+- 统计结果缓存 5 分钟
+- 用户有新订单时清除缓存`,
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer JWT 令牌（访问令牌）',
+    required: true,
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '查询成功',
+    schema: {
+      example: {
+        data: {
+          totalOrders: 15,
+          paidOrders: 12,
+          completedOrders: 10,
+          cancelledOrders: 2,
+          refundedOrders: 1,
+          totalSpent: '4485.00',
+          avgOrderAmount: '299.00',
+          firstOrderDate: '2023-12-01T00:00:00Z',
+          lastOrderDate: '2024-01-08T00:00:00Z',
+          favoriteCategory: {
+            id: 1,
+            name: '自然科学',
+            orderCount: 8,
+          },
+          monthlyStats: [
+            { month: '2024-01', orders: 10, amount: '2990.00' },
+            { month: '2023-12', orders: 5, amount: '1495.00' },
+          ],
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权（缺少或无效的 JWT 令牌）',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '权限不足（需要 ADMIN 角色）',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '用户不存在',
+  })
+  async getUserOrderSummary(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ data: UserOrderSummaryResponseDto }> {
+    try {
+      this.logger.log(`Admin ${user.id} querying order summary for user ${id}`);
+      const result = await this.adminUsersService.getUserOrderSummary(id);
+      return { data: result };
+    } catch (error) {
+      this.logger.error(`Failed to query order summary for user ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 查询用户退款记录列表（管理员视角）
+   * @param user 当前用户（管理员）
+   * @param id 用户 ID
+   * @returns 退款记录列表
+   */
+  @Get(':id/refunds')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '查询用户退款记录（管理员）',
+    description: `管理员查询特定用户的所有退款申请记录。
+
+**返回信息：**
+- 退款记录 ID
+- 关联的订单 ID 和订单号
+- 退款金额
+- 退款状态（PENDING、APPROVED、REJECTED、PROCESSING、SUCCESS、FAILED）
+- 退款原因
+- 申请时间
+- 处理时间（退款完成时间）
+
+**数据权限：**
+- 管理员可以查看任何用户的退款记录
+- 按申请时间倒序排序`,
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer JWT 令牌（访问令牌）',
+    required: true,
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '查询成功',
+    schema: {
+      example: {
+        data: [
+          {
+            id: 1,
+            orderId: 5,
+            orderNo: 'ORD20240114123456789',
+            amount: '299.00',
+            status: 'SUCCESS',
+            reason: '活动时间变更',
+            requestedAt: '2024-01-14T12:00:00Z',
+            processedAt: '2024-01-15T10:00:00Z',
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权（缺少或无效的 JWT 令牌）',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '权限不足（需要 ADMIN 角色）',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '用户不存在',
+  })
+  async findUserRefunds(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ data: UserRefundListResponseDto[] }> {
+    try {
+      this.logger.log(`Admin ${user.id} querying refunds for user ${id}`);
+      const result = await this.adminUsersService.findUserRefunds(id);
+      return { data: result };
+    } catch (error) {
+      this.logger.error(`Failed to query refunds for user ${id}:`, error);
       throw error;
     }
   }
