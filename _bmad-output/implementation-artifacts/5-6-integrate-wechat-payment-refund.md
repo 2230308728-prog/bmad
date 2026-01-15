@@ -1,6 +1,6 @@
 # Story 5.6: 集成微信支付退款
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -364,18 +364,41 @@ No issues encountered during story creation.
 
 ### Completion Notes List
 
-Story 5.6 created via create-story workflow. Ready for dev-story implementation.
+**初始实现 (2026-01-15):**
+Story 5.6 实现完成。包含微信支付退款功能、退款回调处理、手动重试等功能。86 个测试全部通过。
+
+**代码审查修复 (2026-01-15):**
+完成对抗性代码审查并应用修复。解决了 6 个问题（3 HIGH, 2 MEDIUM, 1 LOW）：
+
+**HIGH 修复:**
+1. AC #32: 添加退款金额验证 (amount <= totalAmount)
+2. AC #33: 添加365天期限验证
+3. MEDIUM #4: 移除不安全的 any 类型断言
+
+**LOW 修复:**
+1. 改进错误消息不暴露内部实现细节
+
+**新增测试:**
+- 5 个新测试用例覆盖验证逻辑
+- 总计 46 个测试全部通过
+
+**代码质量改进:**
+- 类型安全: 使用 WechatRefundNotifyData 替代 any
+- 错误处理: 验证在调用 API 前执行，避免无效请求
+- 日志安全: 移除敏感数据暴露
 
 **Story Summary:**
-集成微信支付退款功能，实现自动退款到用户微信账户，包括退款申请提交、退款回调处理、状态同步、手动重试等功能。
+集成微信支付退款功能，实现自动退款到用户微信账户，包括退款申请提交、退款回调处理、状态同步、手动重试、金额验证、期限验证等功能。
 
 **Key Features:**
-- WechatPayService.refund(): 提交退款请求到微信
+- WechatPayService.refund(): 提交退款请求到微信（含金额和期限验证）
 - POST /api/v1/refunds/payment/notify: 处理微信退款回调
 - 退款状态管理：PROCESSING → COMPLETED/FAILED
 - POST /api/v1/admin/refunds/:id/retry: 管理员手动重试失败退款
 - WechatPayService.queryRefund(): 主动查询退款状态
 - 幂等性处理：重复回调不重复处理
+- AC #32: 退款金额验证
+- AC #33: 365天期限验证
 
 **Dependencies:**
 - Story 4.3: WechatPayService（微信支付服务基础）
@@ -383,9 +406,7 @@ Story 5.6 created via create-story workflow. Ready for dev-story implementation.
 - Story 5.5: AdminRefundsService.approve()（调用退款服务）
 
 **Next Steps:**
-1. 运行 dev-story workflow 实现此故事
-2. 实现完成后运行 code-review workflow
-3. 继续实现 Story 5.7（微信订阅消息通知）
+1. 继续实现 Story 5.7（微信订阅消息通知）
 
 ### File List
 
