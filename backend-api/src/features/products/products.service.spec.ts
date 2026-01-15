@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { ProductsService } from './products.service';
 import { GetProductsDto } from './dto/get-products.dto';
 import { ProductStatus } from '@prisma/client';

@@ -32,6 +32,7 @@ model User {
   openid    String?    @unique // 微信 OpenID，唯一索引（允许多个 NULL）- PARENT 用户使用
   email     String?    @unique // 邮箱，唯一索引（允许多个 NULL）- ADMIN 用户使用
   password  String? // 密码（bcrypt 加密）- ADMIN 用户使用
+  name      String? // 用户姓名（真实姓名）
   nickname  String? // 用户昵称
   avatarUrl String?    @map("avatar_url") // 头像 URL
   phone     String? // 手机号（加密存储）
@@ -171,6 +172,11 @@ model Order {
 
   // 预订信息
   bookingDate   DateTime?     @map("booking_date") // 预订日期/活动日期（用于退款期限验证）
+  contactName   String?       @map("contact_name") // 联系人姓名
+  contactPhone  String?       @map("contact_phone") // 联系人电话
+  childName     String?       @map("child_name") // 孩子姓名
+  childAge      Int?          @map("child_age") // 孩子年龄
+  participantCount Int?       @map("participant_count") // 参与人数
 
   // 时间戳
   paidAt        DateTime?     @map("paid_at") // 支付时间
@@ -178,6 +184,7 @@ model Order {
   completedAt   DateTime?     @map("completed_at") // 完成时间
   cancelledAt   DateTime?     @map("cancelled_at") // 取消时间
   refundRequestAt DateTime?   @map("refund_request_at") // 退款申请时间
+  refundedAt    DateTime?     @map("refunded_at") // 退款完成时间
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
@@ -186,6 +193,7 @@ model Order {
   items         OrderItem[] // 订单项（一个订单可有多个产品）
   payments      PaymentRecord[] // 支付记录
   refunds       RefundRecord[] // 退款记录
+  statusHistory OrderStatusHistory[] // 订单状态历史
   issues        UserIssue[] // 一个订单可以关联多个问题
 
   // 索引
@@ -251,6 +259,25 @@ model PaymentRecord {
   @@map("payment_records")
 }
 
+// 订单状态历史模型
+model OrderStatusHistory {
+  id          Int          @id @default(autoincrement())
+  orderId     Int          @map("order_id")
+  fromStatus  OrderStatus? @map("from_status")
+  toStatus    OrderStatus  @map("to_status")
+  reason      String?      // 状态变更原因
+  changedBy   Int?         @map("changed_by") // 操作人 ID（管理员或系统）
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  // 关联关系
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // 索引
+  @@index([orderId])
+  @@index([createdAt])
+  @@map("order_status_history")
+}
+
 // 退款状态枚举
 enum RefundStatus {
   PENDING // 待退款
@@ -270,7 +297,7 @@ model RefundRecord {
   userId        Int          @map("user_id") // 申请人用户 ID（外键）
   refundNo      String       @unique @map("refund_no") // 退款单号（系统生成）
   refundId      String?      @unique @map("refund_id") // 微信支付/支付宝退款单号
-  amount        Decimal      @db.Decimal(10, 2) // 退款金额（分）
+  amount        Decimal      @map("refund_amount") @db.Decimal(10, 2) // 退款金额（分）
   reason        String? // 退款原因（简短）
   description   String? // 退款详细说明
   status        RefundStatus // 退款状态

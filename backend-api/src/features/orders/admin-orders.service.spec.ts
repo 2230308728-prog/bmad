@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { AdminOrdersService } from './admin-orders.service';
 import { AdminQueryOrdersDto } from './dto/admin/admin-query-orders.dto';

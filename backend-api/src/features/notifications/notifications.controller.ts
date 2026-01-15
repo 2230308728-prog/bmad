@@ -13,13 +13,13 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
 import { NotificationsService } from './notifications.service';
 import { SubscribeNotificationsDto } from './dto/subscribe-notifications.dto';
 import { NotificationTemplateResponseDto } from './dto/notification-template-response.dto';
 import { NotificationPreferenceResponseDto } from './dto/notification-preference-response.dto';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '@/auth/guards/roles.guard';
-import { Roles } from '@/auth/decorators/roles.decorator';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { NotificationType } from '@prisma/client';
 
@@ -30,7 +30,7 @@ import { NotificationType } from '@prisma/client';
  */
 @ApiTags('notifications')
 @Controller('api/v1/notifications')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class NotificationsController {
   private readonly logger = new Logger(NotificationsController.name);

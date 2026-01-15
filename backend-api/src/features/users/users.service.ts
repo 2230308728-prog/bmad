@@ -1,5 +1,5 @@
 import { Injectable, ConflictException, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '@/lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { UserSessionService } from './user-session.service';
 import * as bcrypt from 'bcrypt';

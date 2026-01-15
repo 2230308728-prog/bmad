@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RefundNotifyController } from './refund-notify.controller';
 import { WechatPayService } from '../payments/wechat-pay.service';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RefundStatus } from '@prisma/client';
 import { RefundNotifyRequestDto } from './dto/refund-notify.dto';
 
@@ -22,6 +23,10 @@ describe('RefundNotifyController', () => {
     },
   };
 
+  const mockNotificationsService = {
+    sendRefundNotification: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RefundNotifyController],
@@ -33,6 +38,10 @@ describe('RefundNotifyController', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
         },
       ],
     }).compile();

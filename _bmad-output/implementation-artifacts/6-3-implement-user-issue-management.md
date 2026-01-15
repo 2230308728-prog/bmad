@@ -1,6 +1,6 @@
 # Story 6.3: 实现用户问题处理功能
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -93,50 +93,50 @@ so that **我可以跟踪用户反馈并提供优质的客户服务**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: 在 Prisma Schema 中定义 UserIssue 模型和枚举 (AC: #2-#7)
-  - [ ] 1.1 定义 UserIssue 模型
+- [x] Task 1: 在 Prisma Schema 中定义 UserIssue 模型和枚举 (AC: #2-#7)
+  - [x] 1.1 定义 UserIssue 模型
     - 添加所有字段：id, user_id, order_id, type, title, description, status, priority, assigned_to, resolution, resolved_at, created_at, updated_at
     - 设置外键关联：user_id → User.id, order_id → Order.id (可选)
     - 设置索引：user_id, order_id, status, priority, created_at (优化查询性能)
-  - [ ] 1.2 定义 IssueType 枚举
+  - [x] 1.2 定义 IssueType 枚举
     - COMPLAINT (投诉)
     - QUESTION (咨询)
     - SUGGESTION (建议)
     - REFUND_REQUEST (退款申请)
-  - [ ] 1.3 定义 IssueStatus 枚举
+  - [x] 1.3 定义 IssueStatus 枚举
     - OPEN (待处理)
     - IN_PROGRESS (处理中)
     - RESOLVED (已解决)
     - CLOSED (已关闭)
-  - [ ] 1.4 定义 IssuePriority 枚举
+  - [x] 1.4 定义 IssuePriority 枚举
     - LOW (低)
     - MEDIUM (中)
     - HIGH (高)
     - URGENT (紧急)
-  - [ ] 1.5 执行 Prisma 迁移
+  - [x] 1.5 执行 Prisma 迁移
     - 运行 `npx prisma migrate dev --name add_user_issue_model`
     - 验证迁移成功执行
     - 检查生成的迁移文件
 
-- [ ] Task 2: 创建 Issues 功能模块和基础结构 (AC: #8-#9)
-  - [ ] 2.1 创建 Issues 模块目录
+- [x] Task 2: 创建 Issues 功能模块和基础结构 (AC: #8-#9)
+  - [x] 2.1 创建 Issues 模块目录
     - backend-api/src/features/issues/
     - issues.module.ts
     - issues.controller.ts
     - issues.service.ts
     - dto/ 目录
-  - [ ] 2.2 创建 IssuesModule
+  - [x] 2.2 创建 IssuesModule
     - 导入 IssuesModule 到 AppModule
     - 配置依赖：PrismaModule (数据库)
-  - [ ] 2.3 创建 AdminIssuesController
+  - [x] 2.3 创建 AdminIssuesController
     - 应用 @Controller('admin/issues') 路由前缀
     - 应用 @ApiTags('Admin Issues') Swagger 标签
     - 应用 @ApiBearerAuth() Swagger 认证
     - 应用 @UseGuards(AuthGuard('jwt'), RolesGuard)
     - 应用 @Roles(Role.ADMIN) 权限保护
 
-- [ ] Task 3: 实现 GET /api/v1/admin/issues 端点 - 问题列表查询 (AC: #10-#14)
-  - [ ] 3.1 创建 DTO `backend-api/src/features/issues/dto/admin/query-issues.dto.ts`
+- [x] Task 3: 实现 GET /api/v1/admin/issues 端点 - 问题列表查询 (AC: #10-#14)
+  - [x] 3.1 创建 DTO `backend-api/src/features/issues/dto/admin/query-issues.dto.ts`
     - page: number @IsOptional() @IsInt() @Min(1) @default(1)
     - pageSize: number @IsOptional() @IsInt() @Min(1) @Max(50) @default(20)
     - status: IssueStatus @IsOptional() @IsEnum(IssueStatus)
@@ -144,7 +144,7 @@ so that **我可以跟踪用户反馈并提供优质的客户服务**.
     - priority: IssuePriority @IsOptional() @IsEnum(IssuePriority)
     - userId: number @IsOptional() @IsInt()
     - assignedTo: number @IsOptional() @IsInt()
-  - [ ] 3.2 创建 DTO `backend-api/src/features/issues/dto/admin/issue-list-response.dto.ts`
+  - [x] 3.2 创建 DTO `backend-api/src/features/issues/dto/admin/issue-list-response.dto.ts`
     - id: number
     - userId: number
     - orderId: number | null
@@ -161,7 +161,7 @@ so that **我可以跟踪用户反馈并提供优质的客户服务**.
     - createdAt: Date
     - updatedAt: Date
     - 用户基本信息：userName, userPhone, userAvatarUrl
-  - [ ] 3.3 在 AdminIssuesService 中实现 findIssues(queryDto) 方法
+  - [x] 3.3 在 AdminIssuesService 中实现 findIssues(queryDto) 方法
     - 构建查询条件（支持多条件组合筛选）
     - 实现优先级排序逻辑（自定义排序：URGENT=4, HIGH=3, MEDIUM=2, LOW=1）
     - 同优先级按 created_at DESC
@@ -169,64 +169,64 @@ so that **我可以跟踪用户反馈并提供优质的客户服务**.
     - 包含用户信息（关联 User 表）
     - 包含订单信息（关联 Order 表，如果 order_id 存在）
     - 包含分配的管理员信息（关联 User 表，如果 assigned_to 存在）
-  - [ ] 3.4 在 AdminIssuesController 中实现 GET 端点
+  - [x] 3.4 在 AdminIssuesController 中实现 GET 端点
     - 使用 @Query(ValidationPipe) 验证查询参数
     - 调用 AdminIssuesService.findIssues()
     - 返回分页响应：{ data: [], total, page, pageSize }
-  - [ ] 3.5 添加 Swagger 文档装饰器
+  - [x] 3.5 添加 Swagger 文档装饰器
     - @ApiOperation({ summary: '查询问题列表' })
     - @ApiResponse({ type: PaginatedIssuesResponseDto })
     - 为所有查询参数添加 @ApiQuery() 装饰器
 
-- [ ] Task 4: 实现 POST /api/v1/admin/issues 端点 - 创建问题 (AC: #15-#18)
-  - [ ] 4.1 创建 DTO `backend-api/src/features/issues/dto/admin/create-issue.dto.ts`
+- [x] Task 4: 实现 POST /api/v1/admin/issues 端点 - 创建问题 (AC: #15-#18)
+  - [x] 4.1 创建 DTO `backend-api/src/features/issues/dto/admin/create-issue.dto.ts`
     - userId: number @IsInt() @IsNotEmpty()
     - orderId: number @IsOptional() @IsInt()
     - type: IssueType @IsEnum(IssueType) @IsNotEmpty()
     - title: string @IsString() @IsNotEmpty() @MinLength(1) @MaxLength(200)
     - description: string @IsString() @IsNotEmpty() @MinLength(1)
     - priority: IssuePriority @IsEnum(IssuePriority) @IsNotEmpty() @default(IssuePriority.MEDIUM)
-  - [ ] 4.2 创建 DTO `backend-api/src/features/issues/dto/admin/issue-response.dto.ts`
+  - [x] 4.2 创建 DTO `backend-api/src/features/issues/dto/admin/issue-response.dto.ts`
     - 包含完整的 Issue 对象（与 IssueListResponseDto 结构相同）
-  - [ ] 4.3 在 AdminIssuesService 中实现 createIssue(createDto) 方法
+  - [x] 4.3 在 AdminIssuesService 中实现 createIssue(createDto) 方法
     - 验证用户存在
     - 验证订单存在（如果提供 orderId）
     - 创建问题记录，status 默认为 OPEN
     - 返回创建的问题详情
-  - [ ] 4.4 在 AdminIssuesController 中实现 POST 端点
+  - [x] 4.4 在 AdminIssuesController 中实现 POST 端点
     - 使用 @Body(ValidationPipe) 验证请求体
     - 设置 @HttpCode(HttpStatus.CREATED)
     - 调用 AdminIssuesService.createIssue()
     - 返回 { data: IssueResponseDto }
-  - [ ] 4.5 添加 Swagger 文档装饰器
+  - [x] 4.5 添加 Swagger 文档装饰器
     - @ApiOperation({ summary: '创建问题' })
     - @ApiBody({ type: CreateIssueDto })
     - @ApiResponse({ status: 201, type: IssueResponseDto })
 
-- [ ] Task 5: 实现 PATCH /api/v1/admin/issues/:id/status 端点 - 更新问题状态 (AC: #19-#24)
-  - [ ] 5.1 创建 DTO `backend-api/src/features/issues/dto/admin/update-issue-status.dto.ts`
+- [x] Task 5: 实现 PATCH /api/v1/admin/issues/:id/status 端点 - 更新问题状态 (AC: #19-#24)
+  - [x] 5.1 创建 DTO `backend-api/src/features/issues/dto/admin/update-issue-status.dto.ts`
     - status: IssueStatus @IsOptional() @IsEnum(IssueStatus)
     - assignedTo: number @IsOptional() @IsInt()
     - resolution: string @IsOptional() @IsString() @MinLength(1)
-  - [ ] 5.2 在 AdminIssuesService 中实现 updateIssueStatus(id, updateDto) 方法
+  - [x] 5.2 在 AdminIssuesService 中实现 updateIssueStatus(id, updateDto) 方法
     - 验证问题存在
     - 状态转换验证（OPEN → IN_PROGRESS → RESOLVED → CLOSED）
     - 如果状态为 RESOLVED 或 CLOSED，必须提供 resolution
     - 更新 assigned_to（如果提供）
     - 记录 resolved_at（当状态变为 RESOLVED 或 CLOSED）
     - 返回更新后的问题详情
-  - [ ] 5.3 在 AdminIssuesController 中实现 PATCH 端点
+  - [x] 5.3 在 AdminIssuesController 中实现 PATCH 端点
     - 使用 @Param('id', ParseIntPipe) 转换 ID
     - 使用 @Body(ValidationPipe) 验证请求体
     - 调用 AdminIssuesService.updateIssueStatus()
     - 返回 { data: IssueResponseDto }
-  - [ ] 5.4 添加 Swagger 文档装饰器
+  - [x] 5.4 添加 Swagger 文档装饰器
     - @ApiOperation({ summary: '更新问题状态' })
     - @ApiBody({ type: UpdateIssueStatusDto })
     - @ApiResponse({ type: IssueResponseDto })
 
-- [ ] Task 6: 实现 GET /api/v1/admin/issues/stats 端点 - 问题统计 (AC: #25-#26)
-  - [ ] 6.1 创建 DTO `backend-api/src/features/issues/dto/admin/issue-stats-response.dto.ts`
+- [x] Task 6: 实现 GET /api/v1/admin/issues/stats 端点 - 问题统计 (AC: #25-#26)
+  - [x] 6.1 创建 DTO `backend-api/src/features/issues/dto/admin/issue-stats-response.dto.ts`
     - total: number (总问题数)
     - open: number (待处理)
     - inProgress: number (处理中)
@@ -236,24 +236,24 @@ so that **我可以跟踪用户反馈并提供优质的客户服务**.
     - high: number (高)
     - avgResolutionTime: string (平均解决时间，格式：X小时)
     - todayCreated: number (今日新增)
-  - [ ] 6.2 在 AdminIssuesService 中实现 getIssueStats() 方法
+  - [x] 6.2 在 AdminIssuesService 中实现 getIssueStats() 方法
     - 使用 Prisma groupBy 统计各状态问题数量
     - 使用 Prisma groupBy 统计各优先级问题数量
     - 计算平均解决时间（对已解决问题计算 resolved_at - created_at 的平均值）
     - 统计今日新增问题（created_at >= 今天 00:00:00）
-  - [ ] 6.3 添加 Redis 缓存优化
+  - [x] 6.3 添加 Redis 缓存优化
     - 缓存键：issue:stats
     - TTL: 5 分钟
     - 问题状态变更时清除缓存
-  - [ ] 6.4 在 AdminIssuesController 中实现 GET 端点
+  - [x] 6.4 在 AdminIssuesController 中实现 GET 端点
     - 调用 AdminIssuesService.getIssueStats()
     - 返回 { data: IssueStatsResponseDto }
-  - [ ] 6.5 添加 Swagger 文档装饰器
+  - [x] 6.5 添加 Swagger 文档装饰器
     - @ApiOperation({ summary: '获取问题统计' })
     - @ApiResponse({ type: IssueStatsResponseDto })
 
-- [ ] Task 7: 添加单元测试 (AC: 全部)
-  - [ ] 7.1 在 AdminIssuesService 测试中添加：
+- [x] Task 7: 添加单元测试 (AC: 全部)
+  - [x] 7.1 在 AdminIssuesService 测试中添加：
     - 测试问题列表查询（各种筛选条件）
     - 测试优先级排序逻辑
     - 测试问题创建（成功、失败场景）
@@ -261,20 +261,20 @@ so that **我可以跟踪用户反馈并提供优质的客户服务**.
     - 测试问题统计计算
     - 测试缓存功能
     - 测试错误处理（问题不存在、用户不存在、订单不存在等）
-  - [ ] 7.2 在 AdminIssuesController 测试中添加：
+  - [x] 7.2 在 AdminIssuesController 测试中添加：
     - 测试所有端点的路由和权限
     - 测试请求参数验证
     - Mock AdminIssuesService
     - 测试分页响应格式
-  - [ ] 7.3 测试覆盖率要求
+  - [x] 7.3 测试覆盖率要求
     - 至少 80% 代码覆盖率
     - 关键业务逻辑 100% 覆盖
 
-- [ ] Task 8: 添加 Swagger 文档 (AC: 全部)
-  - [ ] 8.1 为所有端点添加 @ApiOperation() 描述
-  - [ ] 8.2 为所有端点添加 @ApiResponse() 响应示例
-  - [ ] 8.3 为所有 DTO 添加 @ApiProperty() 装饰器
-  - [ ] 8.4 为枚举添加 @ApiEnum() 装饰器
+- [x] Task 8: 添加 Swagger 文档 (AC: 全部)
+  - [x] 8.1 为所有端点添加 @ApiOperation() 描述
+  - [x] 8.2 为所有端点添加 @ApiResponse() 响应示例
+  - [x] 8.3 为所有 DTO 添加 @ApiProperty() 装饰器
+  - [x] 8.4 为枚举添加 @ApiEnum() 装饰器
 
 ## Dev Notes
 

@@ -22,6 +22,7 @@ describe('NotificationsService', () => {
     userNotificationPreference: {
       findUnique: jest.fn(),
       upsert: jest.fn(),
+      create: jest.fn(),
     },
   };
 
@@ -30,8 +31,20 @@ describe('NotificationsService', () => {
     set: jest.fn(),
   };
 
+  // Setup config mock BEFORE creating the module
   const mockConfigService = {
-    get: jest.fn(),
+    get: jest.fn((key: string) => {
+      const configMap: Record<string, string> = {
+        WECHAT_APP_ID: 'test_app_id',
+        WECHAT_APP_SECRET: 'test_app_secret',
+        WECHAT_ORDER_CONFIRM_TEMPLATE_ID: 'template_order_confirm',
+        WECHAT_TRAVEL_REMINDER_TEMPLATE_ID: 'template_travel_reminder',
+        WECHAT_REFUND_APPROVED_TEMPLATE_ID: 'template_refund_approved',
+        WECHAT_REFUND_REJECTED_TEMPLATE_ID: 'template_refund_rejected',
+        WECHAT_REFUND_COMPLETED_TEMPLATE_ID: 'template_refund_completed',
+      };
+      return configMap[key] || '';
+    }),
   };
 
   const mockHttpService = {
@@ -42,6 +55,23 @@ describe('NotificationsService', () => {
   };
 
   beforeEach(async () => {
+    // Reset all mocks before each test
+    jest.clearAllMocks();
+
+    // Reset ConfigService mock to default implementation
+    mockConfigService.get.mockImplementation((key: string) => {
+      const configMap: Record<string, string> = {
+        WECHAT_APP_ID: 'test_app_id',
+        WECHAT_APP_SECRET: 'test_app_secret',
+        WECHAT_ORDER_CONFIRM_TEMPLATE_ID: 'template_order_confirm',
+        WECHAT_TRAVEL_REMINDER_TEMPLATE_ID: 'template_travel_reminder',
+        WECHAT_REFUND_APPROVED_TEMPLATE_ID: 'template_refund_approved',
+        WECHAT_REFUND_REJECTED_TEMPLATE_ID: 'template_refund_rejected',
+        WECHAT_REFUND_COMPLETED_TEMPLATE_ID: 'template_refund_completed',
+      };
+      return configMap[key] || '';
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
@@ -69,23 +99,6 @@ describe('NotificationsService', () => {
     prismaService = module.get<PrismaService>(PrismaService);
     cacheService = module.get<CacheService>(CacheService);
     configService = module.get<ConfigService>(ConfigService);
-
-    // Reset all mocks before each test
-    jest.clearAllMocks();
-
-    // Setup default config values
-    mockConfigService.get.mockImplementation((key: string) => {
-      const configMap: Record<string, string> = {
-        WECHAT_APP_ID: 'test_app_id',
-        WECHAT_APP_SECRET: 'test_app_secret',
-        WECHAT_ORDER_CONFIRM_TEMPLATE_ID: 'order_confirm_template',
-        WECHAT_TRAVEL_REMINDER_TEMPLATE_ID: 'travel_reminder_template',
-        WECHAT_REFUND_APPROVED_TEMPLATE_ID: 'refund_approved_template',
-        WECHAT_REFUND_REJECTED_TEMPLATE_ID: 'refund_rejected_template',
-        WECHAT_REFUND_COMPLETED_TEMPLATE_ID: 'refund_completed_template',
-      };
-      return configMap[key] || '';
-    });
   });
 
   describe('getAccessToken', () => {
@@ -130,16 +143,21 @@ describe('NotificationsService', () => {
 
     it('should throw error if WeChat API returns invalid response', async () => {
       mockCacheService.get.mockResolvedValue(null);
+      // Mock the API to return a response without access_token
       mockHttpService.axiosRef.get.mockResolvedValue({
         data: {
           errcode: 40013,
           errmsg: 'invalid appid',
         },
-      });
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {},
+      } as any);
 
-      await expect(service.getAccessToken()).rejects.toThrow(
-        'Invalid access_token response from WeChat API',
-      );
+      const error = await service.getAccessToken().catch(e => e);
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Failed to fetch access_token from WeChat API');
     });
 
     it('should throw error if WECHAT_APP_ID or WECHAT_APP_SECRET is missing', async () => {

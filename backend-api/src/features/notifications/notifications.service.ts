@@ -44,34 +44,29 @@ export class NotificationsService {
     CUSTOMER_SERVICE: 'thing3',
   } as const;
 
-  // 消息模板 ID 常量
-  private readonly ORDER_CONFIRM_TEMPLATE_ID = this.configService.get<string>(
-    'WECHAT_ORDER_CONFIRM_TEMPLATE_ID',
-    '',
-  );
-  private readonly TRAVEL_REMINDER_TEMPLATE_ID = this.configService.get<string>(
-    'WECHAT_TRAVEL_REMINDER_TEMPLATE_ID',
-    '',
-  );
-  private readonly REFUND_APPROVED_TEMPLATE_ID = this.configService.get<string>(
-    'WECHAT_REFUND_APPROVED_TEMPLATE_ID',
-    '',
-  );
-  private readonly REFUND_REJECTED_TEMPLATE_ID = this.configService.get<string>(
-    'WECHAT_REFUND_REJECTED_TEMPLATE_ID',
-    '',
-  );
-  private readonly REFUND_COMPLETED_TEMPLATE_ID = this.configService.get<string>(
-    'WECHAT_REFUND_COMPLETED_TEMPLATE_ID',
-    '',
-  );
-
   constructor(
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
   ) {}
+
+  // 消息模板 ID 常量 - 使用 getter 方法确保 configService 已注入
+  private get ORDER_CONFIRM_TEMPLATE_ID(): string {
+    return this.configService.get<string>('WECHAT_ORDER_CONFIRM_TEMPLATE_ID', '');
+  }
+  private get TRAVEL_REMINDER_TEMPLATE_ID(): string {
+    return this.configService.get<string>('WECHAT_TRAVEL_REMINDER_TEMPLATE_ID', '');
+  }
+  private get REFUND_APPROVED_TEMPLATE_ID(): string {
+    return this.configService.get<string>('WECHAT_REFUND_APPROVED_TEMPLATE_ID', '');
+  }
+  private get REFUND_REJECTED_TEMPLATE_ID(): string {
+    return this.configService.get<string>('WECHAT_REFUND_REJECTED_TEMPLATE_ID', '');
+  }
+  private get REFUND_COMPLETED_TEMPLATE_ID(): string {
+    return this.configService.get<string>('WECHAT_REFUND_COMPLETED_TEMPLATE_ID', '');
+  }
 
   /**
    * 获取微信 access_token（带 Redis 缓存）

@@ -83,7 +83,7 @@ development_status:
   epic-4-retrospective: done
 
   # Epic 5: 订单管理与通知
-  epic-5: in-progress
+  epic-5: done
   5-1-implement-parent-order-list-detail-query: done
   5-2-implement-admin-order-management-api: done
   5-3-design-refund-data-model: done
@@ -91,13 +91,13 @@ development_status:
   5-5-implement-admin-refund-review: done
   5-6-integrate-wechat-payment-refund: done
   5-7-implement-wechat-subscription-notification: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
 
   # Epic 6: 用户管理与分析
-  epic-6: in-progress
+  epic-6: done
   6-1-implement-admin-user-info-query: done
   6-2-implement-user-order-history-query: done
   6-3-implement-user-issue-management: done
   6-4-implement-dashboard-order-user-stats: done
-  6-5-implement-dashboard-popular-products-conversion: backlog
-  epic-6-retrospective: optional
+  6-5-implement-dashboard-popular-products-conversion: done
+  epic-6-retrospective: done

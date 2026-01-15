@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { WechatPayService } from '../payments/wechat-pay.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AdminRefundsService } from './admin-refunds.service';
 import { AdminQueryRefundsDto } from './dto/admin';
 import { RefundStatus, OrderStatus } from '@prisma/client';
@@ -41,6 +42,10 @@ describe('AdminRefundsService', () => {
     isAvailable: jest.fn(() => true),
     refund: jest.fn(),
     queryRefund: jest.fn(),
+  };
+
+  const mockNotificationsService = {
+    sendRefundNotification: jest.fn(),
   };
 
   const mockUser = {
@@ -117,6 +122,10 @@ describe('AdminRefundsService', () => {
         {
           provide: WechatPayService,
           useValue: mockWechatPayService,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
         },
       ],
     }).compile();

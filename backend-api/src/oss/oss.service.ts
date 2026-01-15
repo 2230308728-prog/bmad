@@ -84,9 +84,10 @@ export class OssService {
     // Extract filename from URL: https://bucket.region.aliyuncs.com/path/to/file
     try {
       const url = new URL(fileUrl);
-      // Remove leading '/' from pathname and skip bucket name (first segment)
+      // Remove leading '/' from pathname
+      // Note: pathname does NOT include bucket name (it's in the hostname)
       const pathSegments = url.pathname.split('/').filter(Boolean);
-      const fileName = pathSegments.slice(1).join('/'); // Skip bucket name
+      const fileName = pathSegments.join('/');
       await this.client.delete(fileName);
     } catch {
       throw new Error(`Invalid OSS URL format: ${fileUrl}`);

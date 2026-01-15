@@ -1,6 +1,6 @@
 # Story 4.2: 实现预订信息提交 API
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality-check before dev-story. -->
 
@@ -66,73 +66,73 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: 创建订单相关 DTO** (AC: 接收请求 Body)
-  - [ ] 创建 CreateOrderDto
-    - [ ] productId: @IsNotEmpty() @IsInt() @ApiProperty()
-    - [ ] bookingDate: @IsNotEmpty() @IsDateString() @ApiProperty()
-    - [ ] childName: @IsNotEmpty() @IsString() @MaxLength(50) @ApiProperty()
-    - [ ] childAge: @IsNotEmpty() @IsInt() @Min(1) @Max(18) @ApiProperty()
-    - [ ] contactName: @IsNotEmpty() @IsString() @MaxLength(50) @ApiProperty()
-    - [ ] contactPhone: @IsNotEmpty() @IsPhoneNumber('CN') @ApiProperty()
-    - [ ] participantCount: @IsNotEmpty() @IsInt() @Min(1) @Max(20) @ApiProperty()
-    - [ ] remark: @IsOptional() @IsString() @MaxLength(500) @ApiProperty()
-  - [ ] 添加完整的 Swagger 文档
+- [x] **Task 1: 创建订单相关 DTO** (AC: 接收请求 Body)
+  - [x] 创建 CreateOrderDto
+    - [x] productId: @IsNotEmpty() @IsInt() @ApiProperty()
+    - [x] bookingDate: @IsNotEmpty() @IsDateString() @ApiProperty()
+    - [x] childName: @IsNotEmpty() @IsString() @MaxLength(50) @ApiProperty()
+    - [x] childAge: @IsNotEmpty() @IsInt() @Min(1) @Max(18) @ApiProperty()
+    - [x] contactName: @IsNotEmpty() @IsString() @MaxLength(50) @ApiProperty()
+    - [x] contactPhone: @IsNotEmpty() @IsPhoneNumber('CN') @ApiProperty()
+    - [x] participantCount: @IsNotEmpty() @IsInt() @Min(1) @Max(20) @ApiProperty()
+    - [x] remark: @IsOptional() @IsString() @MaxLength(500) @ApiProperty()
+  - [x] 添加完整的 Swagger 文档
 
-- [ ] **Task 2: 实现 OrdersService 创建订单逻辑** (AC: 验证和创建订单)
-  - [ ] 创建 OrdersService（orders.service.ts）
-  - [ ] 实现 create() 方法：
-    - [ ] 验证产品存在且状态为 PUBLISHED
-    - [ ] 验证产品库存 >= participantCount
-    - [ ] 验证 childAge 在产品 min_age 和 max_age 范围内
-    - [ ] 计算订单总金额
-    - [ ] 生成唯一订单编号（ORD + YYYYMMDD + 8位随机数）
-    - [ ] 使用 Redis DECRBY 原子操作预扣库存
-    - [ ] 如果库存不足，回滚并抛出异常
-    - [ ] 创建 Order 和 OrderItem 记录
-    - [ ] 返回完整订单信息（包含产品快照）
-  - [ ] 添加完整的错误处理和日志记录
+- [x] **Task 2: 实现 OrdersService 创建订单逻辑** (AC: 验证和创建订单)
+  - [x] 创建 OrdersService（orders.service.ts）
+  - [x] 实现 create() 方法：
+    - [x] 验证产品存在且状态为 PUBLISHED
+    - [x] 验证产品库存 >= participantCount
+    - [x] 验证 childAge 在产品 min_age 和 max_age 范围内
+    - [x] 计算订单总金额
+    - [x] 生成唯一订单编号（ORD + YYYYMMDD + 8位随机数）
+    - [x] 使用 Redis DECRBY 原子操作预扣库存
+    - [x] 如果库存不足，回滚并抛出异常
+    - [x] 创建 Order 和 OrderItem 记录
+    - [x] 返回完整订单信息（包含产品快照）
+  - [x] 添加完整的错误处理和日志记录
 
-- [ ] **Task 3: 实现 OrdersController 端点** (AC: 实现 POST /api/v1/orders)
-  - [ ] 创建 OrdersController（orders.controller.ts）
-  - [ ] 应用 @UseGuards(AuthGuard('jwt'), RolesGuard)
-  - [ ] 应用 @Roles(Role.PARENT)
-  - [ ] 实现 POST /api/v1/orders 端点
-  - [ ] 使用 @CurrentUser() 装饰器获取当前用户 ID
-  - [ ] 调用 OrdersService.create() 方法
-  - [ ] 返回 201 状态码和订单信息
-  - [ ] 添加完整的 Swagger 文档
+- [x] **Task 3: 实现 OrdersController 端点** (AC: 实现 POST /api/v1/orders)
+  - [x] 创建 OrdersController（orders.controller.ts）
+  - [x] 应用 @UseGuards(AuthGuard('jwt'), RolesGuard)
+  - [x] 应用 @Roles(Role.PARENT)
+  - [x] 实现 POST /api/v1/orders 端点
+  - [x] 使用 @CurrentUser() 装饰器获取当前用户 ID
+  - [x] 调用 OrdersService.create() 方法
+  - [x] 返回 201 状态码和订单信息
+  - [x] 添加完整的 Swagger 文档
 
-- [ ] **Task 4: 实现 Redis 库存预扣逻辑** (AC: Redis 原子操作预扣库存)
-  - [ ] 在 OrdersService 中注入 CacheService（Redis）
-  - [ ] 实现 preDeductStock() 方法：
-    - [ ] 使用 Redis DECRBY 原子操作扣减库存
-    - [ ] 返回扣减后的库存值
-    - [ ] 如果库存 < 0，则回滚（INCRBY）并返回 false
-  - [ ] 实现 rollbackStock() 方法：
-    - [ ] 使用 Redis INCRBY 回滚库存
-  - [ ] 在 create() 方法中使用事务保证数据一致性
+- [x] **Task 4: 实现 Redis 库存预扣逻辑** (AC: Redis 原子操作预扣库存)
+  - [x] 在 OrdersService 中注入 CacheService（Redis）
+  - [x] 实现 preDeductStock() 方法：
+    - [x] 使用 Redis DECRBY 原子操作扣减库存
+    - [x] 返回扣减后的库存值
+    - [x] 如果库存 < 0，则回滚（INCRBY）并返回 false
+  - [x] 实现 rollbackStock() 方法：
+    - [x] 使用 Redis INCRBY 回滚库存
+  - [x] 在 create() 方法中使用事务保证数据一致性
 
-- [ ] **Task 5: 实现订单编号生成逻辑** (AC: 生成唯一订单编号)
-  - [ ] 实现 generateOrderNo() 方法
-  - [ ] 格式：ORD + YYYYMMDD + 8位随机数
-  - [ ] 示例：ORD20240109123456789
-  - [ ] 确保订单编号全局唯一
+- [x] **Task 5: 实现订单编号生成逻辑** (AC: 生成唯一订单编号)
+  - [x] 实现 generateOrderNo() 方法
+  - [x] 格式：ORD + YYYYMMDD + 8位随机数
+  - [x] 示例：ORD20240109123456789
+  - [x] 确保订单编号全局唯一
 
-- [ ] **Task 6: 编写单元测试** (AC: 综合)
-  - [ ] 测试 OrdersService.create() 成功场景
-  - [ ] 测试产品不存在（404）
-  - [ ] 测试产品未发布（400）
-  - [ ] 测试库存不足（400）
-  - [ ] 测试年龄范围不符（400）
-  - [ ] 测试手机号格式无效（400）
-  - [ ] 测试 Redis 库存扣减和回滚
-  - [ ] 测试订单编号生成唯一性
+- [x] **Task 6: 编写单元测试** (AC: 综合)
+  - [x] 测试 OrdersService.create() 成功场景
+  - [x] 测试产品不存在（404）
+  - [x] 测试产品未发布（400）
+  - [x] 测试库存不足（400）
+  - [x] 测试年龄范围不符（400）
+  - [x] 测试手机号格式无效（400）
+  - [x] 测试 Redis 库存扣减和回滚
+  - [x] 测试订单编号生成唯一性
 
-- [ ] **Task 7: 编写集成测试和文档** (AC: 综合)
-  - [ ] 测试 POST /api/v1/orders 端点
-  - [ ] 验证 Swagger 文档正确生成
-  - [ ] 验证权限保护（@Roles(Role.PARENT)）
-  - [ ] 验证 JWT 认证
+- [x] **Task 7: 编写集成测试和文档** (AC: 综合)
+  - [x] 测试 POST /api/v1/orders 端点
+  - [x] 验证 Swagger 文档正确生成
+  - [x] 验证权限保护（@Roles(Role.PARENT)）
+  - [x] 验证 JWT 认证
 
 ## Dev Notes
 

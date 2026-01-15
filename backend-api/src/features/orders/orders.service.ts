@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
@@ -645,7 +645,7 @@ export class OrdersService {
       refunds: order.refunds.map((refund) => ({
         id: refund.id,
         refundNo: refund.refundNo,
-        refundAmount: refund.refundAmount.toString(),
+        refundAmount: refund.amount.toString(),
         reason: refund.reason,
         status: refund.status,
         createdAt: refund.createdAt.toISOString(),

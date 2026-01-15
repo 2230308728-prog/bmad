@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from '../features/users/users.service';
-import { PrismaService } from '@/lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { TokenBlacklistService } from '../features/users/token-blacklist.service';
 import { UserSessionService } from '../features/users/user-session.service';
 

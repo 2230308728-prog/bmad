@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '@/lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '@/redis/cache.service';
 import { QueryIssuesDto } from './dto/admin/query-issues.dto';
 import { CreateIssueDto } from './dto/admin/create-issue.dto';

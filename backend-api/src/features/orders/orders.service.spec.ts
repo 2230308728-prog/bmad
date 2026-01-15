@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { WechatPayService } from '../payments/wechat-pay.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus, PaymentStatus, ProductStatus } from '@prisma/client';
@@ -29,6 +30,10 @@ describe('OrdersService', () => {
     queryOrder: jest.fn(),
   };
 
+  const mockNotificationsService = {
+    sendOrderConfirmNotification: jest.fn(),
+  };
+
   const mockPrismaService = {
     product: {
       findFirst: jest.fn(),
@@ -51,6 +56,10 @@ describe('OrdersService', () => {
         {
           provide: WechatPayService,
           useValue: mockWechatPayService,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
         },
       ],
     }).compile();

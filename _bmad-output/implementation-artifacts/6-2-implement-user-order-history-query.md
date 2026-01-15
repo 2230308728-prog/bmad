@@ -1,6 +1,6 @@
 # Story 6.2: 实现用户订单历史查询
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

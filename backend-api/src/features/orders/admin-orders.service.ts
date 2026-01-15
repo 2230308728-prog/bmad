@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { AdminQueryOrdersDto } from './dto/admin/admin-query-orders.dto';
 import { UpdateOrderStatusDto } from './dto/admin/update-order-status.dto';
@@ -163,18 +163,10 @@ export class AdminOrdersService {
           orderBy: { createdAt: 'desc' },
         },
         refunds: {
-          orderBy: { appliedAt: 'desc' },
+          orderBy: { createdAt: 'desc' },
         },
         statusHistory: {
-          include: {
-            changedByUser: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-          orderBy: { changedAt: 'desc' },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });
@@ -230,11 +222,11 @@ export class AdminOrdersService {
       refunds: order.refunds.map((refund) => ({
         id: refund.id,
         refundNo: refund.refundNo,
-        refundAmount: refund.refundAmount.toString(),
+        refundAmount: refund.amount.toString(),
         reason: refund.reason,
         adminNote: refund.adminNote,
         status: refund.status,
-        appliedAt: refund.appliedAt.toISOString(),
+        appliedAt: refund.createdAt.toISOString(),
         approvedAt: refund.approvedAt?.toISOString(),
         wechatRefundId: refund.wechatRefundId,
       })),
@@ -244,8 +236,7 @@ export class AdminOrdersService {
         toStatus: history.toStatus,
         reason: history.reason,
         changedBy: history.changedBy,
-        changedByName: history.changedByUser.name,
-        changedAt: history.changedAt.toISOString(),
+        changedAt: history.createdAt.toISOString(),
       })),
     };
   }
@@ -342,6 +333,7 @@ export class AdminOrdersService {
               refundNo,
               orderId,
               userId: order.userId,
+              appliedBy: adminId,
               status: 'PENDING',
               amount: order.actualAmount,
               reason: reason || '管理员发起退款',

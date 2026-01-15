@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
 import { WechatPayService } from './wechat-pay.service';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { OrderStatus, Prisma } from '@prisma/client';
 import type { CurrentUserType } from '../../common/decorators/current-user.decorator';

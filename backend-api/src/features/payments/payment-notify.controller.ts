@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { OrderStatus, PaymentStatus, PaymentChannel, Prisma, Order } from '@prisma/client';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { WechatPayService, WechatPayNotifyData } from './wechat-pay.service';
 import { WechatPayNotifyDto } from './dto/wechat-pay-notify.dto';
 import { CacheService } from '../../redis/cache.service';

@@ -1,10 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AuthGuard } from '@nestjs/passport';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationType } from '@prisma/client';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '@/auth/guards/roles.guard';
-import { Roles } from '@/auth/decorators/roles.decorator';
+import { RolesGuard } from '@/common/guards/roles.guard';
 
 describe('NotificationsController', () => {
   let controller: NotificationsController;
@@ -25,7 +24,7 @@ describe('NotificationsController', () => {
         },
       ],
     })
-      .overrideGuard(JwtAuthGuard)
+      .overrideProvider(AuthGuard('jwt'))
       .useValue({ canActivate: true })
       .overrideGuard(RolesGuard)
       .useValue({ canActivate: true })

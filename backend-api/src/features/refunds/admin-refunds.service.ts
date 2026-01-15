@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { WechatPayService } from '../payments/wechat-pay.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -318,7 +318,7 @@ export class AdminRefundsService {
         // 退款状态保持 APPROVED，需要管理员手动重试
       } else {
         // 查询支付记录获取订单总金额
-        const payments = await this.prisma.payment.findMany({
+        const payments = await this.prisma.paymentRecord.findMany({
           where: {
             orderId: refund.orderId,
             status: 'SUCCESS',
@@ -550,7 +550,7 @@ export class AdminRefundsService {
 
     try {
       // 查询支付记录获取订单总金额
-      const payments = await this.prisma.payment.findMany({
+      const payments = await this.prisma.paymentRecord.findMany({
         where: {
           orderId: refund.orderId,
           status: 'SUCCESS',

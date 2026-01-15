@@ -13,7 +13,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiHeader } from '@nestjs/swagger';
 import { Role, OrderStatus, Prisma } from '@prisma/client';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { WechatPayService } from './wechat-pay.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';

@@ -9,7 +9,7 @@ import { AdminUsersController } from './admin-users.controller';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { UserSessionService } from './user-session.service';
 import { AdminUsersService } from './admin-users.service';
-import { PrismaService } from '@/lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { AuthModule } from '@/auth/auth.module';
 
 @Module({

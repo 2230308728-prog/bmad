@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentNotifyController } from './payment-notify.controller';
 import { WechatPayService } from './wechat-pay.service';
-import { PrismaService } from '../../lib/prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { HttpException } from '@nestjs/common';
