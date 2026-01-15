@@ -17,6 +17,7 @@ import { PaymentsModule } from './features/payments/payments.module';
 import { CacheModule } from './cache/cache.module';
 import { RefundsModule } from './features/refunds/refunds.module';
 import { NotificationsModule } from './features/notifications/notifications.module';
+import { IssuesModule } from './features/issues/issues.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { NotificationsModule } from './features/notifications/notifications.modu
     PaymentsModule,
     RefundsModule,
     NotificationsModule,
+    IssuesModule,
   ],
   controllers: [AppController],
   providers: [

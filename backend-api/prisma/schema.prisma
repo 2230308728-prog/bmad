@@ -44,6 +44,8 @@ model User {
   orders Order[] // 一个用户有多个订单
   refunds RefundRecord[] // 一个用户有多个退款记录
   notificationPreference UserNotificationPreference? // 用户通知偏好（一对一）
+  issues UserIssue[] // 一个用户有多个问题记录
+  assignedIssues UserIssue[] @relation("IssueAssignee") // 作为管理员分配的问题
 
   @@map("users") // 表名映射为小写复数
 }
@@ -184,6 +186,7 @@ model Order {
   items         OrderItem[] // 订单项（一个订单可有多个产品）
   payments      PaymentRecord[] // 支付记录
   refunds       RefundRecord[] // 退款记录
+  issues        UserIssue[] // 一个订单可以关联多个问题
 
   // 索引
   @@index([userId]) // 用户订单查询优化
@@ -330,4 +333,61 @@ model UserNotificationPreference {
 
   @@index([userId])
   @@map("user_notification_preferences")
+}
+
+// ==================== Epic 6: Story 6.3 用户问题处理 ====================
+
+// 问题类型枚举
+enum IssueType {
+  COMPLAINT // 投诉
+  QUESTION // 咨询
+  SUGGESTION // 建议
+  REFUND_REQUEST // 退款申请
+}
+
+// 问题状态枚举
+enum IssueStatus {
+  OPEN // 待处理
+  IN_PROGRESS // 处理中
+  RESOLVED // 已解决
+  CLOSED // 已关闭
+}
+
+// 问题优先级枚举
+enum IssuePriority {
+  LOW // 低
+  MEDIUM // 中
+  HIGH // 高
+  URGENT // 紧急
+}
+
+// 用户问题模型
+model UserIssue {
+  id         Int           @id @default(autoincrement())
+  userId     Int           @map("user_id")
+  orderId    Int?          @map("order_id")
+  type       IssueType
+  title      String
+  description String
+  status     IssueStatus   @default(OPEN)
+  priority   IssuePriority @default(MEDIUM)
+  assignedTo Int?          @map("assigned_to")
+  resolution String?
+  resolvedAt DateTime?     @map("resolved_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  // 关联关系
+  user   User   @relation(fields: [userId], references: [id])
+  order  Order? @relation(fields: [orderId], references: [id])
+  assignee User? @relation("IssueAssignee", fields: [assignedTo], references: [id])
+
+  // 索引
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([assignedTo])
+  @@map("user_issues")
 }
