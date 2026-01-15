@@ -2,8 +2,11 @@ import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenEx
 import { PrismaService } from '../../lib/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { QueryOrdersDto } from './dto/query-orders.dto';
+import { maskPhoneNumber } from './dto/order-detail.dto';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { WechatPayService, WechatPayOrderQueryResult } from '../../features/payments/wechat-pay.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /**
  * Orders Service
@@ -17,6 +20,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly cacheService: CacheService,
     private readonly wechatPayService: WechatPayService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -431,6 +435,28 @@ export class OrdersService {
           `支付成功处理完成（主动查询）: orderNo=${order.orderNo}, transactionId=${wechatResult.transaction_id}`,
         );
       });
+
+      // Story 5.7: 发送订单确认通知
+      // NOTE: 通知发送失败不影响主流程（记录日志即可）
+      try {
+        const firstItem = order.items[0];
+        if (firstItem) {
+          await this.notificationsService.sendOrderConfirmNotification(
+            order.userId,
+            order.orderNo,
+            firstItem.productName,
+            order.bookingDate || new Date(),
+            firstItem.quantity,
+            order.contactPhone || '',
+            parseFloat(order.actualAmount?.toString() || '0'),
+          );
+        }
+      } catch (notificationError) {
+        // 通知发送失败不影响主流程，仅记录日志
+        this.logger.warn(
+          `订单确认通知发送失败（不影响主流程）: orderNo=${order.orderNo}, error=${notificationError}`,
+        );
+      }
     } catch (error) {
       this.logger.error(`处理支付成功失败: orderNo=${order.orderNo}`, error);
       throw error;
@@ -491,5 +517,139 @@ export class OrdersService {
       this.logger.error(`处理支付失败失败: orderNo=${order.orderNo}`, error);
       throw error;
     }
+  }
+
+  /**
+   * 查询用户订单列表
+   * @param userId 用户 ID
+   * @param queryDto 查询参数
+   * @returns 分页订单列表
+   */
+  async findAll(userId: number, queryDto: QueryOrdersDto) {
+    const { page = 1, pageSize = 20, status, sortBy = 'createdAt', sortOrder = 'desc' } = queryDto;
+
+    // 计算分页参数
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+
+    // 构建 WHERE 条件
+    const where: any = {
+      userId,
+    };
+
+    // 应用状态筛选（可选）
+    if (status) {
+      where.status = status;
+    }
+
+    // 构建排序参数
+    const orderBy: any = {};
+    orderBy[sortBy] = sortOrder;
+
+    // 并行查询订单数据和总数
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          items: {
+            take: 1, // 只取第一个订单项获取产品名称
+          },
+        },
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    // 构建响应数据
+    const data = orders.map((order) => ({
+      id: order.id,
+      orderNo: order.orderNo,
+      status: order.status,
+      totalAmount: order.totalAmount.toString(),
+      productName: order.items[0]?.productName || '',
+      createdAt: order.createdAt.toISOString(),
+    }));
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  /**
+   * 查询订单详情
+   * @param orderId 订单 ID
+   * @param userId 当前用户 ID
+   * @returns 订单详情
+   */
+  async findOne(orderId: number, userId: number) {
+    // 查询订单（验证所有权）
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId,
+      },
+      include: {
+        items: true,
+        payments: {
+          orderBy: { createdAt: 'desc' },
+        },
+        refunds: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!order) {
+      this.logger.warn(`订单不存在或不属于当前用户: orderId=${orderId}, userId=${userId}`);
+      throw new NotFoundException('订单不存在');
+    }
+
+    // 应用手机号脱敏
+    const maskedPhone = maskPhoneNumber(order.contactPhone || '');
+
+    // 构建响应数据
+    return {
+      id: order.id,
+      orderNo: order.orderNo,
+      status: order.status,
+      totalAmount: order.totalAmount.toString(),
+      actualAmount: order.actualAmount?.toString() || '0.00',
+      remark: order.remark,
+      contactName: order.contactName,
+      contactPhone: maskedPhone,
+      childName: order.childName,
+      childAge: order.childAge,
+      bookingDate: order.bookingDate?.toISOString().split('T')[0] || '',
+      paidAt: order.paidAt?.toISOString(),
+      createdAt: order.createdAt.toISOString(),
+      items: order.items.map((item) => ({
+        id: item.id,
+        productName: item.productName,
+        productPrice: item.productPrice.toString(),
+        quantity: item.quantity,
+        subtotal: item.subtotal.toString(),
+      })),
+      payments: order.payments.map((payment) => ({
+        id: payment.id,
+        transactionId: payment.transactionId,
+        channel: payment.channel,
+        amount: payment.amount.toString(),
+        status: payment.status,
+        createdAt: payment.createdAt.toISOString(),
+      })),
+      refunds: order.refunds.map((refund) => ({
+        id: refund.id,
+        refundNo: refund.refundNo,
+        refundAmount: refund.refundAmount.toString(),
+        reason: refund.reason,
+        status: refund.status,
+        createdAt: refund.createdAt.toISOString(),
+      })),
+    };
   }
 }

@@ -7,13 +7,14 @@ import { RefundNotifyController } from './refund-notify.controller';
 import { PrismaModule } from '../../prisma.module';
 import { RedisModule } from '../../redis/redis.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 /**
  * Refunds Module
  * 退款功能模块（家长端 + 管理端 + 退款回调）
  */
 @Module({
-  imports: [PrismaModule, RedisModule, PaymentsModule],
+  imports: [PrismaModule, RedisModule, PaymentsModule, NotificationsModule],
   controllers: [RefundsController, AdminRefundsController, RefundNotifyController],
   providers: [RefundsService, AdminRefundsService],
   exports: [RefundsService, AdminRefundsService],

@@ -40,6 +40,11 @@ model User {
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
 
+  // 关联关系
+  orders Order[] // 一个用户有多个订单
+  refunds RefundRecord[] // 一个用户有多个退款记录
+  notificationPreference UserNotificationPreference? // 用户通知偏好（一对一）
+
   @@map("users") // 表名映射为小写复数
 }
 
@@ -87,6 +92,8 @@ model Product {
 
   // 关联关系
   category ProductCategory @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[] // 一个产品可以在多个订单项中
+  stockHistory ProductStockHistory[] // 库存变更历史
 
   // 索引
   @@index([categoryId]) // 分类查询优化
@@ -94,4 +101,233 @@ model Product {
   @@index([createdAt]) // 时间排序优化
   @@index([status, featured]) // 推荐产品查询优化
   @@map("products") // 表名映射为小写复数
+}
+
+// 产品库存历史记录
+model ProductStockHistory {
+  id        Int      @id @default(autoincrement())
+  productId Int      @map("product_id")
+  oldStock  Int      @map("old_stock")
+  newStock  Int      @map("new_stock")
+  reason    String? // 变更原因
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@map("product_stock_history")
+}
+
+// ==================== Epic 4: 订单与支付 ====================
+
+// 订单状态枚举
+enum OrderStatus {
+  PENDING // 待支付
+  PAID // 已支付
+  CONFIRMED // 已确认（商家已确认）
+  COMPLETED // 已完成
+  CANCELLED // 已取消
+  REFUNDING // 退款中
+  REFUNDED // 已退款
+}
+
+// 支付状态枚举
+enum PaymentStatus {
+  PENDING // 待支付
+  PROCESSING // 支付处理中
+  SUCCESS // 支付成功
+  FAILED // 支付失败
+  REFUNDING // 退款中
+  REFUNDED // 已退款
+  CANCELLED // 已取消
+}
+
+// 支付渠道枚举
+enum PaymentChannel {
+  WECHAT_JSAPI // 微信 JSAPI 支付（小程序/公众号）
+  WECHAT_NATIVE // 微信 Native 支付（扫码）
+  WECHAT_H5 // 微信 H5 支付
+  WECHAT_APP // 微信 APP 支付
+  ALIPAY // 支付宝
+}
+
+// 订单模型
+model Order {
+  id            Int           @id @default(autoincrement())
+  orderNo       String        @unique @map("order_no") // 订单号（系统生成）
+  userId        Int           @map("user_id") // 下单用户 ID
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(10, 2) // 订单总金额（分）
+  discountAmount Decimal?      @map("discount_amount") @db.Decimal(10, 2) // 优惠金额（分）
+  actualAmount  Decimal       @map("actual_amount") @db.Decimal(10, 2) // 实际支付金额（分）
+  status        OrderStatus   @default(PENDING) // 订单状态
+  paymentStatus PaymentStatus @default(PENDING) @map("payment_status") // 支付状态
+  paymentChannel PaymentChannel? @map("payment_channel") // 支付渠道
+
+  // 备注信息
+  remark        String? // 用户备注
+
+  // 预订信息
+  bookingDate   DateTime?     @map("booking_date") // 预订日期/活动日期（用于退款期限验证）
+
+  // 时间戳
+  paidAt        DateTime?     @map("paid_at") // 支付时间
+  confirmedAt   DateTime?     @map("confirmed_at") // 确认时间
+  completedAt   DateTime?     @map("completed_at") // 完成时间
+  cancelledAt   DateTime?     @map("cancelled_at") // 取消时间
+  refundRequestAt DateTime?   @map("refund_request_at") // 退款申请时间
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // 关联关系
+  user          User          @relation(fields: [userId], references: [id])
+  items         OrderItem[] // 订单项（一个订单可有多个产品）
+  payments      PaymentRecord[] // 支付记录
+  refunds       RefundRecord[] // 退款记录
+
+  // 索引
+  @@index([userId]) // 用户订单查询优化
+  @@index([orderNo]) // 订单号查询优化（已由 @unique 覆盖）
+  @@index([status]) // 状态筛选优化
+  @@index([paymentStatus]) // 支付状态筛选优化
+  @@index([createdAt]) // 时间排序优化
+  @@index([userId, status]) // 用户订单状态组合查询优化
+  @@map("orders")
+}
+
+// 订单项模型
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  orderId     Int     @map("order_id")
+  productId   Int     @map("product_id")
+  productName String  @map("product_name") // 产品名称快照（冗余，防止产品删除后无法显示）
+  productPrice Decimal @map("product_price") @db.Decimal(10, 2) // 产品单价快照（分）
+  quantity    Int     @default(1) // 数量
+  subtotal    Decimal @db.Decimal(10, 2) // 小计金额（分）
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+
+  // 索引
+  @@index([orderId]) // 订单项查询优化
+  @@index([productId]) // 产品销售分析优化
+  @@map("order_items")
+}
+
+// 支付记录模型
+model PaymentRecord {
+  id            Int           @id @default(autoincrement())
+  orderId       Int           @map("order_id")
+  transactionId String        @unique @map("transaction_id") // 微信支付/支付宝交易号
+  outTradeNo    String        @unique @map("out_trade_no") // 商户订单号（对应 order.order_no）
+  channel       PaymentChannel // 支付渠道
+  amount        Decimal       @db.Decimal(10, 2) // 支付金额（分）
+  status        PaymentStatus // 支付状态
+
+  // 微信支付相关字段
+  prepayId      String?       @map("prepay_id") // 预支付交易会话标识
+  tradeType     String?       @map("trade_type") // 交易类型（JSAPI, NATIVE, APP）
+
+  // 通知相关
+  notifyData    Json?         @map("notify_data") // 支付通知原始数据
+  notifiedAt    DateTime?     @map("notified_at") // 通知接收时间
+
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // 关联关系
+  order         Order         @relation(fields: [orderId], references: [id])
+
+  // 索引
+  @@index([orderId]) // 订单支付记录查询优化
+  @@index([transactionId]) // 交易号查询优化（已由 @unique 覆盖）
+  @@index([status]) // 状态筛选优化
+  @@map("payment_records")
+}
+
+// 退款状态枚举
+enum RefundStatus {
+  PENDING // 待退款
+  APPROVED // 已批准（管理员审核通过）
+  REJECTED // 已拒绝（管理员审核拒绝）
+  PROCESSING // 退款处理中
+  SUCCESS // 退款成功
+  FAILED // 退款失败
+  CANCELLED // 已取消
+  COMPLETED // 已完成（与 SUCCESS 同义但更语义化）
+}
+
+// 退款记录模型
+model RefundRecord {
+  id            Int          @id @default(autoincrement())
+  orderId       Int          @map("order_id")
+  userId        Int          @map("user_id") // 申请人用户 ID（外键）
+  refundNo      String       @unique @map("refund_no") // 退款单号（系统生成）
+  refundId      String?      @unique @map("refund_id") // 微信支付/支付宝退款单号
+  amount        Decimal      @db.Decimal(10, 2) // 退款金额（分）
+  reason        String? // 退款原因（简短）
+  description   String? // 退款详细说明
+  status        RefundStatus // 退款状态
+
+  // 退款申请信息
+  appliedBy     Int          @map("applied_by") // 申请人 ID（冗余，便于查询）
+  approvedBy    Int?         @map("approved_by") // 审批人 ID（管理员）
+  approvedAt    DateTime?    @map("approved_at") // 审批时间
+
+  // 退款凭证信息
+  images        String[] // 凭证图片数组（PostgreSQL text[]）
+
+  // 管理员审核信息
+  adminNote     String?     @map("admin_note") // 管理员备注
+  rejectedReason String?    @map("rejected_reason") // 拒绝原因
+  rejectedAt    DateTime?    @map("rejected_at") // 拒绝时间
+
+  // 退款完成信息
+  refundedAt    DateTime?    @map("refunded_at") // 退款完成时间
+
+  // 微信支付相关
+  wechatRefundId String?     @map("wechat_refund_id") // 微信退款单号（与 refundId 区分）
+  notifyData    Json?        @map("notify_data") // 退款通知原始数据
+
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // 关联关系
+  order         Order        @relation(fields: [orderId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+
+  // 索引
+  @@index([orderId]) // 订单退款记录查询优化
+  @@index([refundNo]) // 退款单号查询优化（已由 @unique 覆盖）
+  @@index([status]) // 状态筛选优化
+  @@index([appliedBy]) // 用户退款申请查询优化
+  @@index([userId, status]) // 用户退款状态组合查询优化
+  @@map("refund_records")
+}
+
+// ==================== Epic 5: Story 5.7 通知服务 ====================
+
+// 通知类型枚举
+enum NotificationType {
+  ORDER_CONFIRM // 订单确认通知
+  TRAVEL_REMINDER // 出行提醒通知
+  REFUND_APPROVED // 退款批准通知
+  REFUND_REJECTED // 退款拒绝通知
+  REFUND_COMPLETED // 退款完成通知
+}
+
+// 用户通知偏好模型
+model UserNotificationPreference {
+  id                Int             @id @default(autoincrement())
+  userId            Int             @unique @map("user_id")
+  notificationTypes String[]        @map("notification_types")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  user              User            @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("user_notification_preferences")
 }

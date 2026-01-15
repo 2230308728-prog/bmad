@@ -90,7 +90,7 @@ development_status:
   5-4-implement-parent-refund-application: done
   5-5-implement-admin-refund-review: done
   5-6-integrate-wechat-payment-refund: done
-  5-7-implement-wechat-subscription-notification: backlog
+  5-7-implement-wechat-subscription-notification: done
   epic-5-retrospective: optional
 
   # Epic 6: 用户管理与分析

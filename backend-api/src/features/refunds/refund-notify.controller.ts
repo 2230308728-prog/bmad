@@ -2,6 +2,7 @@ import { Controller, Post, Body, Logger, HttpCode, HttpStatus } from '@nestjs/co
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { WechatPayService, WechatRefundNotifyData } from '../payments/wechat-pay.service';
 import { PrismaService } from '../../lib/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RefundStatus } from '@prisma/client';
 import { RefundNotifyRequestDto } from './dto/refund-notify.dto';
 
@@ -18,6 +19,7 @@ export class RefundNotifyController {
   constructor(
     private readonly wechatPayService: WechatPayService,
     private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -130,7 +132,7 @@ export class RefundNotifyController {
       // 处理不同的退款状态
       if (status === 'SUCCESS') {
         // 退款成功
-        await this.prisma.refundRecord.update({
+        const updatedRefund = await this.prisma.refundRecord.update({
           where: { id: refundRecord.id },
           data: {
             status: RefundStatus.COMPLETED,
@@ -143,7 +145,23 @@ export class RefundNotifyController {
           `退款成功，状态已更新为 COMPLETED [refundNo: ${refundNo}, wechatRefundId: ${wechatRefundId}]`,
         );
 
-        // NOTE: 用户通知将在 Story 5.7（微信订阅消息通知）中实现
+        // Story 5.7: 发送退款完成通知
+        // NOTE: 通知发送失败不影响主流程（记录日志即可）
+        try {
+          await this.notificationsService.sendRefundResultNotification(
+            refundRecord.userId,
+            'COMPLETED',
+            refundRecord.refundNo,
+            parseFloat(refundRecord.amount.toString()),
+            refundRecord.reason || undefined,
+            undefined,
+            updatedRefund.refundedAt || undefined,
+          );
+        } catch (notificationError) {
+          this.logger.warn(
+            `退款完成通知发送失败（不影响主流程）: refundNo=${refundNo}, error=${notificationError}`,
+          );
+        }
       } else if (status === 'ABNORMAL') {
         // 退款异常
         await this.prisma.refundRecord.update({

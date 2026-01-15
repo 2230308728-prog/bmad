@@ -15,6 +15,8 @@ import { ProductsModule } from './features/products/products.module';
 import { OrdersModule } from './features/orders/orders.module';
 import { PaymentsModule } from './features/payments/payments.module';
 import { CacheModule } from './cache/cache.module';
+import { RefundsModule } from './features/refunds/refunds.module';
+import { NotificationsModule } from './features/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { CacheModule } from './cache/cache.module';
     ProductsModule,
     OrdersModule,
     PaymentsModule,
+    RefundsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

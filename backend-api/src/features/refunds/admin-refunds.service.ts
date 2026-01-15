@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { PrismaService } from '../../lib/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { WechatPayService } from '../payments/wechat-pay.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RefundStatus, OrderStatus, Prisma } from '@prisma/client';
 import { AdminQueryRefundsDto } from './dto/admin';
 
@@ -24,6 +25,7 @@ export class AdminRefundsService {
     private readonly prisma: PrismaService,
     private readonly cacheService: CacheService,
     private readonly wechatPayService: WechatPayService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -290,6 +292,22 @@ export class AdminRefundsService {
 
     this.logger.log(`退款已批准: refundNo=${result.refundNo}, adminId=${adminId}`);
 
+    // Story 5.7: 发送退款批准通知
+    // NOTE: 通知发送失败不影响主流程（记录日志即可）
+    try {
+      await this.notificationsService.sendRefundResultNotification(
+        refund.userId,
+        'APPROVED',
+        refund.refundNo,
+        parseFloat(refund.amount.toString()),
+        refund.reason || undefined,
+      );
+    } catch (notificationError) {
+      this.logger.warn(
+        `退款批准通知发送失败（不影响主流程）: refundNo=${refund.refundNo}, error=${notificationError}`,
+      );
+    }
+
     // 调用微信支付退款服务
     try {
       // 检查微信支付服务是否可用
@@ -314,7 +332,9 @@ export class AdminRefundsService {
           // 退款状态保持 APPROVED，需要管理员手动重试
         } else {
           const totalAmount = payments[0].amount;
-          const paymentTime = payments[0].updatedAt; // 使用支付记录的更新时间作为支付完成时间
+          // 使用 notifiedAt 作为支付完成时间（这是微信支付回调的时间）
+          // 如果 notifiedAt 不存在（极少数情况），使用 createdAt 作为后备
+          const paymentTime = payments[0].notifiedAt || payments[0].createdAt;
 
           // 调用微信支付退款接口
           const refundResult = await this.wechatPayService.refund(
@@ -405,10 +425,22 @@ export class AdminRefundsService {
 
     this.logger.log(`退款已拒绝: refundNo=${result.refundNo}, adminId=${adminId}`);
 
-    // NOTE: 用户通知将在 Story 5.7（微信订阅消息通知）中实现
-    // 当前实现：退款状态已更新为 REJECTED，拒绝原因已记录
-    // 后续实现：通过微信订阅消息向用户发送退款拒绝通知
-    // 用户可在退款列表中查看拒绝原因和详情
+    // Story 5.7: 发送退款拒绝通知
+    // NOTE: 通知发送失败不影响主流程（记录日志即可）
+    try {
+      await this.notificationsService.sendRefundResultNotification(
+        refund.userId,
+        'REJECTED',
+        refund.refundNo,
+        parseFloat(refund.amount.toString()),
+        refund.reason || undefined,
+        result.rejectedReason || undefined,
+      );
+    } catch (notificationError) {
+      this.logger.warn(
+        `退款拒绝通知发送失败（不影响主流程）: refundNo=${refund.refundNo}, error=${notificationError}`,
+      );
+    }
 
     // 清除相关 Redis 缓存
     try {
@@ -533,7 +565,9 @@ export class AdminRefundsService {
       }
 
       const totalAmount = payments[0].amount;
-      const paymentTime = payments[0].updatedAt; // 使用支付记录的更新时间作为支付完成时间
+      // 使用 notifiedAt 作为支付完成时间（这是微信支付回调的时间）
+      // 如果 notifiedAt 不存在（极少数情况），使用 createdAt 作为后备
+      const paymentTime = payments[0].notifiedAt || payments[0].createdAt;
 
       // 调用微信支付退款接口
       const result = await this.wechatPayService.refund(
