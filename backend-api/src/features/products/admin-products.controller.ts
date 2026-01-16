@@ -6,13 +6,21 @@ import {
   Get,
   Body,
   Param,
+  Query,
   UseGuards,
   Logger,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { AdminProductsService } from './admin-products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -32,11 +40,68 @@ import { ParsePositiveIntPipe } from '../../common/pipes/parse-positive-int.pipe
 @ApiTags('admin-products')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(Role.ADMIN)
-@Controller('v1/admin/products')
+@Controller('admin/products')
 export class AdminProductsController {
   private readonly logger = new Logger(AdminProductsController.name);
 
   constructor(private readonly adminProductsService: AdminProductsService) {}
+
+  /**
+   * 查询产品列表（管理员视角）
+   * @param query 查询参数
+   * @returns 分页产品列表（包含所有状态的产品）
+   */
+  @Get()
+  @ApiOperation({
+    summary: '查询产品列表（管理员）',
+    description:
+      '管理员查询所有产品（包括 DRAFT、PUBLISHED、UNPUBLISHED），支持分页和筛选',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 20 })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['DRAFT', 'PUBLISHED', 'UNPUBLISHED'],
+  })
+  @ApiQuery({ name: 'categoryId', required: false, type: Number })
+  @ApiQuery({ name: 'keyword', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description: '成功返回产品列表',
+    schema: {
+      example: {
+        data: [
+          {
+            id: 1,
+            title: '上海科技馆探索之旅',
+            description: '<p>精彩的科技探索之旅...</p>',
+            categoryId: 1,
+            category: { id: 1, name: '自然科学' },
+            price: '299.00',
+            originalPrice: '399.00',
+            stock: 50,
+            status: 'PUBLISHED',
+            createdAt: '2024-01-13T12:00:00Z',
+          },
+        ],
+        total: 100,
+        page: 1,
+        pageSize: 20,
+      },
+    },
+  })
+  async findAll(@Query() query: any) {
+    try {
+      this.logger.log(
+        `Fetching products with filters: ${JSON.stringify(query)}`,
+      );
+      return await this.adminProductsService.findAll(query);
+    } catch (error) {
+      this.logger.error('Failed to fetch products:', error);
+      throw error;
+    }
+  }
 
   /**
    * 创建产品
@@ -191,7 +256,8 @@ export class AdminProductsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: '删除产品',
-    description: '管理员删除研学产品（软删除，设置状态为 UNPUBLISHED），需要 ADMIN 角色权限。已有订单的产品不能删除。',
+    description:
+      '管理员删除研学产品（软删除，设置状态为 UNPUBLISHED），需要 ADMIN 角色权限。已有订单的产品不能删除。',
   })
   @ApiParam({ name: 'id', type: Number, description: '产品 ID', example: 1 })
   @ApiResponse({
@@ -237,7 +303,8 @@ export class AdminProductsController {
   @Patch(':id/status')
   @ApiOperation({
     summary: '更新产品状态',
-    description: '管理员更新产品状态（DRAFT | PUBLISHED | UNPUBLISHED），需要 ADMIN 角色权限。不允许从 PUBLISHED 直接变为 DRAFT。',
+    description:
+      '管理员更新产品状态（DRAFT | PUBLISHED | UNPUBLISHED），需要 ADMIN 角色权限。不允许从 PUBLISHED 直接变为 DRAFT。',
   })
   @ApiParam({ name: 'id', type: Number, description: '产品 ID', example: 1 })
   @ApiBody({ type: UpdateProductStatusDto })
@@ -280,7 +347,9 @@ export class AdminProductsController {
     @Body() updateStatusDto: UpdateProductStatusDto,
   ) {
     try {
-      this.logger.log(`Updating product ${id} status to: ${updateStatusDto.status}`);
+      this.logger.log(
+        `Updating product ${id} status to: ${updateStatusDto.status}`,
+      );
       return await this.adminProductsService.updateStatus(id, updateStatusDto);
     } catch (error) {
       this.logger.error(`Failed to update product ${id} status:`, error);
@@ -297,7 +366,8 @@ export class AdminProductsController {
   @Patch(':id/stock')
   @ApiOperation({
     summary: '更新产品库存',
-    description: '管理员更新产品库存数量，需要 ADMIN 角色权限。会自动创建库存变更历史记录。库存 < 10 时会返回 lowStock: true 标志。',
+    description:
+      '管理员更新产品库存数量，需要 ADMIN 角色权限。会自动创建库存变更历史记录。库存 < 10 时会返回 lowStock: true 标志。',
   })
   @ApiParam({ name: 'id', type: Number, description: '产品 ID', example: 1 })
   @ApiBody({ type: UpdateProductStockDto })
@@ -339,7 +409,9 @@ export class AdminProductsController {
     @Body() updateStockDto: UpdateProductStockDto,
   ) {
     try {
-      this.logger.log(`Updating product ${id} stock to: ${updateStockDto.stock}`);
+      this.logger.log(
+        `Updating product ${id} stock to: ${updateStockDto.stock}`,
+      );
       return await this.adminProductsService.updateStock(id, updateStockDto);
     } catch (error) {
       this.logger.error(`Failed to update product ${id} stock:`, error);
@@ -354,7 +426,8 @@ export class AdminProductsController {
   @Get('low-stock')
   @ApiOperation({
     summary: '获取低库存产品列表',
-    description: '管理员查询库存低于 10 的产品列表，按库存数量升序排序，需要 ADMIN 角色权限',
+    description:
+      '管理员查询库存低于 10 的产品列表，按库存数量升序排序，需要 ADMIN 角色权限',
   })
   @ApiResponse({
     status: 200,
@@ -409,7 +482,8 @@ export class AdminProductsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '生成图片上传签名 URL',
-    description: '管理员获取 OSS 直传签名 URL，用于前端直接上传图片到 OSS，需要 ADMIN 角色权限。签名 URL 15 分钟有效。',
+    description:
+      '管理员获取 OSS 直传签名 URL，用于前端直接上传图片到 OSS，需要 ADMIN 角色权限。签名 URL 15 分钟有效。',
   })
   @ApiBody({ type: GenerateUploadUrlDto })
   @ApiResponse({
@@ -417,7 +491,8 @@ export class AdminProductsController {
     description: '签名 URL 生成成功',
     schema: {
       example: {
-        uploadUrl: 'https://bucket.oss-cn-shanghai.aliyuncs.com/products/2024/01/14/uuid.jpg?signature=...',
+        uploadUrl:
+          'https://bucket.oss-cn-shanghai.aliyuncs.com/products/2024/01/14/uuid.jpg?signature=...',
         fileName: 'example.jpg',
         fileKey: 'products/2024/01/14/uuid.jpg',
       },
@@ -441,10 +516,17 @@ export class AdminProductsController {
   })
   async generateUploadUrl(@Body() generateUploadUrlDto: GenerateUploadUrlDto) {
     try {
-      this.logger.log(`Generating upload URL for: ${generateUploadUrlDto.fileName}`);
-      return this.adminProductsService.generateUploadUrl(generateUploadUrlDto.fileName);
+      this.logger.log(
+        `Generating upload URL for: ${generateUploadUrlDto.fileName}`,
+      );
+      return this.adminProductsService.generateUploadUrl(
+        generateUploadUrlDto.fileName,
+      );
     } catch (error) {
-      this.logger.error(`Failed to generate upload URL for "${generateUploadUrlDto.fileName}":`, error);
+      this.logger.error(
+        `Failed to generate upload URL for "${generateUploadUrlDto.fileName}":`,
+        error,
+      );
       throw error;
     }
   }

@@ -69,7 +69,7 @@ describe('AdminProductsService', () => {
       title: '上海科技馆探索之旅',
       description: '精彩的科技探索之旅',
       categoryId: 1,
-      price: 299.00,
+      price: 299.0,
       stock: 50,
       location: '上海浦东新区',
       images: ['https://oss.example.com/products/1/image1.jpg'],
@@ -93,7 +93,9 @@ describe('AdminProductsService', () => {
         category: mockCategory,
       };
 
-      mockPrismaService.productCategory.findUnique.mockResolvedValue(mockCategory);
+      mockPrismaService.productCategory.findUnique.mockResolvedValue(
+        mockCategory,
+      );
       mockPrismaService.product.create.mockResolvedValue(mockProduct);
 
       const result = await service.create(createProductDto);
@@ -101,9 +103,11 @@ describe('AdminProductsService', () => {
       expect(result).toBeDefined();
       expect(result.id).toBe(1);
       expect(result.title).toBe(createProductDto.title);
-      expect(mockPrismaService.productCategory.findUnique).toHaveBeenCalledWith({
-        where: { id: createProductDto.categoryId },
-      });
+      expect(mockPrismaService.productCategory.findUnique).toHaveBeenCalledWith(
+        {
+          where: { id: createProductDto.categoryId },
+        },
+      );
       expect(mockPrismaService.product.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           title: createProductDto.title,
@@ -130,52 +134,84 @@ describe('AdminProductsService', () => {
     it('should throw NotFoundException if category does not exist', async () => {
       mockPrismaService.productCategory.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(createProductDto)).rejects.toThrow(NotFoundException);
-      await expect(service.create(createProductDto)).rejects.toThrow('分类 ID 1 不存在');
+      await expect(service.create(createProductDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.create(createProductDto)).rejects.toThrow(
+        '分类 ID 1 不存在',
+      );
       expect(mockPrismaService.product.create).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if price <= 0', async () => {
       const mockCategory = { id: 1, name: '自然科学' };
-      mockPrismaService.productCategory.findUnique.mockResolvedValue(mockCategory);
+      mockPrismaService.productCategory.findUnique.mockResolvedValue(
+        mockCategory,
+      );
 
       const invalidDto = { ...createProductDto, price: 0 };
 
-      await expect(service.create(invalidDto)).rejects.toThrow(BadRequestException);
-      await expect(service.create(invalidDto)).rejects.toThrow('产品价格必须大于 0');
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        '产品价格必须大于 0',
+      );
       expect(mockPrismaService.product.create).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if stock < 0', async () => {
       const mockCategory = { id: 1, name: '自然科学' };
-      mockPrismaService.productCategory.findUnique.mockResolvedValue(mockCategory);
+      mockPrismaService.productCategory.findUnique.mockResolvedValue(
+        mockCategory,
+      );
 
       const invalidDto = { ...createProductDto, stock: -1 };
 
-      await expect(service.create(invalidDto)).rejects.toThrow(BadRequestException);
-      await expect(service.create(invalidDto)).rejects.toThrow('库存数量不能小于 0');
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        '库存数量不能小于 0',
+      );
       expect(mockPrismaService.product.create).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if maxAge < minAge', async () => {
       const mockCategory = { id: 1, name: '自然科学' };
-      mockPrismaService.productCategory.findUnique.mockResolvedValue(mockCategory);
+      mockPrismaService.productCategory.findUnique.mockResolvedValue(
+        mockCategory,
+      );
 
       const invalidDto = { ...createProductDto, minAge: 12, maxAge: 6 };
 
-      await expect(service.create(invalidDto)).rejects.toThrow(BadRequestException);
-      await expect(service.create(invalidDto)).rejects.toThrow('最大年龄不能小于最小年龄');
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        '最大年龄不能小于最小年龄',
+      );
       expect(mockPrismaService.product.create).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if originalPrice < price', async () => {
       const mockCategory = { id: 1, name: '自然科学' };
-      mockPrismaService.productCategory.findUnique.mockResolvedValue(mockCategory);
+      mockPrismaService.productCategory.findUnique.mockResolvedValue(
+        mockCategory,
+      );
 
-      const invalidDto = { ...createProductDto, price: 399, originalPrice: 299 };
+      const invalidDto = {
+        ...createProductDto,
+        price: 399,
+        originalPrice: 299,
+      };
 
-      await expect(service.create(invalidDto)).rejects.toThrow(BadRequestException);
-      await expect(service.create(invalidDto)).rejects.toThrow('原价必须大于等于现价');
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.create(invalidDto)).rejects.toThrow(
+        '原价必须大于等于现价',
+      );
       expect(mockPrismaService.product.create).not.toHaveBeenCalled();
     });
 
@@ -198,7 +234,9 @@ describe('AdminProductsService', () => {
         category: mockCategory,
       };
 
-      mockPrismaService.productCategory.findUnique.mockResolvedValue(mockCategory);
+      mockPrismaService.productCategory.findUnique.mockResolvedValue(
+        mockCategory,
+      );
       mockPrismaService.product.create.mockResolvedValue(mockProduct);
 
       const result = await service.create(createProductDto);
@@ -211,7 +249,7 @@ describe('AdminProductsService', () => {
   describe('update', () => {
     const updateProductDto = {
       title: '上海科技馆探索之旅（更新版）',
-      price: 399.00,
+      price: 399.0,
     };
 
     const existingProduct = {
@@ -245,7 +283,9 @@ describe('AdminProductsService', () => {
       };
 
       mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
-      mockPrismaService.productCategory.findUnique.mockResolvedValue(mockCategory);
+      mockPrismaService.productCategory.findUnique.mockResolvedValue(
+        mockCategory,
+      );
       mockPrismaService.product.update.mockResolvedValue(updatedProduct);
 
       const result = await service.update(1, updateProductDto);
@@ -273,8 +313,12 @@ describe('AdminProductsService', () => {
     it('should throw NotFoundException if product does not exist', async () => {
       mockPrismaService.product.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(999, updateProductDto)).rejects.toThrow(NotFoundException);
-      await expect(service.update(999, updateProductDto)).rejects.toThrow('产品 ID 999 不存在');
+      await expect(service.update(999, updateProductDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.update(999, updateProductDto)).rejects.toThrow(
+        '产品 ID 999 不存在',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
@@ -284,8 +328,12 @@ describe('AdminProductsService', () => {
 
       const updateWithCategory = { ...updateProductDto, categoryId: 999 };
 
-      await expect(service.update(1, updateWithCategory)).rejects.toThrow(NotFoundException);
-      await expect(service.update(1, updateWithCategory)).rejects.toThrow('分类 ID 999 不存在');
+      await expect(service.update(1, updateWithCategory)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.update(1, updateWithCategory)).rejects.toThrow(
+        '分类 ID 999 不存在',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
@@ -294,8 +342,12 @@ describe('AdminProductsService', () => {
 
       const updateWithInvalidPrice = { ...updateProductDto, price: 0 };
 
-      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(BadRequestException);
-      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow('产品价格必须大于 0');
+      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(
+        '产品价格必须大于 0',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
@@ -304,8 +356,12 @@ describe('AdminProductsService', () => {
 
       const updateWithInvalidStock = { stock: -1 };
 
-      await expect(service.update(1, updateWithInvalidStock)).rejects.toThrow(BadRequestException);
-      await expect(service.update(1, updateWithInvalidStock)).rejects.toThrow('库存数量不能小于 0');
+      await expect(service.update(1, updateWithInvalidStock)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.update(1, updateWithInvalidStock)).rejects.toThrow(
+        '库存数量不能小于 0',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
@@ -314,8 +370,12 @@ describe('AdminProductsService', () => {
 
       const updateWithInvalidAge = { minAge: 15, maxAge: 10 };
 
-      await expect(service.update(1, updateWithInvalidAge)).rejects.toThrow(BadRequestException);
-      await expect(service.update(1, updateWithInvalidAge)).rejects.toThrow('最大年龄不能小于最小年龄');
+      await expect(service.update(1, updateWithInvalidAge)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.update(1, updateWithInvalidAge)).rejects.toThrow(
+        '最大年龄不能小于最小年龄',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
@@ -325,8 +385,12 @@ describe('AdminProductsService', () => {
 
       const updateWithInvalidAge = { maxAge: 5 }; // 5 < 10 (existing minAge)
 
-      await expect(service.update(1, updateWithInvalidAge)).rejects.toThrow(BadRequestException);
-      await expect(service.update(1, updateWithInvalidAge)).rejects.toThrow('最大年龄不能小于最小年龄');
+      await expect(service.update(1, updateWithInvalidAge)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.update(1, updateWithInvalidAge)).rejects.toThrow(
+        '最大年龄不能小于最小年龄',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
@@ -335,8 +399,12 @@ describe('AdminProductsService', () => {
 
       const updateWithInvalidPrice = { price: 499, originalPrice: 399 }; // 399 < 499
 
-      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(BadRequestException);
-      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow('原价必须大于等于现价');
+      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(
+        '原价必须大于等于现价',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
@@ -345,8 +413,12 @@ describe('AdminProductsService', () => {
 
       const updateWithInvalidPrice = { originalPrice: 199 }; // 199 < existing 299
 
-      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(BadRequestException);
-      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow('原价必须大于等于现价');
+      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.update(1, updateWithInvalidPrice)).rejects.toThrow(
+        '原价必须大于等于现价',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
   });
@@ -393,13 +465,17 @@ describe('AdminProductsService', () => {
       mockPrismaService.$queryRaw.mockResolvedValue([{ count: 5 }]);
 
       await expect(service.remove(1)).rejects.toThrow(BadRequestException);
-      await expect(service.remove(1)).rejects.toThrow('该产品已有订单，无法删除');
+      await expect(service.remove(1)).rejects.toThrow(
+        '该产品已有订单，无法删除',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
     it('should handle orders table not existing gracefully', async () => {
       mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
-      mockPrismaService.$queryRaw.mockRejectedValue(new Error('relation "orders" does not exist'));
+      mockPrismaService.$queryRaw.mockRejectedValue(
+        new Error('relation "orders" does not exist'),
+      );
       mockPrismaService.product.update.mockResolvedValue({
         ...existingProduct,
         status: ProductStatus.UNPUBLISHED,
@@ -412,7 +488,9 @@ describe('AdminProductsService', () => {
 
     it('should re-throw non-table errors from orders check', async () => {
       mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
-      mockPrismaService.$queryRaw.mockRejectedValue(new Error('Connection timeout'));
+      mockPrismaService.$queryRaw.mockRejectedValue(
+        new Error('Connection timeout'),
+      );
 
       await expect(service.remove(1)).rejects.toThrow('Connection timeout');
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
@@ -472,7 +550,10 @@ describe('AdminProductsService', () => {
     });
 
     it('should successfully update status from PUBLISHED to UNPUBLISHED', async () => {
-      const publishedProduct = { ...existingProduct, status: ProductStatus.PUBLISHED };
+      const publishedProduct = {
+        ...existingProduct,
+        status: ProductStatus.PUBLISHED,
+      };
       const updateStatusDto = { status: ProductStatus.UNPUBLISHED };
       const updatedProduct = {
         ...publishedProduct,
@@ -491,19 +572,30 @@ describe('AdminProductsService', () => {
       const updateStatusDto = { status: ProductStatus.PUBLISHED };
       mockPrismaService.product.findUnique.mockResolvedValue(null);
 
-      await expect(service.updateStatus(999, updateStatusDto)).rejects.toThrow(NotFoundException);
-      await expect(service.updateStatus(999, updateStatusDto)).rejects.toThrow('产品 ID 999 不存在');
+      await expect(service.updateStatus(999, updateStatusDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.updateStatus(999, updateStatusDto)).rejects.toThrow(
+        '产品 ID 999 不存在',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for invalid status transition (PUBLISHED to DRAFT)', async () => {
-      const publishedProduct = { ...existingProduct, status: ProductStatus.PUBLISHED };
+      const publishedProduct = {
+        ...existingProduct,
+        status: ProductStatus.PUBLISHED,
+      };
       const updateStatusDto = { status: ProductStatus.DRAFT };
 
       mockPrismaService.product.findUnique.mockResolvedValue(publishedProduct);
 
-      await expect(service.updateStatus(1, updateStatusDto)).rejects.toThrow(BadRequestException);
-      await expect(service.updateStatus(1, updateStatusDto)).rejects.toThrow('不允许从已发布状态直接变为草稿状态');
+      await expect(service.updateStatus(1, updateStatusDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.updateStatus(1, updateStatusDto)).rejects.toThrow(
+        '不允许从已发布状态直接变为草稿状态',
+      );
       expect(mockPrismaService.product.update).not.toHaveBeenCalled();
     });
 
@@ -523,14 +615,19 @@ describe('AdminProductsService', () => {
     });
 
     it('should allow status transition from UNPUBLISHED to PUBLISHED', async () => {
-      const unpublishedProduct = { ...existingProduct, status: ProductStatus.UNPUBLISHED };
+      const unpublishedProduct = {
+        ...existingProduct,
+        status: ProductStatus.UNPUBLISHED,
+      };
       const updateStatusDto = { status: ProductStatus.PUBLISHED };
       const updatedProduct = {
         ...unpublishedProduct,
         status: ProductStatus.PUBLISHED,
       };
 
-      mockPrismaService.product.findUnique.mockResolvedValue(unpublishedProduct);
+      mockPrismaService.product.findUnique.mockResolvedValue(
+        unpublishedProduct,
+      );
       mockPrismaService.product.update.mockResolvedValue(updatedProduct);
 
       const result = await service.updateStatus(1, updateStatusDto);
@@ -545,7 +642,7 @@ describe('AdminProductsService', () => {
       title: '上海科技馆探索之旅',
       description: '精彩的科技探索之旅',
       categoryId: 1,
-      price: { toString: () => '299.00' },
+      price: { toFixed: () => '299.00', toString: () => '299.00' },
       originalPrice: null,
       stock: 50,
       minAge: 6,
@@ -603,8 +700,12 @@ describe('AdminProductsService', () => {
       const updateStockDto = { stock: 30 };
       mockPrismaService.product.findUnique.mockResolvedValue(null);
 
-      await expect(service.updateStock(999, updateStockDto)).rejects.toThrow(NotFoundException);
-      await expect(service.updateStock(999, updateStockDto)).rejects.toThrow('产品 ID 999 不存在');
+      await expect(service.updateStock(999, updateStockDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.updateStock(999, updateStockDto)).rejects.toThrow(
+        '产品 ID 999 不存在',
+      );
       expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
     });
 
@@ -612,8 +713,12 @@ describe('AdminProductsService', () => {
       const updateStockDto = { stock: -1 };
       mockPrismaService.product.findUnique.mockResolvedValue(existingProduct);
 
-      await expect(service.updateStock(1, updateStockDto)).rejects.toThrow(BadRequestException);
-      await expect(service.updateStock(1, updateStockDto)).rejects.toThrow('库存数量不能小于 0');
+      await expect(service.updateStock(1, updateStockDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.updateStock(1, updateStockDto)).rejects.toThrow(
+        '库存数量不能小于 0',
+      );
       expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
     });
 
@@ -765,7 +870,8 @@ describe('AdminProductsService', () => {
   describe('generateUploadUrl', () => {
     it('should successfully generate upload URL for valid image file', () => {
       const fileName = 'example.jpg';
-      const signedUrl = 'https://bucket.oss-cn-shanghai.aliyuncs.com/products/2024/01/14/uuid.jpg?signature=...';
+      const signedUrl =
+        'https://bucket.oss-cn-shanghai.aliyuncs.com/products/2024/01/14/uuid.jpg?signature=...';
 
       mockOssService.validateFileType.mockReturnValue(true);
       mockOssService.generateSignedUrl.mockReturnValue(signedUrl);
@@ -786,14 +892,19 @@ describe('AdminProductsService', () => {
 
       mockOssService.validateFileType.mockReturnValue(false);
 
-      expect(() => service.generateUploadUrl(fileName)).toThrow(BadRequestException);
-      expect(() => service.generateUploadUrl(fileName)).toThrow('文件类型必须是以下之一: jpg, jpeg, png, webp');
+      expect(() => service.generateUploadUrl(fileName)).toThrow(
+        BadRequestException,
+      );
+      expect(() => service.generateUploadUrl(fileName)).toThrow(
+        '文件类型必须是以下之一: jpg, jpeg, png, webp',
+      );
       expect(mockOssService.generateSignedUrl).not.toHaveBeenCalled();
     });
 
     it('should generate unique file key with date path and UUID', () => {
       const fileName = 'test.png';
-      const signedUrl = 'https://bucket.oss-cn-shanghai.aliyuncs.com/test.png?signature=...';
+      const signedUrl =
+        'https://bucket.oss-cn-shanghai.aliyuncs.com/test.png?signature=...';
 
       mockOssService.validateFileType.mockReturnValue(true);
       mockOssService.generateSignedUrl.mockReturnValue(signedUrl);
@@ -809,8 +920,12 @@ describe('AdminProductsService', () => {
 
       mockOssService.validateFileType.mockReturnValue(true);
 
-      expect(() => service.generateUploadUrl(fileName)).toThrow(BadRequestException);
-      expect(() => service.generateUploadUrl(fileName)).toThrow('文件名必须包含有效的扩展名（如 .jpg, .png）');
+      expect(() => service.generateUploadUrl(fileName)).toThrow(
+        BadRequestException,
+      );
+      expect(() => service.generateUploadUrl(fileName)).toThrow(
+        '文件名必须包含有效的扩展名（如 .jpg, .png）',
+      );
       expect(mockOssService.generateSignedUrl).not.toHaveBeenCalled();
     });
 
@@ -819,8 +934,12 @@ describe('AdminProductsService', () => {
 
       mockOssService.validateFileType.mockReturnValue(true);
 
-      expect(() => service.generateUploadUrl(fileName)).toThrow(BadRequestException);
-      expect(() => service.generateUploadUrl(fileName)).toThrow('文件名必须包含有效的扩展名（如 .jpg, .png）');
+      expect(() => service.generateUploadUrl(fileName)).toThrow(
+        BadRequestException,
+      );
+      expect(() => service.generateUploadUrl(fileName)).toThrow(
+        '文件名必须包含有效的扩展名（如 .jpg, .png）',
+      );
       expect(mockOssService.generateSignedUrl).not.toHaveBeenCalled();
     });
   });

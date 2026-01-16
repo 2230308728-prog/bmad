@@ -43,8 +43,10 @@ export class AuthService {
       type: 'refresh',
     };
 
-    const accessTokenExpiration = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '15m';
-    const refreshTokenExpiration = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION') || '7d';
+    const accessTokenExpiration =
+      this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '15m';
+    const refreshTokenExpiration =
+      this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION') || '7d';
 
     // Type assertion required: jsonwebtoken's StringValue type doesn't accept plain string
     // from ConfigService. This is a known type definition mismatch between @nestjs/jwt and jsonwebtoken.
@@ -92,7 +94,8 @@ export class AuthService {
    */
   async validateRefreshToken(token: string): Promise<RefreshTokenPayload> {
     try {
-      const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(token);
+      const payload =
+        await this.jwtService.verifyAsync<RefreshTokenPayload>(token);
 
       if (payload.type !== 'refresh') {
         throw new UnauthorizedException('Invalid token type');
@@ -115,7 +118,7 @@ export class AuthService {
    * @throws Error 如果令牌无效或无法解码
    */
   extractUserIdFromToken(token: string): number {
-    const payload = this.jwtService.decode(token) as JwtPayload;
+    const payload = this.jwtService.decode(token);
 
     if (!payload || typeof payload.sub !== 'number') {
       throw new Error('Invalid token: unable to extract user ID');

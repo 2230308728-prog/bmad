@@ -49,7 +49,9 @@ describe('RolesGuard', () => {
     it('should allow access when user has one of multiple required roles', () => {
       const mockRequest = { user: { id: 1, role: Role.PARENT } };
       const context = createMockContext(mockRequest);
-      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([Role.ADMIN, Role.PARENT]);
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockReturnValue([Role.ADMIN, Role.PARENT]);
 
       expect(guard.canActivate(context)).toBe(true);
     });

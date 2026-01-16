@@ -13,7 +13,15 @@ import {
   HttpException,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiHeader,
+  ApiBearerAuth,
+  ApiProperty,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminUsersService } from './admin-users.service';
 import { QueryUsersDto } from './dto/admin/query-users.dto';
@@ -28,7 +36,10 @@ import { UserRefundListResponseDto } from './dto/admin/user-refund-list-response
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { CurrentUser, type CurrentUserType } from '@/common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type CurrentUserType,
+} from '@/common/decorators/current-user.decorator';
 
 /**
  * 管理员用户控制器
@@ -119,7 +130,9 @@ export class AdminUsersController {
     @Query(ValidationPipe) queryDto: QueryUsersDto,
   ) {
     try {
-      this.logger.log(`Admin ${user.id} querying users with filters: ${JSON.stringify(queryDto)}`);
+      this.logger.log(
+        `Admin ${user.id} querying users with filters: ${JSON.stringify(queryDto)}`,
+      );
       const result = await this.adminUsersService.findAll(queryDto);
       return result;
     } catch (error) {
@@ -178,7 +191,9 @@ export class AdminUsersController {
     status: 403,
     description: '权限不足（需要 ADMIN 角色）',
   })
-  async getStats(@CurrentUser() user: CurrentUserType): Promise<{ data: UserStatsResponseDto }> {
+  async getStats(
+    @CurrentUser() user: CurrentUserType,
+  ): Promise<{ data: UserStatsResponseDto }> {
     try {
       this.logger.log(`Admin ${user.id} querying user stats`);
       const result = await this.adminUsersService.getStats();
@@ -236,13 +251,19 @@ export class AdminUsersController {
     status: 403,
     description: '权限不足（需要 ADMIN 角色）',
   })
-  async findOne(@CurrentUser() user: CurrentUserType, @Param('id', ParseIntPipe) id: number) {
+  async findOne(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     try {
       this.logger.log(`Admin ${user.id} querying user detail for user ${id}`);
       const result = await this.adminUsersService.findOne(id);
       return { data: result };
     } catch (error) {
-      this.logger.error(`Failed to query user detail for admin ${user.id}, user ${id}:`, error);
+      this.logger.error(
+        `Failed to query user detail for admin ${user.id}, user ${id}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -309,7 +330,9 @@ export class AdminUsersController {
     @Body(ValidationPipe) updateDto: UpdateUserStatusDto,
   ): Promise<{ data: UserDetailResponseDto }> {
     try {
-      this.logger.log(`Admin ${user.id} updating user ${id} status to ${updateDto.status}`);
+      this.logger.log(
+        `Admin ${user.id} updating user ${id} status to ${updateDto.status}`,
+      );
       const result = await this.adminUsersService.updateStatus(id, updateDto);
       return { data: result };
     } catch (error) {

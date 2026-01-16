@@ -91,16 +91,17 @@ export class NotificationSchedulerService {
           }
 
           // 发送出行提醒通知
-          const success = await this.notificationsService.sendTravelReminderNotification(
-            order.userId,
-            product.title,
-            order.bookingDate || tomorrow,
-            '09:00', // 默认出行时间（实际应从产品配置获取）
-            product.location,
-            product.location, // 集合地点默认为活动地点（实际应从产品配置获取）
-            '客服电话：400-123-4567', // 联系方式（实际应从系统配置获取）
-            '请携带好身份证件，提前15分钟到达集合地点', // 温馨提示
-          );
+          const success =
+            await this.notificationsService.sendTravelReminderNotification(
+              order.userId,
+              product.title,
+              order.bookingDate || tomorrow,
+              '09:00', // 默认出行时间（实际应从产品配置获取）
+              product.location,
+              product.location, // 集合地点默认为活动地点（实际应从产品配置获取）
+              '客服电话：400-123-4567', // 联系方式（实际应从系统配置获取）
+              '请携带好身份证件，提前15分钟到达集合地点', // 温馨提示
+            );
 
           if (success) {
             successCount++;

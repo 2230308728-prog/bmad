@@ -40,7 +40,9 @@ describe('CustomThrottlerGuard', () => {
       ip: '127.0.0.1',
     };
 
-    const tracker = await guard.getTracker(mockRequest as Record<string, unknown>);
+    const tracker = await guard.getTracker(
+      mockRequest as Record<string, unknown>,
+    );
     expect(tracker).toBe('127.0.0.1');
   });
 

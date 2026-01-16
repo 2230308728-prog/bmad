@@ -20,7 +20,9 @@ export class TokenBlacklistService {
   async addToAccessBlacklist(token: string, ttl: number): Promise<void> {
     const key = `blacklist:access:${token}`;
     await this.cacheService.set(key, '1', ttl);
-    this.logger.debug(`访问令牌已加入黑名单 [token: ${token.substring(0, 10)}..., ttl: ${ttl}s]`);
+    this.logger.debug(
+      `访问令牌已加入黑名单 [token: ${token.substring(0, 10)}..., ttl: ${ttl}s]`,
+    );
   }
 
   /**
@@ -31,7 +33,9 @@ export class TokenBlacklistService {
   async addToRefreshBlacklist(token: string, ttl: number): Promise<void> {
     const key = `blacklist:refresh:${token}`;
     await this.cacheService.set(key, '1', ttl);
-    this.logger.debug(`刷新令牌已加入黑名单 [token: ${token.substring(0, 10)}..., ttl: ${ttl}s]`);
+    this.logger.debug(
+      `刷新令牌已加入黑名单 [token: ${token.substring(0, 10)}..., ttl: ${ttl}s]`,
+    );
   }
 
   /**

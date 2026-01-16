@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { RefundsService } from './refunds.service';
@@ -77,9 +81,9 @@ describe('RefundsService', () => {
     };
 
     it('should create refund successfully', async () => {
-      (mockPrismaService.order.findUnique as jest.Mock).mockResolvedValue(mockOrder);
-      (mockPrismaService.refundRecord.findFirst as jest.Mock).mockResolvedValue(null);
-      (mockPrismaService.$transaction as jest.Mock).mockImplementation(async (callback) => {
+      mockPrismaService.order.findUnique.mockResolvedValue(mockOrder);
+      mockPrismaService.refundRecord.findFirst.mockResolvedValue(null);
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
         // Simulate transaction callback
         const mockCreatedRefund = {
           id: 1,
@@ -100,34 +104,42 @@ describe('RefundsService', () => {
     });
 
     it('should throw NotFoundException when order does not exist', async () => {
-      (mockPrismaService.order.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPrismaService.order.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(1, createRefundDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create(1, createRefundDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ForbiddenException when order does not belong to user', async () => {
       const otherUserOrder = { ...mockOrder, userId: 2 };
-      (mockPrismaService.order.findUnique as jest.Mock).mockResolvedValue(otherUserOrder);
+      mockPrismaService.order.findUnique.mockResolvedValue(otherUserOrder);
 
-      await expect(service.create(1, createRefundDto)).rejects.toThrow(ForbiddenException);
+      await expect(service.create(1, createRefundDto)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw BadRequestException when order status is not PAID', async () => {
       const pendingOrder = { ...mockOrder, status: OrderStatus.PENDING };
-      (mockPrismaService.order.findUnique as jest.Mock).mockResolvedValue(pendingOrder);
+      mockPrismaService.order.findUnique.mockResolvedValue(pendingOrder);
 
-      await expect(service.create(1, createRefundDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(1, createRefundDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when refund already exists for order', async () => {
-      (mockPrismaService.order.findUnique as jest.Mock).mockResolvedValue(mockOrder);
-      (mockPrismaService.refundRecord.findFirst as jest.Mock).mockResolvedValue({
+      mockPrismaService.order.findUnique.mockResolvedValue(mockOrder);
+      mockPrismaService.refundRecord.findFirst.mockResolvedValue({
         id: 1,
         refundNo: 'REF20240114123456789',
         status: RefundStatus.PENDING,
       });
 
-      await expect(service.create(1, createRefundDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(1, createRefundDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when refund deadline exceeded', async () => {
@@ -136,10 +148,12 @@ describe('RefundsService', () => {
         ...mockOrder,
         bookingDate: new Date(Date.now() + 47 * 60 * 60 * 1000), // 47 hours from now
       };
-      (mockPrismaService.order.findUnique as jest.Mock).mockResolvedValue(pastBookingOrder);
-      (mockPrismaService.refundRecord.findFirst as jest.Mock).mockResolvedValue(null);
+      mockPrismaService.order.findUnique.mockResolvedValue(pastBookingOrder);
+      mockPrismaService.refundRecord.findFirst.mockResolvedValue(null);
 
-      await expect(service.create(1, createRefundDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(1, createRefundDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when bookingDate is null', async () => {
@@ -148,10 +162,12 @@ describe('RefundsService', () => {
         ...mockOrder,
         bookingDate: null,
       };
-      (mockPrismaService.order.findUnique as jest.Mock).mockResolvedValue(noBookingDateOrder);
-      (mockPrismaService.refundRecord.findFirst as jest.Mock).mockResolvedValue(null);
+      mockPrismaService.order.findUnique.mockResolvedValue(noBookingDateOrder);
+      mockPrismaService.refundRecord.findFirst.mockResolvedValue(null);
 
-      await expect(service.create(1, createRefundDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(1, createRefundDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -169,8 +185,8 @@ describe('RefundsService', () => {
     ];
 
     it('should return paginated refund list', async () => {
-      (mockPrismaService.refundRecord.findMany as jest.Mock).mockResolvedValue(mockRefunds);
-      (mockPrismaService.refundRecord.count as jest.Mock).mockResolvedValue(1);
+      mockPrismaService.refundRecord.findMany.mockResolvedValue(mockRefunds);
+      mockPrismaService.refundRecord.count.mockResolvedValue(1);
 
       const result = await service.findAll(1, new QueryRefundsDto());
 
@@ -181,8 +197,8 @@ describe('RefundsService', () => {
     });
 
     it('should filter by userId', async () => {
-      (mockPrismaService.refundRecord.findMany as jest.Mock).mockResolvedValue(mockRefunds);
-      (mockPrismaService.refundRecord.count as jest.Mock).mockResolvedValue(1);
+      mockPrismaService.refundRecord.findMany.mockResolvedValue(mockRefunds);
+      mockPrismaService.refundRecord.count.mockResolvedValue(1);
 
       await service.findAll(1, { page: 1, pageSize: 10 });
 
@@ -196,8 +212,8 @@ describe('RefundsService', () => {
     });
 
     it('should sort by appliedAt descending', async () => {
-      (mockPrismaService.refundRecord.findMany as jest.Mock).mockResolvedValue(mockRefunds);
-      (mockPrismaService.refundRecord.count as jest.Mock).mockResolvedValue(1);
+      mockPrismaService.refundRecord.findMany.mockResolvedValue(mockRefunds);
+      mockPrismaService.refundRecord.count.mockResolvedValue(1);
 
       await service.findAll(1, { page: 2, pageSize: 20 });
 
@@ -247,7 +263,7 @@ describe('RefundsService', () => {
     };
 
     it('should return refund detail with order and product info', async () => {
-      (mockPrismaService.refundRecord.findFirst as jest.Mock).mockResolvedValue(mockRefund);
+      mockPrismaService.refundRecord.findFirst.mockResolvedValue(mockRefund);
 
       const result = await service.findOne(1, 1);
 
@@ -259,14 +275,16 @@ describe('RefundsService', () => {
     });
 
     it('should throw NotFoundException when refund does not exist', async () => {
-      (mockPrismaService.refundRecord.findFirst as jest.Mock).mockResolvedValue(null);
+      mockPrismaService.refundRecord.findFirst.mockResolvedValue(null);
 
       await expect(service.findOne(1, 999)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException when refund does not belong to user', async () => {
       const otherUserRefund = { ...mockRefund, userId: 2 };
-      (mockPrismaService.refundRecord.findFirst as jest.Mock).mockResolvedValue(otherUserRefund);
+      mockPrismaService.refundRecord.findFirst.mockResolvedValue(
+        otherUserRefund,
+      );
 
       await expect(service.findOne(1, 1)).rejects.toThrow(ForbiddenException);
     });

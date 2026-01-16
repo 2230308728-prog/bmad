@@ -9,7 +9,10 @@ describe('Roles Decorator', () => {
       testMethod() {}
     }
 
-    const descriptor = Object.getOwnPropertyDescriptor(TestClass.prototype, 'testMethod');
+    const descriptor = Object.getOwnPropertyDescriptor(
+      TestClass.prototype,
+      'testMethod',
+    );
     expect(descriptor).toBeDefined();
   });
 

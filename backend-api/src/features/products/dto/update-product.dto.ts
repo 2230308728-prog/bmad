@@ -18,12 +18,20 @@ import { ProductStatus } from '@prisma/client';
  * 所有字段都是可选的
  */
 export class UpdateProductDto {
-  @ApiProperty({ example: '上海科技馆探索之旅（更新版）', description: '产品标题', required: false })
+  @ApiProperty({
+    example: '上海科技馆探索之旅（更新版）',
+    description: '产品标题',
+    required: false,
+  })
   @IsOptional()
   @IsString({ message: '产品标题必须是字符串' })
   title?: string;
 
-  @ApiProperty({ example: '<p>更新后的产品描述...</p>', description: '产品详细描述', required: false })
+  @ApiProperty({
+    example: '<p>更新后的产品描述...</p>',
+    description: '产品详细描述',
+    required: false,
+  })
   @IsOptional()
   @IsString({ message: '产品描述必须是字符串' })
   description?: string;
@@ -35,13 +43,17 @@ export class UpdateProductDto {
   @Type(() => Number)
   categoryId?: number;
 
-  @ApiProperty({ example: 399.00, description: '产品价格', required: false })
+  @ApiProperty({ example: 399.0, description: '产品价格', required: false })
   @IsOptional()
   @IsPositive({ message: '产品价格必须大于 0' })
   @Type(() => Number)
   price?: number;
 
-  @ApiProperty({ example: 499.00, description: '原价（用于展示优惠）', required: false })
+  @ApiProperty({
+    example: 499.0,
+    description: '原价（用于展示优惠）',
+    required: false,
+  })
   @IsOptional()
   @IsPositive({ message: '原价必须大于 0' })
   @Type(() => Number)
@@ -73,7 +85,11 @@ export class UpdateProductDto {
   @IsString({ message: '活动时长必须是字符串' })
   duration?: string;
 
-  @ApiProperty({ example: '北京海淀区', description: '活动地点', required: false })
+  @ApiProperty({
+    example: '北京海淀区',
+    description: '活动地点',
+    required: false,
+  })
   @IsOptional()
   @IsString({ message: '活动地点必须是字符串' })
   location?: string;
@@ -93,7 +109,12 @@ export class UpdateProductDto {
   @IsBoolean({ message: '是否推荐必须是布尔值' })
   featured?: boolean;
 
-  @ApiProperty({ example: 'PUBLISHED', description: '产品状态', enum: ProductStatus, required: false })
+  @ApiProperty({
+    example: 'PUBLISHED',
+    description: '产品状态',
+    enum: ProductStatus,
+    required: false,
+  })
   @IsOptional()
   @IsEnum(ProductStatus, { message: '产品状态必须是有效的枚举值' })
   status?: ProductStatus;

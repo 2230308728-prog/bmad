@@ -1,5 +1,20 @@
-import { Controller, Get, Query, Param, UsePipes, ValidationPipe, Logger, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Query,
+  Param,
+  UsePipes,
+  ValidationPipe,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { GetProductsDto } from './dto/get-products.dto';
 import { SearchProductsDto } from './dto/search-products.dto';
@@ -26,7 +41,7 @@ export class ProductsController {
   @Get()
   @ApiOperation({
     summary: '获取产品列表',
-    description: '查询已发布的产品列表，支持分页、分类筛选和多种排序方式'
+    description: '查询已发布的产品列表，支持分页、分类筛选和多种排序方式',
   })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 20 })
@@ -35,20 +50,20 @@ export class ProductsController {
     name: 'sortBy',
     required: false,
     enum: ['price_asc', 'price_desc', 'created', 'popular'],
-    example: 'created'
+    example: 'created',
   })
   @ApiResponse({
     status: 200,
     description: '成功返回产品列表',
-    type: PaginatedProductsDto
+    type: PaginatedProductsDto,
   })
   @ApiResponse({
     status: 400,
-    description: '请求参数验证失败'
+    description: '请求参数验证失败',
   })
   @ApiResponse({
     status: 500,
-    description: '服务器内部错误'
+    description: '服务器内部错误',
   })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async findAll(@Query() query: GetProductsDto) {
@@ -75,25 +90,25 @@ export class ProductsController {
   @Get(':id')
   @ApiOperation({
     summary: '获取产品详情',
-    description: '根据产品 ID 查询已发布产品的详细信息'
+    description: '根据产品 ID 查询已发布产品的详细信息',
   })
   @ApiParam({ name: 'id', type: Number, description: '产品 ID', example: 1 })
   @ApiResponse({
     status: 200,
     description: '成功返回产品详情',
-    type: ProductDetailDto
+    type: ProductDetailDto,
   })
   @ApiResponse({
     status: 400,
-    description: '无效的产品 ID'
+    description: '无效的产品 ID',
   })
   @ApiResponse({
     status: 404,
-    description: '产品不存在或未发布'
+    description: '产品不存在或未发布',
   })
   @ApiResponse({
     status: 500,
-    description: '服务器内部错误'
+    description: '服务器内部错误',
   })
   async findOne(@Param('id', ParsePositiveIntPipe) id: number) {
     try {
@@ -106,10 +121,7 @@ export class ProductsController {
       return { data: product };
     } catch (error) {
       // 记录错误详情
-      this.logger.error(
-        `Failed to fetch product detail for id ${id}:`,
-        error,
-      );
+      this.logger.error(`Failed to fetch product detail for id ${id}:`, error);
 
       // 重新抛出，让全局异常过滤器处理
       throw error;
@@ -124,29 +136,39 @@ export class ProductsController {
   @Get('search')
   @ApiOperation({
     summary: '搜索和筛选产品',
-    description: '使用关键词搜索产品，支持价格、年龄、地点等多条件筛选'
+    description: '使用关键词搜索产品，支持价格、年龄、地点等多条件筛选',
   })
-  @ApiQuery({ name: 'keyword', required: true, type: String, example: '科技馆' })
+  @ApiQuery({
+    name: 'keyword',
+    required: true,
+    type: String,
+    example: '科技馆',
+  })
   @ApiQuery({ name: 'categoryId', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'minPrice', required: false, type: Number, example: 100 })
   @ApiQuery({ name: 'maxPrice', required: false, type: Number, example: 500 })
   @ApiQuery({ name: 'minAge', required: false, type: Number, example: 6 })
   @ApiQuery({ name: 'maxAge', required: false, type: Number, example: 12 })
-  @ApiQuery({ name: 'location', required: false, type: String, example: '上海' })
+  @ApiQuery({
+    name: 'location',
+    required: false,
+    type: String,
+    example: '上海',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 20 })
   @ApiResponse({
     status: 200,
     description: '成功返回搜索结果',
-    type: PaginatedProductsDto
+    type: PaginatedProductsDto,
   })
   @ApiResponse({
     status: 400,
-    description: '请求参数验证失败'
+    description: '请求参数验证失败',
   })
   @ApiResponse({
     status: 500,
-    description: '服务器内部错误'
+    description: '服务器内部错误',
   })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async search(@Query() query: SearchProductsDto) {

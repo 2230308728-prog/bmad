@@ -94,7 +94,9 @@ describe('ProductsController', () => {
 
       productsService.findAll!.mockResolvedValue(mockEmptyResponse);
 
-      const result = await controller.findAll({ categoryId: 999 } as GetProductsDto);
+      const result = await controller.findAll({
+        categoryId: 999,
+      } as GetProductsDto);
 
       expect(result.data).toEqual([]);
       expect(result.meta.total).toBe(0);
@@ -216,10 +218,14 @@ describe('ProductsController', () => {
     it('should return search results with keyword', async () => {
       productsService.search = jest.fn().mockResolvedValue(mockSearchResponse);
 
-      const result = await controller.search({ keyword: '科技馆' } as SearchProductsDto);
+      const result = await controller.search({
+        keyword: '科技馆',
+      } as SearchProductsDto);
 
       expect(result).toEqual(mockSearchResponse);
-      expect(productsService.search).toHaveBeenCalledWith({ keyword: '科技馆' });
+      expect(productsService.search).toHaveBeenCalledWith({
+        keyword: '科技馆',
+      });
     });
 
     it('should accept and pass search parameters', async () => {
@@ -251,26 +257,32 @@ describe('ProductsController', () => {
         meta: { total: 0, page: 1, pageSize: 20, totalPages: 0 },
       });
 
-      const result = await controller.search({ keyword: '不存在' } as SearchProductsDto);
+      const result = await controller.search({
+        keyword: '不存在',
+      } as SearchProductsDto);
 
       expect(result.data).toEqual([]);
       expect(result.meta.total).toBe(0);
     });
 
     it('should handle service errors gracefully', async () => {
-      productsService.search = jest.fn().mockRejectedValue(
-        new Error('Database query failed'),
-      );
+      productsService.search = jest
+        .fn()
+        .mockRejectedValue(new Error('Database query failed'));
 
-      await expect(controller.search({ keyword: 'test' } as SearchProductsDto)).rejects.toThrow(
-        'Database query failed',
-      );
+      await expect(
+        controller.search({ keyword: 'test' } as SearchProductsDto),
+      ).rejects.toThrow('Database query failed');
     });
 
     it('should handle page parameter correctly', async () => {
       productsService.search = jest.fn().mockResolvedValue(mockSearchResponse);
 
-      await controller.search({ keyword: 'test', page: 2, pageSize: 20 } as SearchProductsDto);
+      await controller.search({
+        keyword: 'test',
+        page: 2,
+        pageSize: 20,
+      } as SearchProductsDto);
 
       expect(productsService.search).toHaveBeenCalledWith(
         expect.objectContaining({ page: 2 }),
@@ -280,7 +292,11 @@ describe('ProductsController', () => {
     it('should handle pageSize parameter correctly', async () => {
       productsService.search = jest.fn().mockResolvedValue(mockSearchResponse);
 
-      await controller.search({ keyword: 'test', page: 1, pageSize: 50 } as SearchProductsDto);
+      await controller.search({
+        keyword: 'test',
+        page: 1,
+        pageSize: 50,
+      } as SearchProductsDto);
 
       expect(productsService.search).toHaveBeenCalledWith(
         expect.objectContaining({ pageSize: 50 }),
@@ -315,7 +331,10 @@ describe('ProductsController', () => {
       description: '<p>详细的产品介绍...</p>',
       price: '299.00',
       originalPrice: '399.00',
-      images: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+      images: [
+        'https://example.com/image1.jpg',
+        'https://example.com/image2.jpg',
+      ],
       location: '上海浦东新区',
       duration: '1天',
       stock: 50,
@@ -353,11 +372,13 @@ describe('ProductsController', () => {
     });
 
     it('should handle service errors gracefully', async () => {
-      productsService.findOne = jest.fn().mockRejectedValue(
-        new Error('Database connection failed'),
-      );
+      productsService.findOne = jest
+        .fn()
+        .mockRejectedValue(new Error('Database connection failed'));
 
-      await expect(controller.findOne(1)).rejects.toThrow('Database connection failed');
+      await expect(controller.findOne(1)).rejects.toThrow(
+        'Database connection failed',
+      );
     });
 
     it('should parse and validate positive integer id', async () => {

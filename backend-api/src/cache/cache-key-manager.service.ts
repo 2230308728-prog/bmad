@@ -56,7 +56,8 @@ export class CacheKeyManagerService {
       // 为每个标签添加该缓存键
       for (const tag of tags) {
         const tagKey = this.TAG_PREFIX + tag;
-        const currentKeys = (await this.cacheService.get<string[]>(tagKey)) || [];
+        const currentKeys =
+          (await this.cacheService.get<string[]>(tagKey)) || [];
 
         // 避免重复添加
         if (!currentKeys.includes(key)) {
@@ -120,7 +121,9 @@ export class CacheKeyManagerService {
     pattern: string,
     tags: CacheTag[],
   ): Promise<number> {
-    this.logger.log(`按模式失效缓存 [pattern: ${pattern}], tags: ${tags.join(',')}`);
+    this.logger.log(
+      `按模式失效缓存 [pattern: ${pattern}], tags: ${tags.join(',')}`,
+    );
 
     let totalInvalidated = 0;
     for (const tag of tags) {
@@ -207,7 +210,7 @@ export class CacheKeyManagerService {
       for (const key of keys) {
         // 尝试获取缓存键（不获取值，只检查存在性）
         // 注意：由于 CacheService 没有存在性检查，我们使用 get 并忽略结果
-        const exists = await this.cacheService.get(key) !== null;
+        const exists = (await this.cacheService.get(key)) !== null;
         if (exists) {
           validKeys.push(key);
         }

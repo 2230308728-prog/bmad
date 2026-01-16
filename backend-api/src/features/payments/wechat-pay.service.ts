@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import WxPay from 'wechatpay-node-v3';
 import { readFileSync } from 'fs';
@@ -25,7 +30,14 @@ export interface WechatPayOrderQueryResult {
   out_trade_no: string;
   transaction_id: string;
   trade_type: string;
-  trade_state: 'SUCCESS' | 'REFUND' | 'NOTPAY' | 'CLOSED' | 'REVOKED' | 'USERPAYING' | 'PAYERROR';
+  trade_state:
+    | 'SUCCESS'
+    | 'REFUND'
+    | 'NOTPAY'
+    | 'CLOSED'
+    | 'REVOKED'
+    | 'USERPAYING'
+    | 'PAYERROR';
   trade_state_desc: string;
   bank_type: string;
   attach: string;
@@ -171,7 +183,12 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
     query: (params: any) => Promise<any>;
     close: (outTradeNo: string) => Promise<any>;
     verifySign: (params: any) => Promise<boolean>;
-    decipher_gcm: (ciphertext: string, associatedData: string, nonce: string, key: string) => any;
+    decipher_gcm: (
+      ciphertext: string,
+      associatedData: string,
+      nonce: string,
+      key: string,
+    ) => any;
     sha256WithRsa: (data: string) => string;
     refund: (params: any) => Promise<any>;
     query_refund: (params: any) => Promise<any>;
@@ -188,10 +205,19 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
     this.appId = this.configService.get<string>('WECHAT_PAY_APPID', '');
     this.mchId = this.configService.get<string>('WECHAT_PAY_MCHID', '');
     this.serialNo = this.configService.get<string>('WECHAT_PAY_SERIAL_NO', '');
-    this.privateKeyPath = this.configService.get<string>('WECHAT_PAY_PRIVATE_KEY_PATH', '');
+    this.privateKeyPath = this.configService.get<string>(
+      'WECHAT_PAY_PRIVATE_KEY_PATH',
+      '',
+    );
     this.apiV3Key = this.configService.get<string>('WECHAT_PAY_APIV3_KEY', '');
-    this.notifyUrl = this.configService.get<string>('WECHAT_PAY_NOTIFY_URL', '');
-    this.refundNotifyUrl = this.configService.get<string>('WECHAT_PAY_REFUND_NOTIFY_URL', '');
+    this.notifyUrl = this.configService.get<string>(
+      'WECHAT_PAY_NOTIFY_URL',
+      '',
+    );
+    this.refundNotifyUrl = this.configService.get<string>(
+      'WECHAT_PAY_REFUND_NOTIFY_URL',
+      '',
+    );
   }
 
   /**
@@ -211,7 +237,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
         const keyPath = join(process.cwd(), this.privateKeyPath);
         privateKey = readFileSync(keyPath);
       } catch (error) {
-        this.logger.error(`读取商户私钥失败 [path: ${this.privateKeyPath}]: ${(error as Error).message}`);
+        this.logger.error(
+          `读取商户私钥失败 [path: ${this.privateKeyPath}]: ${(error as Error).message}`,
+        );
         return;
       }
 
@@ -290,7 +318,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       }
 
       const prepayId = result.data.prepay_id;
-      this.logger.log(`JSAPI 订单创建成功 [orderNo: ${outTradeNo}, prepayId: ${prepayId}]`);
+      this.logger.log(
+        `JSAPI 订单创建成功 [orderNo: ${outTradeNo}, prepayId: ${prepayId}]`,
+      );
 
       return prepayId;
     } catch (error) {
@@ -378,10 +408,14 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       }
 
       const tradeState = result.data.trade_state;
-      this.logger.log(`订单查询成功 [orderNo: ${outTradeNo}, tradeState: ${tradeState}]`);
+      this.logger.log(
+        `订单查询成功 [orderNo: ${outTradeNo}, tradeState: ${tradeState}]`,
+      );
       return result.data;
     } catch (error) {
-      this.logger.error(`订单查询失败 [orderNo: ${outTradeNo}]: ${(error as Error).message}`);
+      this.logger.error(
+        `订单查询失败 [orderNo: ${outTradeNo}]: ${(error as Error).message}`,
+      );
       throw error;
     }
   }
@@ -436,13 +470,22 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
    * @param nonce 加密随机串
    * @returns 解密后的数据
    */
-  decipherNotify(ciphertext: string, associatedData: string, nonce: string): WechatPayNotifyData {
+  decipherNotify(
+    ciphertext: string,
+    associatedData: string,
+    nonce: string,
+  ): WechatPayNotifyData {
     if (!this.wxpay) {
       throw new Error('微信支付服务不可用');
     }
 
     try {
-      const result = this.wxpay.decipher_gcm(ciphertext, associatedData, nonce, this.apiV3Key);
+      const result = this.wxpay.decipher_gcm(
+        ciphertext,
+        associatedData,
+        nonce,
+        this.apiV3Key,
+      );
       this.logger.log('支付回调数据解密成功');
       return result;
     } catch (error) {
@@ -464,13 +507,17 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
       const result = await this.wxpay.close(outTradeNo);
 
       if (result.status !== 200) {
-        this.logger.error(`订单关闭失败 [orderNo: ${outTradeNo}]: ${JSON.stringify(result)}`);
+        this.logger.error(
+          `订单关闭失败 [orderNo: ${outTradeNo}]: ${JSON.stringify(result)}`,
+        );
         throw new Error('关闭订单失败');
       }
 
       this.logger.log(`订单关闭成功 [orderNo: ${outTradeNo}]`);
     } catch (error) {
-      this.logger.error(`订单关闭失败 [orderNo: ${outTradeNo}]: ${(error as Error).message}`);
+      this.logger.error(
+        `订单关闭失败 [orderNo: ${outTradeNo}]: ${(error as Error).message}`,
+      );
       throw error;
     }
   }
@@ -600,7 +647,9 @@ export class WechatPayService implements OnModuleInit, OnModuleDestroy {
 
       return refundResult;
     } catch (error) {
-      this.logger.error(`退款查询失败 [refundNo: ${outRefundNo}]: ${(error as Error).message}`);
+      this.logger.error(
+        `退款查询失败 [refundNo: ${outRefundNo}]: ${(error as Error).message}`,
+      );
       throw error;
     }
   }

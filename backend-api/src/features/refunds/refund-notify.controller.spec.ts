@@ -120,7 +120,9 @@ describe('RefundNotifyController', () => {
         order: { id: 1 },
       };
 
-      mockPrismaService.refundRecord.findUnique.mockResolvedValue(mockRefundRecord);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(
+        mockRefundRecord,
+      );
       mockPrismaService.refundRecord.update.mockResolvedValue({
         id: 1,
         status: RefundStatus.COMPLETED,
@@ -159,7 +161,9 @@ describe('RefundNotifyController', () => {
         order: { id: 1 },
       };
 
-      mockPrismaService.refundRecord.findUnique.mockResolvedValue(mockRefundRecord);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(
+        mockRefundRecord,
+      );
       mockPrismaService.refundRecord.update.mockResolvedValue({
         id: 1,
         status: RefundStatus.FAILED,
@@ -196,7 +200,9 @@ describe('RefundNotifyController', () => {
         order: { id: 1 },
       };
 
-      mockPrismaService.refundRecord.findUnique.mockResolvedValue(mockRefundRecord);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(
+        mockRefundRecord,
+      );
 
       const result = await controller.handleRefundNotify(mockNotifyDto);
 
@@ -222,7 +228,9 @@ describe('RefundNotifyController', () => {
         order: { id: 1 },
       };
 
-      mockPrismaService.refundRecord.findUnique.mockResolvedValue(mockRefundRecord);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(
+        mockRefundRecord,
+      );
 
       const result = await controller.handleRefundNotify(mockNotifyDto);
 
@@ -248,7 +256,9 @@ describe('RefundNotifyController', () => {
         order: { id: 1 },
       };
 
-      mockPrismaService.refundRecord.findUnique.mockResolvedValue(mockRefundRecord);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(
+        mockRefundRecord,
+      );
 
       const result = await controller.handleRefundNotify(mockNotifyDto);
 
@@ -260,7 +270,9 @@ describe('RefundNotifyController', () => {
     });
 
     it('should handle errors and return FAIL', async () => {
-      mockWechatPayService.verifyNotify.mockRejectedValue(new Error('Network error'));
+      mockWechatPayService.verifyNotify.mockRejectedValue(
+        new Error('Network error'),
+      );
 
       const result = await controller.handleRefundNotify(mockNotifyDto);
 

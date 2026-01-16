@@ -26,9 +26,7 @@ export class UserSessionService {
   ): Promise<void> {
     const key = `user:refresh:${userId}`;
     await this.cacheService.set(key, refreshToken, ttl);
-    this.logger.debug(
-      `保存用户刷新令牌 [userId: ${userId}, ttl: ${ttl}s]`,
-    );
+    this.logger.debug(`保存用户刷新令牌 [userId: ${userId}, ttl: ${ttl}s]`);
   }
 
   /**

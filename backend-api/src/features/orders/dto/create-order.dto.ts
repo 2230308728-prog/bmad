@@ -23,7 +23,10 @@ export class CreateOrderDto {
   @Type(() => Number)
   productId!: number;
 
-  @ApiProperty({ example: '2024-02-15', description: '预订日期（YYYY-MM-DD 格式）' })
+  @ApiProperty({
+    example: '2024-02-15',
+    description: '预订日期（YYYY-MM-DD 格式）',
+  })
   @IsNotEmpty({ message: '预订日期不能为空' })
   @IsDateString({}, { message: '预订日期格式无效' })
   bookingDate!: string;
@@ -48,7 +51,10 @@ export class CreateOrderDto {
   @MaxLength(50, { message: '联系人姓名不能超过 50 个字符' })
   contactName!: string;
 
-  @ApiProperty({ example: '13800138000', description: '联系人手机号（中国手机号）' })
+  @ApiProperty({
+    example: '13800138000',
+    description: '联系人手机号（中国手机号）',
+  })
   @IsNotEmpty({ message: '联系人手机号不能为空' })
   @IsPhoneNumber('CN', { message: '联系人手机号格式无效' })
   contactPhone!: string;

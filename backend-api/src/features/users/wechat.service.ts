@@ -14,7 +14,8 @@ interface Jscode2sessionResponse {
 @Injectable()
 export class WechatService {
   private readonly logger = new Logger(WechatService.name);
-  private readonly jscode2sessionUrl = 'https://api.weixin.qq.com/sns/jscode2session';
+  private readonly jscode2sessionUrl =
+    'https://api.weixin.qq.com/sns/jscode2session';
   private readonly appId: string;
   private readonly appSecret: string;
 
@@ -38,7 +39,9 @@ export class WechatService {
    */
   async jscode2session(code: string): Promise<string> {
     try {
-      this.logger.log(`Exchanging code for openid: ${code.substring(0, 10)}...`);
+      this.logger.log(
+        `Exchanging code for openid: ${code.substring(0, 10)}...`,
+      );
 
       const params = {
         appid: this.appId,
@@ -61,7 +64,9 @@ export class WechatService {
         throw new UnauthorizedException('微信授权失败，请重试');
       }
 
-      this.logger.log(`Successfully obtained openid: ${response.data.openid.substring(0, 10)}...`);
+      this.logger.log(
+        `Successfully obtained openid: ${response.data.openid.substring(0, 10)}...`,
+      );
 
       return response.data.openid;
     } catch (error) {

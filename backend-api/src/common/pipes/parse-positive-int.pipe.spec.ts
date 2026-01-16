@@ -24,32 +24,42 @@ describe('ParsePositiveIntPipe', () => {
     it('should reject zero', () => {
       expect(() => pipe.transform('0', metadata)).toThrow(BadRequestException);
       expect(() => pipe.transform('0', metadata)).toThrow(
-        'Validation failed: "0" must be a positive integer'
+        'Validation failed: "0" must be a positive integer',
       );
     });
 
     it('should reject negative integers', () => {
       expect(() => pipe.transform('-1', metadata)).toThrow(BadRequestException);
-      expect(() => pipe.transform('-100', metadata)).toThrow(BadRequestException);
+      expect(() => pipe.transform('-100', metadata)).toThrow(
+        BadRequestException,
+      );
       // 负号会在格式检查时被拒绝
       expect(() => pipe.transform('-1', metadata)).toThrow(
-        'Validation failed: "-1" is not a valid integer'
+        'Validation failed: "-1" is not a valid integer',
       );
     });
 
     it('should reject NaN values', () => {
-      expect(() => pipe.transform('abc', metadata)).toThrow(BadRequestException);
-      expect(() => pipe.transform('not-a-number', metadata)).toThrow(BadRequestException);
       expect(() => pipe.transform('abc', metadata)).toThrow(
-        'Validation failed: "abc" is not a valid integer'
+        BadRequestException,
+      );
+      expect(() => pipe.transform('not-a-number', metadata)).toThrow(
+        BadRequestException,
+      );
+      expect(() => pipe.transform('abc', metadata)).toThrow(
+        'Validation failed: "abc" is not a valid integer',
       );
     });
 
     it('should reject decimal numbers', () => {
-      expect(() => pipe.transform('1.5', metadata)).toThrow(BadRequestException);
-      expect(() => pipe.transform('3.14', metadata)).toThrow(BadRequestException);
+      expect(() => pipe.transform('1.5', metadata)).toThrow(
+        BadRequestException,
+      );
       expect(() => pipe.transform('3.14', metadata)).toThrow(
-        'Validation failed: "3.14" is not a valid integer'
+        BadRequestException,
+      );
+      expect(() => pipe.transform('3.14', metadata)).toThrow(
+        'Validation failed: "3.14" is not a valid integer',
       );
     });
 
@@ -58,7 +68,9 @@ describe('ParsePositiveIntPipe', () => {
     });
 
     it('should reject special characters', () => {
-      expect(() => pipe.transform('!@#', metadata)).toThrow(BadRequestException);
+      expect(() => pipe.transform('!@#', metadata)).toThrow(
+        BadRequestException,
+      );
     });
 
     it('should handle edge cases', () => {

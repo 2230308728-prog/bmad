@@ -151,10 +151,12 @@ describe('AuthService', () => {
       mockJwtService.verifyAsync.mockResolvedValue(refreshPayload);
 
       // Act & Assert
-      await expect(service.validateAccessToken('refresh_token'))
-        .rejects.toThrow(UnauthorizedException);
-      await expect(service.validateAccessToken('refresh_token'))
-        .rejects.toThrow('Invalid token type');
+      await expect(
+        service.validateAccessToken('refresh_token'),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateAccessToken('refresh_token'),
+      ).rejects.toThrow('Invalid token type');
     });
 
     it('should throw UnauthorizedException for invalid token', async () => {
@@ -162,10 +164,12 @@ describe('AuthService', () => {
       mockJwtService.verifyAsync.mockRejectedValue(new Error('Invalid token'));
 
       // Act & Assert
-      await expect(service.validateAccessToken('invalid_token'))
-        .rejects.toThrow(UnauthorizedException);
-      await expect(service.validateAccessToken('invalid_token'))
-        .rejects.toThrow('Invalid access token');
+      await expect(
+        service.validateAccessToken('invalid_token'),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateAccessToken('invalid_token'),
+      ).rejects.toThrow('Invalid access token');
     });
 
     it('should throw UnauthorizedException for expired token', async () => {
@@ -173,8 +177,9 @@ describe('AuthService', () => {
       mockJwtService.verifyAsync.mockRejectedValue(new Error('Token expired'));
 
       // Act & Assert
-      await expect(service.validateAccessToken('expired_token'))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateAccessToken('expired_token'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -192,7 +197,9 @@ describe('AuthService', () => {
 
       // Assert
       expect(result).toEqual(validPayload);
-      expect(mockJwtService.verifyAsync).toHaveBeenCalledWith('valid_refresh_token');
+      expect(mockJwtService.verifyAsync).toHaveBeenCalledWith(
+        'valid_refresh_token',
+      );
     });
 
     it('should throw UnauthorizedException for access token used as refresh token', async () => {
@@ -205,10 +212,12 @@ describe('AuthService', () => {
       mockJwtService.verifyAsync.mockResolvedValue(accessPayload);
 
       // Act & Assert
-      await expect(service.validateRefreshToken('access_token'))
-        .rejects.toThrow(UnauthorizedException);
-      await expect(service.validateRefreshToken('access_token'))
-        .rejects.toThrow('Invalid token type');
+      await expect(
+        service.validateRefreshToken('access_token'),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateRefreshToken('access_token'),
+      ).rejects.toThrow('Invalid token type');
     });
 
     it('should throw UnauthorizedException for invalid refresh token', async () => {
@@ -216,10 +225,12 @@ describe('AuthService', () => {
       mockJwtService.verifyAsync.mockRejectedValue(new Error('Invalid'));
 
       // Act & Assert
-      await expect(service.validateRefreshToken('invalid_token'))
-        .rejects.toThrow(UnauthorizedException);
-      await expect(service.validateRefreshToken('invalid_token'))
-        .rejects.toThrow('Invalid refresh token');
+      await expect(
+        service.validateRefreshToken('invalid_token'),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateRefreshToken('invalid_token'),
+      ).rejects.toThrow('Invalid refresh token');
     });
   });
 
@@ -262,8 +273,9 @@ describe('AuthService', () => {
       mockJwtService.decode.mockReturnValue(null);
 
       // Act & Assert
-      expect(() => service.extractUserIdFromToken('invalid_token'))
-        .toThrow('Invalid token: unable to extract user ID');
+      expect(() => service.extractUserIdFromToken('invalid_token')).toThrow(
+        'Invalid token: unable to extract user ID',
+      );
     });
 
     it('should throw error when payload.sub is not a number', () => {
@@ -272,8 +284,9 @@ describe('AuthService', () => {
       mockJwtService.decode.mockReturnValue(invalidPayload);
 
       // Act & Assert
-      expect(() => service.extractUserIdFromToken('malformed_token'))
-        .toThrow('Invalid token: unable to extract user ID');
+      expect(() => service.extractUserIdFromToken('malformed_token')).toThrow(
+        'Invalid token: unable to extract user ID',
+      );
     });
   });
 });

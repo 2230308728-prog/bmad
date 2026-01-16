@@ -13,7 +13,15 @@ import {
   ValidationPipe,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiHeader,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminIssuesService } from './admin-issues.service';
 import { QueryIssuesDto } from './dto/admin/query-issues.dto';
@@ -25,7 +33,10 @@ import { IssueStatsResponseDto } from './dto/admin/issue-stats-response.dto';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { CurrentUser, type CurrentUserType } from '@/common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type CurrentUserType,
+} from '@/common/decorators/current-user.decorator';
 
 /**
  * 管理员问题控制器
@@ -72,12 +83,42 @@ export class AdminIssuesController {
     example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   @ApiQuery({ name: 'page', required: false, example: 1, description: '页码' })
-  @ApiQuery({ name: 'pageSize', required: false, example: 20, description: '每页数量' })
-  @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'], description: '状态筛选' })
-  @ApiQuery({ name: 'type', required: false, enum: ['COMPLAINT', 'QUESTION', 'SUGGESTION', 'REFUND_REQUEST'], description: '类型筛选' })
-  @ApiQuery({ name: 'priority', required: false, enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'], description: '优先级筛选' })
-  @ApiQuery({ name: 'userId', required: false, example: 1, description: '用户 ID 筛选' })
-  @ApiQuery({ name: 'assignedTo', required: false, example: 2, description: '分配管理员筛选' })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    example: 20,
+    description: '每页数量',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'],
+    description: '状态筛选',
+  })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    enum: ['COMPLAINT', 'QUESTION', 'SUGGESTION', 'REFUND_REQUEST'],
+    description: '类型筛选',
+  })
+  @ApiQuery({
+    name: 'priority',
+    required: false,
+    enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'],
+    description: '优先级筛选',
+  })
+  @ApiQuery({
+    name: 'userId',
+    required: false,
+    example: 1,
+    description: '用户 ID 筛选',
+  })
+  @ApiQuery({
+    name: 'assignedTo',
+    required: false,
+    example: 2,
+    description: '分配管理员筛选',
+  })
   @ApiResponse({
     status: 200,
     description: '查询成功',
@@ -100,7 +141,9 @@ export class AdminIssuesController {
     @Query(ValidationPipe) queryDto: QueryIssuesDto,
   ): Promise<IssueListResponseDto> {
     try {
-      this.logger.log(`Admin ${user.id} querying issues with filters: ${JSON.stringify(queryDto)}`);
+      this.logger.log(
+        `Admin ${user.id} querying issues with filters: ${JSON.stringify(queryDto)}`,
+      );
       const result = await this.adminIssuesService.findIssues(queryDto);
       return result;
     } catch (error) {
@@ -157,7 +200,9 @@ export class AdminIssuesController {
     status: 403,
     description: '权限不足（需要 ADMIN 角色）',
   })
-  async getStats(@CurrentUser() user: CurrentUserType): Promise<{ data: IssueStatsResponseDto }> {
+  async getStats(
+    @CurrentUser() user: CurrentUserType,
+  ): Promise<{ data: IssueStatsResponseDto }> {
     try {
       this.logger.log(`Admin ${user.id} querying issue stats`);
       const result = await this.adminIssuesService.getIssueStats();
@@ -221,7 +266,9 @@ export class AdminIssuesController {
     @Body(ValidationPipe) createDto: CreateIssueDto,
   ): Promise<{ data: IssueResponseDto }> {
     try {
-      this.logger.log(`Admin ${user.id} creating issue for user ${createDto.userId}`);
+      this.logger.log(
+        `Admin ${user.id} creating issue for user ${createDto.userId}`,
+      );
       const result = await this.adminIssuesService.createIssue(createDto);
       return { data: result };
     } catch (error) {
@@ -290,7 +337,10 @@ export class AdminIssuesController {
   ): Promise<{ data: IssueResponseDto }> {
     try {
       this.logger.log(`Admin ${user.id} updating issue ${id} status`);
-      const result = await this.adminIssuesService.updateIssueStatus(id, updateDto);
+      const result = await this.adminIssuesService.updateIssueStatus(
+        id,
+        updateDto,
+      );
       return { data: result };
     } catch (error) {
       this.logger.error(`Failed to update issue ${id} status:`, error);

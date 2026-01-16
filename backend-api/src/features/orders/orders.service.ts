@@ -1,11 +1,20 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
 import { maskPhoneNumber } from './dto/order-detail.dto';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
-import { WechatPayService, WechatPayOrderQueryResult } from '../../features/payments/wechat-pay.service';
+import {
+  WechatPayService,
+  WechatPayOrderQueryResult,
+} from '../../features/payments/wechat-pay.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 /**
@@ -68,11 +77,16 @@ export class OrdersService {
     if (currentStock === null) {
       // 首次访问，使用数据库库存初始化
       await this.cacheService.setStock(stockKey, product.stock);
-      this.logger.debug(`初始化 Redis 库存: productId=${dto.productId}, stock=${product.stock}`);
+      this.logger.debug(
+        `初始化 Redis 库存: productId=${dto.productId}, stock=${product.stock}`,
+      );
     }
 
     // 5. Redis 预扣库存
-    const stockPreDeducted = await this.preDeductStock(dto.productId, dto.participantCount);
+    const stockPreDeducted = await this.preDeductStock(
+      dto.productId,
+      dto.participantCount,
+    );
 
     if (!stockPreDeducted) {
       this.logger.warn(`Redis 库存预扣失败: productId=${dto.productId}`);
@@ -159,7 +173,10 @@ export class OrdersService {
    * @param quantity 扣减数量
    * @returns 是否扣减成功
    */
-  private async preDeductStock(productId: number, quantity: number): Promise<boolean> {
+  private async preDeductStock(
+    productId: number,
+    quantity: number,
+  ): Promise<boolean> {
     const stockKey = `product:stock:${productId}`;
     const newStock = await this.cacheService.decrby(stockKey, quantity);
 
@@ -188,10 +205,15 @@ export class OrdersService {
    * @param productId 产品 ID
    * @param quantity 回滚数量
    */
-  private async rollbackStock(productId: number, quantity: number): Promise<void> {
+  private async rollbackStock(
+    productId: number,
+    quantity: number,
+  ): Promise<void> {
     const stockKey = `product:stock:${productId}`;
     await this.cacheService.incrby(stockKey, quantity);
-    this.logger.debug(`Redis 库存回滚: productId=${productId}, quantity=${quantity}`);
+    this.logger.debug(
+      `Redis 库存回滚: productId=${productId}, quantity=${quantity}`,
+    );
   }
 
   /**
@@ -215,14 +237,18 @@ export class OrdersService {
     const queryCount = parseInt(count ?? '0', 10);
 
     if (queryCount >= 10) {
-      this.logger.warn(`支付状态查询频率超限: orderId=${orderId}, count=${queryCount}`);
+      this.logger.warn(
+        `支付状态查询频率超限: orderId=${orderId}, count=${queryCount}`,
+      );
       return true;
     }
 
     // 递增计数（检查 incr 是否返回 null，表示 Redis 操作失败）
     const newCount = await this.cacheService.incr(rateLimitKey);
     if (newCount === null) {
-      this.logger.error(`Redis incr 操作失败: orderId=${orderId}, key=${rateLimitKey}`);
+      this.logger.error(
+        `Redis incr 操作失败: orderId=${orderId}, key=${rateLimitKey}`,
+      );
       // Redis 操作失败时，为了安全起见，限制请求
       return true;
     }
@@ -256,7 +282,9 @@ export class OrdersService {
     }
 
     if (order.userId !== userId) {
-      this.logger.warn(`订单不属于当前用户: orderId=${orderId}, userId=${userId}, orderUserId=${order.userId}`);
+      this.logger.warn(
+        `订单不属于当前用户: orderId=${orderId}, userId=${userId}, orderUserId=${order.userId}`,
+      );
       throw new ForbiddenException('无权访问此订单');
     }
 
@@ -317,7 +345,9 @@ export class OrdersService {
 
     // 5. PENDING 状态：主动查询微信支付状态
     try {
-      const wechatResult = await this.wechatPayService.queryOrder(order.orderNo);
+      const wechatResult = await this.wechatPayService.queryOrder(
+        order.orderNo,
+      );
 
       // 6. 根据微信返回状态处理
       if (wechatResult.trade_state === 'SUCCESS') {
@@ -342,7 +372,10 @@ export class OrdersService {
         };
       }
 
-      if (wechatResult.trade_state === 'PAYERROR' || wechatResult.trade_state === 'CLOSED') {
+      if (
+        wechatResult.trade_state === 'PAYERROR' ||
+        wechatResult.trade_state === 'CLOSED'
+      ) {
         // 支付失败或关闭：更新订单状态，释放库存
         await this.processPaymentFailure(order);
 
@@ -350,7 +383,8 @@ export class OrdersService {
           orderId: order.id,
           orderNo: order.orderNo,
           status: OrderStatus.CANCELLED,
-          message: wechatResult.trade_state === 'CLOSED' ? '支付已关闭' : '支付失败',
+          message:
+            wechatResult.trade_state === 'CLOSED' ? '支付已关闭' : '支付失败',
         };
       }
 
@@ -362,7 +396,10 @@ export class OrdersService {
         message: '等待支付',
       };
     } catch (error) {
-      this.logger.error(`查询微信支付状态失败: orderNo=${order.orderNo}`, error);
+      this.logger.error(
+        `查询微信支付状态失败: orderNo=${order.orderNo}`,
+        error,
+      );
 
       // 对于验证错误（BadRequestException），直接向上抛出
       if (error instanceof BadRequestException) {
@@ -384,7 +421,10 @@ export class OrdersService {
    * @param order 订单
    * @param wechatResult 微信支付查询结果
    */
-  private async processPaymentSuccess(order: any, wechatResult: WechatPayOrderQueryResult): Promise<void> {
+  private async processPaymentSuccess(
+    order: any,
+    wechatResult: WechatPayOrderQueryResult,
+  ): Promise<void> {
     // 验证微信支付响应数据完整性
     this.validateWechatPayResponse(wechatResult);
 
@@ -468,19 +508,34 @@ export class OrdersService {
    * @param wechatResult 微信支付查询结果
    * @throws BadRequestException 当响应数据不完整或无效时
    */
-  private validateWechatPayResponse(wechatResult: WechatPayOrderQueryResult): void {
-    if (!wechatResult.transaction_id || wechatResult.transaction_id.trim() === '') {
-      this.logger.error(`微信支付响应缺少 transaction_id: orderNo=${wechatResult.out_trade_no}`);
+  private validateWechatPayResponse(
+    wechatResult: WechatPayOrderQueryResult,
+  ): void {
+    if (
+      !wechatResult.transaction_id ||
+      wechatResult.transaction_id.trim() === ''
+    ) {
+      this.logger.error(
+        `微信支付响应缺少 transaction_id: orderNo=${wechatResult.out_trade_no}`,
+      );
       throw new BadRequestException('微信支付响应数据无效：缺少交易号');
     }
 
     if (!wechatResult.success_time || wechatResult.success_time.trim() === '') {
-      this.logger.error(`微信支付响应缺少 success_time: orderNo=${wechatResult.out_trade_no}`);
+      this.logger.error(
+        `微信支付响应缺少 success_time: orderNo=${wechatResult.out_trade_no}`,
+      );
       throw new BadRequestException('微信支付响应数据无效：缺少支付时间');
     }
 
-    if (!wechatResult.amount || typeof wechatResult.amount.total !== 'number' || wechatResult.amount.total <= 0) {
-      this.logger.error(`微信支付响应金额无效: orderNo=${wechatResult.out_trade_no}, amount=${JSON.stringify(wechatResult.amount)}`);
+    if (
+      !wechatResult.amount ||
+      typeof wechatResult.amount.total !== 'number' ||
+      wechatResult.amount.total <= 0
+    ) {
+      this.logger.error(
+        `微信支付响应金额无效: orderNo=${wechatResult.out_trade_no}, amount=${JSON.stringify(wechatResult.amount)}`,
+      );
       throw new BadRequestException('微信支付响应数据无效：金额异常');
     }
   }
@@ -526,7 +581,13 @@ export class OrdersService {
    * @returns 分页订单列表
    */
   async findAll(userId: number, queryDto: QueryOrdersDto) {
-    const { page = 1, pageSize = 20, status, sortBy = 'createdAt', sortOrder = 'desc' } = queryDto;
+    const {
+      page = 1,
+      pageSize = 20,
+      status,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = queryDto;
 
     // 计算分页参数
     const skip = (page - 1) * pageSize;
@@ -605,7 +666,9 @@ export class OrdersService {
     });
 
     if (!order) {
-      this.logger.warn(`订单不存在或不属于当前用户: orderId=${orderId}, userId=${userId}`);
+      this.logger.warn(
+        `订单不存在或不属于当前用户: orderId=${orderId}, userId=${userId}`,
+      );
       throw new NotFoundException('订单不存在');
     }
 

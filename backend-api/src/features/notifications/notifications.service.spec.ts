@@ -155,9 +155,11 @@ describe('NotificationsService', () => {
         config: {},
       } as any);
 
-      const error = await service.getAccessToken().catch(e => e);
+      const error = await service.getAccessToken().catch((e) => e);
       expect(error).toBeInstanceOf(Error);
-      expect(error.message).toContain('Failed to fetch access_token from WeChat API');
+      expect(error.message).toContain(
+        'Failed to fetch access_token from WeChat API',
+      );
     });
 
     it('should throw error if WECHAT_APP_ID or WECHAT_APP_SECRET is missing', async () => {
@@ -171,7 +173,9 @@ describe('NotificationsService', () => {
 
     it('should handle network errors gracefully', async () => {
       mockCacheService.get.mockResolvedValue(null);
-      mockHttpService.axiosRef.get.mockRejectedValue(new Error('Network error'));
+      mockHttpService.axiosRef.get.mockRejectedValue(
+        new Error('Network error'),
+      );
 
       await expect(service.getAccessToken()).rejects.toThrow(
         'Failed to fetch access_token from WeChat API',
@@ -181,16 +185,24 @@ describe('NotificationsService', () => {
 
   describe('isUserSubscribed', () => {
     it('should return true if user is subscribed to the notification type', async () => {
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue({
-        id: 1,
-        userId: 1,
-        notificationTypes: [NotificationType.ORDER_CONFIRM, NotificationType.TRAVEL_REMINDER],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: {},
-      });
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        {
+          id: 1,
+          userId: 1,
+          notificationTypes: [
+            NotificationType.ORDER_CONFIRM,
+            NotificationType.TRAVEL_REMINDER,
+          ],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: {},
+        },
+      );
 
-      const result = await service.isUserSubscribed(1, NotificationType.ORDER_CONFIRM);
+      const result = await service.isUserSubscribed(
+        1,
+        NotificationType.ORDER_CONFIRM,
+      );
 
       expect(result).toBe(true);
       expect(
@@ -201,24 +213,34 @@ describe('NotificationsService', () => {
     });
 
     it('should return false if user is not subscribed to the notification type', async () => {
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue({
-        id: 1,
-        userId: 1,
-        notificationTypes: [NotificationType.TRAVEL_REMINDER],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: {},
-      });
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        {
+          id: 1,
+          userId: 1,
+          notificationTypes: [NotificationType.TRAVEL_REMINDER],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: {},
+        },
+      );
 
-      const result = await service.isUserSubscribed(1, NotificationType.ORDER_CONFIRM);
+      const result = await service.isUserSubscribed(
+        1,
+        NotificationType.ORDER_CONFIRM,
+      );
 
       expect(result).toBe(false);
     });
 
     it('should return false if user has no notification preferences', async () => {
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(null);
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        null,
+      );
 
-      const result = await service.isUserSubscribed(1, NotificationType.ORDER_CONFIRM);
+      const result = await service.isUserSubscribed(
+        1,
+        NotificationType.ORDER_CONFIRM,
+      );
 
       expect(result).toBe(false);
     });
@@ -228,7 +250,10 @@ describe('NotificationsService', () => {
         new Error('Database error'),
       );
 
-      const result = await service.isUserSubscribed(1, NotificationType.ORDER_CONFIRM);
+      const result = await service.isUserSubscribed(
+        1,
+        NotificationType.ORDER_CONFIRM,
+      );
 
       expect(result).toBe(false);
     });
@@ -240,14 +265,16 @@ describe('NotificationsService', () => {
         id: 1,
         openid: 'test_openid',
       });
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue({
-        id: 1,
-        userId: 1,
-        notificationTypes: [NotificationType.ORDER_CONFIRM],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: {},
-      });
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        {
+          id: 1,
+          userId: 1,
+          notificationTypes: [NotificationType.ORDER_CONFIRM],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: {},
+        },
+      );
       mockCacheService.get.mockResolvedValue('cached_token');
     });
 
@@ -274,14 +301,16 @@ describe('NotificationsService', () => {
     });
 
     it('should return false if user is not subscribed', async () => {
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue({
-        id: 1,
-        userId: 1,
-        notificationTypes: [], // Empty array means no subscriptions
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: {},
-      });
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        {
+          id: 1,
+          userId: 1,
+          notificationTypes: [], // Empty array means no subscriptions
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: {},
+        },
+      );
 
       const result = await service.sendOrderConfirmNotification(
         1,
@@ -318,7 +347,9 @@ describe('NotificationsService', () => {
     });
 
     it('should handle WeChat API errors gracefully', async () => {
-      mockHttpService.axiosRef.post.mockRejectedValue(new Error('Network error'));
+      mockHttpService.axiosRef.post.mockRejectedValue(
+        new Error('Network error'),
+      );
 
       const result = await service.sendOrderConfirmNotification(
         1,
@@ -361,14 +392,16 @@ describe('NotificationsService', () => {
         id: 1,
         openid: 'test_openid',
       });
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue({
-        id: 1,
-        userId: 1,
-        notificationTypes: [NotificationType.TRAVEL_REMINDER],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: {},
-      });
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        {
+          id: 1,
+          userId: 1,
+          notificationTypes: [NotificationType.TRAVEL_REMINDER],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: {},
+        },
+      );
       mockCacheService.get.mockResolvedValue('cached_token');
     });
 
@@ -396,14 +429,16 @@ describe('NotificationsService', () => {
     });
 
     it('should return false if user is not subscribed', async () => {
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue({
-        id: 1,
-        userId: 1,
-        notificationTypes: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: {},
-      });
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        {
+          id: 1,
+          userId: 1,
+          notificationTypes: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: {},
+        },
+      );
 
       const result = await service.sendTravelReminderNotification(
         1,
@@ -426,18 +461,20 @@ describe('NotificationsService', () => {
         id: 1,
         openid: 'test_openid',
       });
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue({
-        id: 1,
-        userId: 1,
-        notificationTypes: [
-          NotificationType.REFUND_APPROVED,
-          NotificationType.REFUND_REJECTED,
-          NotificationType.REFUND_COMPLETED,
-        ],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: {},
-      });
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        {
+          id: 1,
+          userId: 1,
+          notificationTypes: [
+            NotificationType.REFUND_APPROVED,
+            NotificationType.REFUND_REJECTED,
+            NotificationType.REFUND_COMPLETED,
+          ],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: {},
+        },
+      );
       mockCacheService.get.mockResolvedValue('cached_token');
     });
 
@@ -564,14 +601,17 @@ describe('NotificationsService', () => {
         user: {},
       });
 
-      const result = await service.updateUserSubscription(
-        1,
-        [NotificationType.ORDER_CONFIRM],
-      );
+      const result = await service.updateUserSubscription(1, [
+        NotificationType.ORDER_CONFIRM,
+      ]);
 
       expect(result).toBeDefined();
-      expect(result.notificationTypes).toContain(NotificationType.ORDER_CONFIRM);
-      expect(mockPrismaService.userNotificationPreference.upsert).toHaveBeenCalledWith({
+      expect(result.notificationTypes).toContain(
+        NotificationType.ORDER_CONFIRM,
+      );
+      expect(
+        mockPrismaService.userNotificationPreference.upsert,
+      ).toHaveBeenCalledWith({
         where: { userId: 1 },
         update: {
           notificationTypes: [NotificationType.ORDER_CONFIRM],
@@ -608,23 +648,29 @@ describe('NotificationsService', () => {
 
   describe('getUserSubscription', () => {
     it('should return existing subscription preference', async () => {
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue({
-        id: 1,
-        userId: 1,
-        notificationTypes: [NotificationType.ORDER_CONFIRM],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: {},
-      });
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        {
+          id: 1,
+          userId: 1,
+          notificationTypes: [NotificationType.ORDER_CONFIRM],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: {},
+        },
+      );
 
       const result = await service.getUserSubscription(1);
 
       expect(result).toBeDefined();
-      expect(result.notificationTypes).toContain(NotificationType.ORDER_CONFIRM);
+      expect(result.notificationTypes).toContain(
+        NotificationType.ORDER_CONFIRM,
+      );
     });
 
     it('should create default preference when not exists', async () => {
-      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(null);
+      mockPrismaService.userNotificationPreference.findUnique.mockResolvedValue(
+        null,
+      );
       mockPrismaService.userNotificationPreference.create.mockResolvedValue({
         id: 1,
         userId: 1,
@@ -638,7 +684,9 @@ describe('NotificationsService', () => {
 
       expect(result).toBeDefined();
       expect(result.notificationTypes).toEqual([]);
-      expect(mockPrismaService.userNotificationPreference.create).toHaveBeenCalledWith({
+      expect(
+        mockPrismaService.userNotificationPreference.create,
+      ).toHaveBeenCalledWith({
         data: {
           userId: 1,
           notificationTypes: [],

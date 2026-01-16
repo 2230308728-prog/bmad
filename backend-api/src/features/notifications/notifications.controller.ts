@@ -30,7 +30,7 @@ import { NotificationType } from '@prisma/client';
  * 提供通知模板查询和用户订阅管理功能
  */
 @ApiTags('notifications')
-@Controller('api/v1/notifications')
+@Controller('notifications')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class NotificationsController {
@@ -113,7 +113,9 @@ export class NotificationsController {
     @Body() subscribeDto: SubscribeNotificationsDto,
   ): Promise<NotificationPreferenceResponseDto> {
     const userId = req.user.userId;
-    this.logger.log(`User ${userId} subscribing to notifications: ${subscribeDto.notificationTypes.join(', ')}`);
+    this.logger.log(
+      `User ${userId} subscribing to notifications: ${subscribeDto.notificationTypes.join(', ')}`,
+    );
 
     // 使用 Prisma 的 upsert 操作创建或更新用户订阅偏好
     const preference = await this.notificationsService.updateUserSubscription(
@@ -123,7 +125,7 @@ export class NotificationsController {
 
     return {
       userId: preference.userId,
-      notificationTypes: preference.notificationTypes as NotificationType[],
+      notificationTypes: preference.notificationTypes,
       createdAt: preference.createdAt,
       updatedAt: preference.updatedAt,
     };
@@ -152,11 +154,12 @@ export class NotificationsController {
     this.logger.log(`Getting notification preferences for user ${userId}`);
 
     // 获取用户订阅偏好（如果不存在则返回默认空数组）
-    const preference = await this.notificationsService.getUserSubscription(userId);
+    const preference =
+      await this.notificationsService.getUserSubscription(userId);
 
     return {
       userId: preference.userId,
-      notificationTypes: preference.notificationTypes as NotificationType[],
+      notificationTypes: preference.notificationTypes,
       createdAt: preference.createdAt,
       updatedAt: preference.updatedAt,
     };

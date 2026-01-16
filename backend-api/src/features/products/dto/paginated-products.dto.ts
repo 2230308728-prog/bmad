@@ -13,9 +13,9 @@ export class PaginatedProductsDto {
       total: 100,
       page: 1,
       pageSize: 20,
-      totalPages: 5
+      totalPages: 5,
     },
-    description: '分页元数据'
+    description: '分页元数据',
   })
   meta!: {
     total: number;

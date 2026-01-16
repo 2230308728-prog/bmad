@@ -154,7 +154,10 @@ describe('PaymentNotifyController', () => {
       // Mock payment record creation
       mockPrismaService.paymentRecord.create.mockResolvedValue({});
 
-      const result = await controller.handlePaymentNotify(validNotifyData, mockHeaders);
+      const result = await controller.handlePaymentNotify(
+        validNotifyData,
+        mockHeaders,
+      );
 
       expect(result).toEqual({
         code: 'SUCCESS',
@@ -187,7 +190,10 @@ describe('PaymentNotifyController', () => {
         paymentStatus: PaymentStatus.SUCCESS,
       });
 
-      const result = await controller.handlePaymentNotify(validNotifyData, mockHeaders);
+      const result = await controller.handlePaymentNotify(
+        validNotifyData,
+        mockHeaders,
+      );
 
       expect(result).toEqual({
         code: 'SUCCESS',
@@ -223,7 +229,10 @@ describe('PaymentNotifyController', () => {
       });
       mockCacheService.incrby.mockResolvedValue(10);
 
-      const result = await controller.handlePaymentNotify(failedNotifyData, mockHeaders);
+      const result = await controller.handlePaymentNotify(
+        failedNotifyData,
+        mockHeaders,
+      );
 
       expect(result).toEqual({
         code: 'SUCCESS',
@@ -260,7 +269,10 @@ describe('PaymentNotifyController', () => {
         paymentStatus: PaymentStatus.CANCELLED,
       });
 
-      const result = await controller.handlePaymentNotify(failedNotifyData, mockHeaders);
+      const result = await controller.handlePaymentNotify(
+        failedNotifyData,
+        mockHeaders,
+      );
 
       expect(result).toEqual({
         code: 'SUCCESS',
@@ -312,7 +324,10 @@ describe('PaymentNotifyController', () => {
       };
 
       await expect(
-        controller.handlePaymentNotify(validNotifyData, incompleteHeaders as any),
+        controller.handlePaymentNotify(
+          validNotifyData,
+          incompleteHeaders as any,
+        ),
       ).rejects.toThrow(HttpException);
     });
   });

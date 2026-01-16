@@ -8,7 +8,10 @@ import { ProductListItemDto } from './dto/product-list-item.dto';
 import { ProductDetailDto } from './dto/product-detail.dto';
 import { ProductStatus } from '@prisma/client';
 import { CacheService } from '../../redis/cache.service';
-import { CacheKeyManagerService, CacheKeyPattern } from '../../cache/cache-key-manager.service';
+import {
+  CacheKeyManagerService,
+  CacheKeyPattern,
+} from '../../cache/cache-key-manager.service';
 import * as crypto from 'crypto';
 
 /**
@@ -250,15 +253,23 @@ export class ProductsService {
     const { minPrice, maxPrice, minAge, maxAge } = dto;
 
     // 验证价格范围
-    if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
-      const error = new Error(`Invalid price range: minPrice (${minPrice}) cannot be greater than maxPrice (${maxPrice})`);
+    if (
+      minPrice !== undefined &&
+      maxPrice !== undefined &&
+      minPrice > maxPrice
+    ) {
+      const error = new Error(
+        `Invalid price range: minPrice (${minPrice}) cannot be greater than maxPrice (${maxPrice})`,
+      );
       this.logger.warn(error.message);
       throw error;
     }
 
     // 验证年龄范围
     if (minAge !== undefined && maxAge !== undefined && minAge > maxAge) {
-      const error = new Error(`Invalid age range: minAge (${minAge}) cannot be greater than maxAge (${maxAge})`);
+      const error = new Error(
+        `Invalid age range: minAge (${minAge}) cannot be greater than maxAge (${maxAge})`,
+      );
       this.logger.warn(error.message);
       throw error;
     }
@@ -459,7 +470,9 @@ export class ProductsService {
    * @param id 产品 ID
    * @returns 产品详情或 null
    */
-  private async findOneFromDatabase(id: number): Promise<ProductDetailDto | null> {
+  private async findOneFromDatabase(
+    id: number,
+  ): Promise<ProductDetailDto | null> {
     // 使用 findUnique 查询产品，包含 category 关联
     const product = await this.prisma.product.findUnique({
       where: { id },
@@ -477,7 +490,10 @@ export class ProductsService {
 
     // 异步递增浏览次数（不阻塞响应）
     this.incrementViewCount(id).catch((error) => {
-      this.logger.warn(`Failed to increment view count for product ${id}:`, error);
+      this.logger.warn(
+        `Failed to increment view count for product ${id}:`,
+        error,
+      );
     });
 
     // 转换为 DTO 格式
@@ -521,7 +537,10 @@ export class ProductsService {
 
       this.logger.debug(`Incremented view count for product: ${id}`);
     } catch (error) {
-      this.logger.warn(`Failed to increment view count for product ${id}:`, error);
+      this.logger.warn(
+        `Failed to increment view count for product ${id}:`,
+        error,
+      );
       // 不抛出异常，降级处理
     }
   }
@@ -551,7 +570,10 @@ export class ProductsService {
       await this.cacheKeyManager.invalidateProductCache(productId);
       this.logger.log(`Successfully cleared cache for product: ${productId}`);
     } catch (error) {
-      this.logger.warn(`Failed to clear cache for product ${productId}:`, error);
+      this.logger.warn(
+        `Failed to clear cache for product ${productId}:`,
+        error,
+      );
     }
   }
 }

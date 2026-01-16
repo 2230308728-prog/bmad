@@ -90,7 +90,9 @@ describe('OrdersController', () => {
       const error = new Error('产品不存在或已下架');
       mockOrdersService.create.mockRejectedValue(error);
 
-      await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(error);
+      await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(
+        error,
+      );
       expect(service.create).toHaveBeenCalledWith(1, createOrderDto);
     });
 
@@ -98,21 +100,27 @@ describe('OrdersController', () => {
       const error = new Error('库存不足，请选择其他日期或产品');
       mockOrdersService.create.mockRejectedValue(error);
 
-      await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(error);
+      await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(
+        error,
+      );
     });
 
     it('should throw BadRequestException when child age is out of range', async () => {
       const error = new Error('产品适用年龄：6-12岁');
       mockOrdersService.create.mockRejectedValue(error);
 
-      await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(error);
+      await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(
+        error,
+      );
     });
 
     it('should handle validation errors', async () => {
       const error = new Error('Validation failed');
       mockOrdersService.create.mockRejectedValue(error);
 
-      await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(error);
+      await expect(controller.create(mockUser, createOrderDto)).rejects.toThrow(
+        error,
+      );
     });
   });
 
@@ -133,20 +141,34 @@ describe('OrdersController', () => {
 
     it('should return payment success status', async () => {
       mockOrdersService.checkPaymentQueryRateLimit.mockResolvedValue(false);
-      mockOrdersService.checkPaymentStatus.mockResolvedValue(mockPaymentSuccessResponse);
+      mockOrdersService.checkPaymentStatus.mockResolvedValue(
+        mockPaymentSuccessResponse,
+      );
 
-      const result = await controller.getPaymentStatus(mockUser, '1', mockResponse);
+      const result = await controller.getPaymentStatus(
+        mockUser,
+        '1',
+        mockResponse,
+      );
 
       expect(result).toEqual({ data: mockPaymentSuccessResponse });
-      expect(mockOrdersService.checkPaymentQueryRateLimit).toHaveBeenCalledWith(1);
+      expect(mockOrdersService.checkPaymentQueryRateLimit).toHaveBeenCalledWith(
+        1,
+      );
       expect(mockOrdersService.checkPaymentStatus).toHaveBeenCalledWith(1, 1);
     });
 
     it('should return payment pending status', async () => {
       mockOrdersService.checkPaymentQueryRateLimit.mockResolvedValue(false);
-      mockOrdersService.checkPaymentStatus.mockResolvedValue(mockPaymentPendingResponse);
+      mockOrdersService.checkPaymentStatus.mockResolvedValue(
+        mockPaymentPendingResponse,
+      );
 
-      const result = await controller.getPaymentStatus(mockUser, '1', mockResponse);
+      const result = await controller.getPaymentStatus(
+        mockUser,
+        '1',
+        mockResponse,
+      );
 
       expect(result).toEqual({ data: mockPaymentPendingResponse });
     });
@@ -154,18 +176,18 @@ describe('OrdersController', () => {
     it('should throw HttpException when rate limit exceeded', async () => {
       mockOrdersService.checkPaymentQueryRateLimit.mockResolvedValue(true);
 
-      await expect(controller.getPaymentStatus(mockUser, '1', mockResponse)).rejects.toThrow(
-        new HttpException('查询频率超限，请稍后重试', 429),
-      );
+      await expect(
+        controller.getPaymentStatus(mockUser, '1', mockResponse),
+      ).rejects.toThrow(new HttpException('查询频率超限，请稍后重试', 429));
       expect(mockOrdersService.checkPaymentStatus).not.toHaveBeenCalled();
       // Verify Retry-After header was set
       expect(mockResponse.setHeader).toHaveBeenCalledWith('Retry-After', '60');
     });
 
     it('should throw HttpException for invalid order ID', async () => {
-      await expect(controller.getPaymentStatus(mockUser, 'invalid', mockResponse)).rejects.toThrow(
-        new HttpException('Invalid order ID', 400),
-      );
+      await expect(
+        controller.getPaymentStatus(mockUser, 'invalid', mockResponse),
+      ).rejects.toThrow(new HttpException('Invalid order ID', 400));
     });
 
     it('should propagate service errors', async () => {
@@ -173,7 +195,9 @@ describe('OrdersController', () => {
       const error = new Error('Order not found');
       mockOrdersService.checkPaymentStatus.mockRejectedValue(error);
 
-      await expect(controller.getPaymentStatus(mockUser, '1', mockResponse)).rejects.toThrow(error);
+      await expect(
+        controller.getPaymentStatus(mockUser, '1', mockResponse),
+      ).rejects.toThrow(error);
     });
   });
 

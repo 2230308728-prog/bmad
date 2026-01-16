@@ -109,13 +109,17 @@ describe('WechatPayService', () => {
 
   describe('generateJsapiParams', () => {
     it('should throw error when service is not available', () => {
-      expect(() => service.generateJsapiParams('test_prepay_id')).toThrow('微信支付服务不可用');
+      expect(() => service.generateJsapiParams('test_prepay_id')).toThrow(
+        '微信支付服务不可用',
+      );
     });
   });
 
   describe('queryOrder', () => {
     it('should throw error when service is not available', async () => {
-      await expect(service.queryOrder('ORD123')).rejects.toThrow('微信支付服务不可用');
+      await expect(service.queryOrder('ORD123')).rejects.toThrow(
+        '微信支付服务不可用',
+      );
     });
   });
 
@@ -129,7 +133,9 @@ describe('WechatPayService', () => {
 
   describe('closeOrder', () => {
     it('should throw error when service is not available', async () => {
-      await expect(service.closeOrder('ORD123')).rejects.toThrow('微信支付服务不可用');
+      await expect(service.closeOrder('ORD123')).rejects.toThrow(
+        '微信支付服务不可用',
+      );
     });
   });
 
@@ -165,7 +171,13 @@ describe('WechatPayService', () => {
       const unavailableService = module.get<WechatPayService>(WechatPayService);
 
       await expect(
-        unavailableService.refund('ORD123', 'REF123', 100, 29900, '用户申请退款'),
+        unavailableService.refund(
+          'ORD123',
+          'REF123',
+          100,
+          29900,
+          '用户申请退款',
+        ),
       ).rejects.toThrow('微信支付服务不可用');
     });
 
@@ -193,7 +205,13 @@ describe('WechatPayService', () => {
         },
       });
 
-      const result = await service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款');
+      const result = await service.refund(
+        'ORD123',
+        'REF123',
+        100,
+        29900,
+        '用户申请退款',
+      );
 
       expect(result.refund_id).toBe('REFUND_WX_123');
       expect(result.out_refund_no).toBe('REF123');
@@ -270,7 +288,14 @@ describe('WechatPayService', () => {
       paymentTime.setDate(paymentTime.getDate() - 366);
 
       await expect(
-        service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款', paymentTime),
+        service.refund(
+          'ORD123',
+          'REF123',
+          100,
+          29900,
+          '用户申请退款',
+          paymentTime,
+        ),
       ).rejects.toThrow('退款必须在支付完成后365天内进行');
 
       // 验证没有调用微信支付 API
@@ -294,7 +319,14 @@ describe('WechatPayService', () => {
       paymentTime.setDate(paymentTime.getDate() - 364);
 
       await expect(
-        service.refund('ORD123', 'REF123', 100, 29900, '用户申请退款', paymentTime),
+        service.refund(
+          'ORD123',
+          'REF123',
+          100,
+          29900,
+          '用户申请退款',
+          paymentTime,
+        ),
       ).resolves.toBeDefined();
     });
 
@@ -348,7 +380,9 @@ describe('WechatPayService', () => {
       }).compile();
       const unavailableService = module.get<WechatPayService>(WechatPayService);
 
-      await expect(unavailableService.queryRefund('REF123')).rejects.toThrow('微信支付服务不可用');
+      await expect(unavailableService.queryRefund('REF123')).rejects.toThrow(
+        '微信支付服务不可用',
+      );
     });
 
     it('should successfully query refund when service is available', async () => {
@@ -392,14 +426,18 @@ describe('WechatPayService', () => {
         data: { code: 'SYSTEM_ERROR', message: '系统错误' },
       });
 
-      await expect(service.queryRefund('REF123')).rejects.toThrow('查询退款失败');
+      await expect(service.queryRefund('REF123')).rejects.toThrow(
+        '查询退款失败',
+      );
     });
 
     it('should handle query refund network error', async () => {
       const mockWxPay = (service as any).wxpay;
       mockWxPay.query_refund.mockRejectedValue(new Error('Network error'));
 
-      await expect(service.queryRefund('REF123')).rejects.toThrow('Network error');
+      await expect(service.queryRefund('REF123')).rejects.toThrow(
+        'Network error',
+      );
     });
   });
 });

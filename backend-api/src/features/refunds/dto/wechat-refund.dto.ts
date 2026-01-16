@@ -58,7 +58,8 @@ export class WechatRefundResponseDto {
 
   @ApiProperty({
     example: 'PROCESSING',
-    description: '退款状态：PROCESSING（处理中）、SUCCESS（成功）、ABNORMAL（异常）',
+    description:
+      '退款状态：PROCESSING（处理中）、SUCCESS（成功）、ABNORMAL（异常）',
     enum: ['PROCESSING', 'SUCCESS', 'ABNORMAL'],
   })
   status!: 'PROCESSING' | 'SUCCESS' | 'ABNORMAL';

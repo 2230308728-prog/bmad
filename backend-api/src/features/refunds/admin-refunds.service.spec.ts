@@ -29,7 +29,7 @@ describe('AdminRefundsService', () => {
     product: {
       findUnique: jest.fn(),
     },
-    payment: {
+    paymentRecord: {
       findMany: jest.fn(),
     },
   };
@@ -46,6 +46,7 @@ describe('AdminRefundsService', () => {
 
   const mockNotificationsService = {
     sendRefundNotification: jest.fn(),
+    sendRefundResultNotification: jest.fn(),
   };
 
   const mockUser = {
@@ -146,11 +147,16 @@ describe('AdminRefundsService', () => {
     it('should return paginated refund list with PENDING first', async () => {
       const mockRefunds = [
         { ...mockRefund, status: RefundStatus.PENDING },
-        { ...mockRefund, id: 2, refundNo: 'REF20240114223456789', status: RefundStatus.APPROVED },
+        {
+          ...mockRefund,
+          id: 2,
+          refundNo: 'REF20240114223456789',
+          status: RefundStatus.APPROVED,
+        },
       ];
 
-      (mockPrismaService.refundRecord.findMany as jest.Mock).mockResolvedValue(mockRefunds);
-      (mockPrismaService.refundRecord.count as jest.Mock).mockResolvedValue(2);
+      mockPrismaService.refundRecord.findMany.mockResolvedValue(mockRefunds);
+      mockPrismaService.refundRecord.count.mockResolvedValue(2);
 
       const result = await service.findAll(new AdminQueryRefundsDto());
 
@@ -163,8 +169,8 @@ describe('AdminRefundsService', () => {
     });
 
     it('should filter by status', async () => {
-      (mockPrismaService.refundRecord.findMany as jest.Mock).mockResolvedValue([mockRefund]);
-      (mockPrismaService.refundRecord.count as jest.Mock).mockResolvedValue(1);
+      mockPrismaService.refundRecord.findMany.mockResolvedValue([mockRefund]);
+      mockPrismaService.refundRecord.count.mockResolvedValue(1);
 
       const queryDto = new AdminQueryRefundsDto();
       queryDto.status = RefundStatus.PENDING;
@@ -181,8 +187,8 @@ describe('AdminRefundsService', () => {
     });
 
     it('should filter by refundNo (partial match)', async () => {
-      (mockPrismaService.refundRecord.findMany as jest.Mock).mockResolvedValue([mockRefund]);
-      (mockPrismaService.refundRecord.count as jest.Mock).mockResolvedValue(1);
+      mockPrismaService.refundRecord.findMany.mockResolvedValue([mockRefund]);
+      mockPrismaService.refundRecord.count.mockResolvedValue(1);
 
       const queryDto = new AdminQueryRefundsDto();
       queryDto.refundNo = 'REF20240114';
@@ -201,8 +207,8 @@ describe('AdminRefundsService', () => {
     });
 
     it('should filter by date range', async () => {
-      (mockPrismaService.refundRecord.findMany as jest.Mock).mockResolvedValue([mockRefund]);
-      (mockPrismaService.refundRecord.count as jest.Mock).mockResolvedValue(1);
+      mockPrismaService.refundRecord.findMany.mockResolvedValue([mockRefund]);
+      mockPrismaService.refundRecord.count.mockResolvedValue(1);
 
       const queryDto = new AdminQueryRefundsDto();
       queryDto.startDate = '2024-01-01';
@@ -225,8 +231,8 @@ describe('AdminRefundsService', () => {
 
   describe('findOne', () => {
     it('should return refund detail with order and payment info', async () => {
-      (mockPrismaService.refundRecord.findUnique as jest.Mock).mockResolvedValue(mockRefund);
-      (mockPrismaService.product.findUnique as jest.Mock).mockResolvedValue({
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(mockRefund);
+      mockPrismaService.product.findUnique.mockResolvedValue({
         id: 1,
         title: '上海科技馆探索之旅',
         images: ['https://oss.example.com/products/1/image1.jpg'],
@@ -242,7 +248,7 @@ describe('AdminRefundsService', () => {
     });
 
     it('should throw NotFoundException when refund does not exist', async () => {
-      (mockPrismaService.refundRecord.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
@@ -251,10 +257,11 @@ describe('AdminRefundsService', () => {
   describe('approve', () => {
     it('should approve refund successfully', async () => {
       // First call - checking if refund exists before approval
-      (mockPrismaService.refundRecord.findUnique as jest.Mock)
-        .mockResolvedValueOnce(mockRefund); // for status check
+      mockPrismaService.refundRecord.findUnique.mockResolvedValueOnce(
+        mockRefund,
+      ); // for status check
 
-      (mockPrismaService.$transaction as jest.Mock).mockImplementation(async (callback) => {
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
         return {
           ...mockRefund,
           status: RefundStatus.APPROVED,
@@ -264,8 +271,8 @@ describe('AdminRefundsService', () => {
         };
       });
 
-      // Mock payment.findMany for WeChat refund integration
-      (mockPrismaService.payment.findMany as jest.Mock).mockResolvedValue([
+      // Mock paymentRecord.findMany for WeChat refund integration
+      mockPrismaService.paymentRecord.findMany.mockResolvedValue([
         {
           id: 1,
           amount: { toString: () => '299.00' },
@@ -274,27 +281,26 @@ describe('AdminRefundsService', () => {
       ]);
 
       // Mock WechatPayService.refund
-      (mockWechatPayService.refund as jest.Mock).mockResolvedValue({
+      mockWechatPayService.refund.mockResolvedValue({
         refund_id: 'REFUND_WX_123',
         status: 'PROCESSING',
       });
 
       // Mock refundRecord.update for PROCESSING status
-      (mockPrismaService.refundRecord.update as jest.Mock).mockResolvedValue({
+      mockPrismaService.refundRecord.update.mockResolvedValue({
         ...mockRefund,
         status: RefundStatus.PROCESSING,
         wechatRefundId: 'REFUND_WX_123',
       });
 
       // Second call - in findOne after approval
-      (mockPrismaService.refundRecord.findUnique as jest.Mock)
-        .mockResolvedValueOnce({
-          ...mockRefund,
-          status: RefundStatus.APPROVED,
-          approvedAt: new Date(),
-        });
+      mockPrismaService.refundRecord.findUnique.mockResolvedValueOnce({
+        ...mockRefund,
+        status: RefundStatus.APPROVED,
+        approvedAt: new Date(),
+      });
 
-      (mockPrismaService.product.findUnique as jest.Mock).mockResolvedValue({
+      mockPrismaService.product.findUnique.mockResolvedValue({
         id: 1,
         title: '上海科技馆探索之旅',
         images: [],
@@ -308,26 +314,33 @@ describe('AdminRefundsService', () => {
     });
 
     it('should throw NotFoundException when refund does not exist', async () => {
-      (mockPrismaService.refundRecord.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(null);
 
-      await expect(service.approve(999, '备注', 1)).rejects.toThrow(NotFoundException);
+      await expect(service.approve(999, '备注', 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when refund status is not PENDING', async () => {
       const approvedRefund = { ...mockRefund, status: RefundStatus.APPROVED };
-      (mockPrismaService.refundRecord.findUnique as jest.Mock).mockResolvedValue(approvedRefund);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(
+        approvedRefund,
+      );
 
-      await expect(service.approve(1, '备注', 1)).rejects.toThrow(BadRequestException);
+      await expect(service.approve(1, '备注', 1)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('reject', () => {
     it('should reject refund successfully', async () => {
       // First call - checking if refund exists before rejection
-      (mockPrismaService.refundRecord.findUnique as jest.Mock)
-        .mockResolvedValueOnce(mockRefund); // for status check
+      mockPrismaService.refundRecord.findUnique.mockResolvedValueOnce(
+        mockRefund,
+      ); // for status check
 
-      (mockPrismaService.refundRecord.update as jest.Mock).mockResolvedValue({
+      mockPrismaService.refundRecord.update.mockResolvedValue({
         ...mockRefund,
         status: RefundStatus.REJECTED,
         rejectedReason: '不符合退款条件',
@@ -335,15 +348,14 @@ describe('AdminRefundsService', () => {
       });
 
       // Second call - in findOne after rejection
-      (mockPrismaService.refundRecord.findUnique as jest.Mock)
-        .mockResolvedValueOnce({
-          ...mockRefund,
-          status: RefundStatus.REJECTED,
-          rejectedReason: '不符合退款条件',
-          rejectedAt: new Date(),
-        });
+      mockPrismaService.refundRecord.findUnique.mockResolvedValueOnce({
+        ...mockRefund,
+        status: RefundStatus.REJECTED,
+        rejectedReason: '不符合退款条件',
+        rejectedAt: new Date(),
+      });
 
-      (mockPrismaService.product.findUnique as jest.Mock).mockResolvedValue({
+      mockPrismaService.product.findUnique.mockResolvedValue({
         id: 1,
         title: '上海科技馆探索之旅',
         images: [],
@@ -363,27 +375,37 @@ describe('AdminRefundsService', () => {
     });
 
     it('should throw BadRequestException when rejectedReason is empty', async () => {
-      await expect(service.reject(1, '', 1)).rejects.toThrow(BadRequestException);
-      await expect(service.reject(1, '   ', 1)).rejects.toThrow(BadRequestException);
+      await expect(service.reject(1, '', 1)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.reject(1, '   ', 1)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException when refund does not exist', async () => {
-      (mockPrismaService.refundRecord.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(null);
 
-      await expect(service.reject(999, '原因', 1)).rejects.toThrow(NotFoundException);
+      await expect(service.reject(999, '原因', 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when refund status is not PENDING', async () => {
       const rejectedRefund = { ...mockRefund, status: RefundStatus.REJECTED };
-      (mockPrismaService.refundRecord.findUnique as jest.Mock).mockResolvedValue(rejectedRefund);
+      mockPrismaService.refundRecord.findUnique.mockResolvedValue(
+        rejectedRefund,
+      );
 
-      await expect(service.reject(1, '原因', 1)).rejects.toThrow(BadRequestException);
+      await expect(service.reject(1, '原因', 1)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('getStats', () => {
     it('should return refund statistics', async () => {
-      (mockPrismaService.refundRecord.count as jest.Mock)
+      mockPrismaService.refundRecord.count
         .mockResolvedValueOnce(100) // total
         .mockResolvedValueOnce(10) // pending
         .mockResolvedValueOnce(50) // approved
@@ -392,7 +414,7 @@ describe('AdminRefundsService', () => {
         .mockResolvedValueOnce(10) // completed
         .mockResolvedValueOnce(5); // failed
 
-      (mockPrismaService.refundRecord.findMany as jest.Mock)
+      mockPrismaService.refundRecord.findMany
         .mockResolvedValueOnce([{ amount: { toString: () => '1000.00' } }]) // pending refunds
         .mockResolvedValueOnce([{ amount: { toString: () => '10000.00' } }]); // all refunds
 

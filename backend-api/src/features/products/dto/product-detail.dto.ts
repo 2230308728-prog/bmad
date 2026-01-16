@@ -17,7 +17,11 @@ export class ProductCategoryDto {
  * 用于 GET /api/v1/products/:id 端点
  */
 export class ProductDetailDto extends ProductListItemDto {
-  @ApiProperty({ example: '<p>精彩探索之旅</p>', description: '产品详细描述', required: false })
+  @ApiProperty({
+    example: '<p>精彩探索之旅</p>',
+    description: '产品详细描述',
+    required: false,
+  })
   description!: string | null;
 
   @ApiProperty({ type: ProductCategoryDto, description: '产品类别信息' })

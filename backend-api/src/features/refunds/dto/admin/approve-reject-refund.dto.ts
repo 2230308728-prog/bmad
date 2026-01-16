@@ -45,9 +45,17 @@ export class RefundReviewResponseDto {
   @ApiProperty({ example: '2024-01-14T14:00:00Z', description: '审核时间' })
   reviewedAt!: string;
 
-  @ApiProperty({ example: '已核实用户凭证，同意退款', description: '管理员备注', required: false })
+  @ApiProperty({
+    example: '已核实用户凭证，同意退款',
+    description: '管理员备注',
+    required: false,
+  })
   adminNote?: string | null;
 
-  @ApiProperty({ example: '不符合退款条件', description: '拒绝原因', required: false })
+  @ApiProperty({
+    example: '不符合退款条件',
+    description: '拒绝原因',
+    required: false,
+  })
   rejectedReason?: string | null;
 }

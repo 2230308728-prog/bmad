@@ -10,7 +10,10 @@ export class CohortRetentionDto {
   @ApiProperty({ description: '新用户数', example: 50 })
   newUsers: number;
 
-  @ApiProperty({ description: '留存率', example: { day1: 80, day7: 40, day30: 20 } })
+  @ApiProperty({
+    description: '留存率',
+    example: { day1: 80, day7: 40, day30: 20 },
+  })
   retention: {
     day1: number;
     day7: number;

@@ -122,21 +122,22 @@ describe('AdminAuthController', () => {
       // - 必须包含字母和数字
 
       const weakPasswords = [
-        'short',         // 太短
-        'onlyletters',   // 没有数字
-        '12345678',      // 没有字母
+        'short', // 太短
+        'onlyletters', // 没有数字
+        '12345678', // 没有字母
       ];
 
-      weakPasswords.forEach(password => {
-        const isValid = password.length >= 8 &&
-                         /^(?=.*[A-Za-z])(?=.*\d)/.test(password);
+      weakPasswords.forEach((password) => {
+        const isValid =
+          password.length >= 8 && /^(?=.*[A-Za-z])(?=.*\d)/.test(password);
         expect(isValid).toBe(false);
       });
 
       // 有效密码
       const validPassword = 'Password123';
-      const isValid = validPassword.length >= 8 &&
-                       /^(?=.*[A-Za-z])(?=.*\d)/.test(validPassword);
+      const isValid =
+        validPassword.length >= 8 &&
+        /^(?=.*[A-Za-z])(?=.*\d)/.test(validPassword);
       expect(isValid).toBe(true);
     });
   });
@@ -203,9 +204,7 @@ describe('AdminAuthController', () => {
       );
 
       // Act & Assert
-      await expect(controller.login(loginDto)).rejects.toThrow(
-        Error,
-      );
+      await expect(controller.login(loginDto)).rejects.toThrow(Error);
     });
   });
 
@@ -234,8 +233,11 @@ describe('AdminAuthController', () => {
 
       // 验证路由配置正确
       const controllerPrototype = Object.getPrototypeOf(controller);
-      const registerMetadata = Reflect.getMetadata('path', controllerPrototype.register);
-      expect(registerMetadata).toBe('register');  // NestJS 存储的路由路径不包含前导斜杠
+      const registerMetadata = Reflect.getMetadata(
+        'path',
+        controllerPrototype.register,
+      );
+      expect(registerMetadata).toBe('register'); // NestJS 存储的路由路径不包含前导斜杠
 
       // 验证方法返回正确的数据结构
       const result = await controller.register(registerDto);

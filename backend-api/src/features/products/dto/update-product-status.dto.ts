@@ -14,6 +14,8 @@ export class UpdateProductStatusDto {
     enumName: 'ProductStatus',
   })
   @IsNotEmpty({ message: '产品状态不能为空' })
-  @IsEnum(ProductStatus, { message: '产品状态必须是有效的枚举值 (DRAFT | PUBLISHED | UNPUBLISHED)' })
+  @IsEnum(ProductStatus, {
+    message: '产品状态必须是有效的枚举值 (DRAFT | PUBLISHED | UNPUBLISHED)',
+  })
   status: ProductStatus;
 }

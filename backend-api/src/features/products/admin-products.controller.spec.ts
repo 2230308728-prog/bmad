@@ -50,7 +50,7 @@ describe('AdminProductsController', () => {
       title: '上海科技馆探索之旅',
       description: '精彩的科技探索之旅',
       categoryId: 1,
-      price: 299.00,
+      price: 299.0,
       stock: 50,
       location: '上海浦东新区',
       images: ['https://oss.example.com/products/1/image1.jpg'],
@@ -95,7 +95,7 @@ describe('AdminProductsController', () => {
   describe('update', () => {
     const updateProductDto: UpdateProductDto = {
       title: '上海科技馆探索之旅（更新版）',
-      price: 399.00,
+      price: 399.0,
     };
 
     it('should successfully update a product', async () => {
@@ -137,7 +137,9 @@ describe('AdminProductsController', () => {
       mockAdminProductsService.update.mockRejectedValue(error);
 
       // ParsePositiveIntPipe would convert '999' to number 999
-      await expect(controller.update(999, updateProductDto)).rejects.toThrow(error);
+      await expect(controller.update(999, updateProductDto)).rejects.toThrow(
+        error,
+      );
       expect(service.update).toHaveBeenCalledWith(999, updateProductDto);
     });
   });
@@ -145,12 +147,14 @@ describe('AdminProductsController', () => {
   describe('update parameter validation', () => {
     const updateProductDto: UpdateProductDto = {
       title: '上海科技馆探索之旅（更新版）',
-      price: 399.00,
+      price: 399.0,
     };
 
     it('should reject invalid non-numeric id', async () => {
       // ParsePositiveIntPipe should reject 'abc'
-      await expect(controller.update('abc', updateProductDto)).rejects.toThrow();
+      await expect(
+        controller.update('abc', updateProductDto),
+      ).rejects.toThrow();
     });
 
     it('should reject negative id', async () => {
@@ -165,7 +169,9 @@ describe('AdminProductsController', () => {
 
     it('should reject decimal id', async () => {
       // ParsePositiveIntPipe should reject '1.5'
-      await expect(controller.update('1.5', updateProductDto)).rejects.toThrow();
+      await expect(
+        controller.update('1.5', updateProductDto),
+      ).rejects.toThrow();
     });
   });
 
@@ -233,7 +239,9 @@ describe('AdminProductsController', () => {
       const error = new Error('Database error');
       mockAdminProductsService.update.mockRejectedValue(error);
 
-      await expect(controller.update(1, {} as UpdateProductDto)).rejects.toThrow();
+      await expect(
+        controller.update(1, {} as UpdateProductDto),
+      ).rejects.toThrow();
 
       expect(errorLogger).toHaveBeenCalled();
     });
@@ -281,17 +289,23 @@ describe('AdminProductsController', () => {
 
       mockAdminProductsService.updateStatus.mockResolvedValue(mockProduct);
 
-      const result = await controller.updateStatus(42, { status: 'UNPUBLISHED' });
+      const result = await controller.updateStatus(42, {
+        status: 'UNPUBLISHED',
+      });
 
       expect(result).toEqual(mockProduct);
-      expect(service.updateStatus).toHaveBeenCalledWith(42, { status: 'UNPUBLISHED' });
+      expect(service.updateStatus).toHaveBeenCalledWith(42, {
+        status: 'UNPUBLISHED',
+      });
     });
 
     it('should handle service errors', async () => {
       const error = new Error('Product not found');
       mockAdminProductsService.updateStatus.mockRejectedValue(error);
 
-      await expect(controller.updateStatus(999, updateStatusDto)).rejects.toThrow(error);
+      await expect(
+        controller.updateStatus(999, updateStatusDto),
+      ).rejects.toThrow(error);
       expect(service.updateStatus).toHaveBeenCalledWith(999, updateStatusDto);
     });
 
@@ -300,7 +314,9 @@ describe('AdminProductsController', () => {
       const error = new Error('Database error');
       mockAdminProductsService.updateStatus.mockRejectedValue(error);
 
-      await expect(controller.updateStatus(1, updateStatusDto)).rejects.toThrow();
+      await expect(
+        controller.updateStatus(1, updateStatusDto),
+      ).rejects.toThrow();
 
       expect(errorLogger).toHaveBeenCalled();
     });
@@ -312,19 +328,27 @@ describe('AdminProductsController', () => {
     };
 
     it('should reject invalid non-numeric id', async () => {
-      await expect(controller.updateStatus('abc', updateStatusDto)).rejects.toThrow();
+      await expect(
+        controller.updateStatus('abc', updateStatusDto),
+      ).rejects.toThrow();
     });
 
     it('should reject negative id', async () => {
-      await expect(controller.updateStatus('-1', updateStatusDto)).rejects.toThrow();
+      await expect(
+        controller.updateStatus('-1', updateStatusDto),
+      ).rejects.toThrow();
     });
 
     it('should reject zero id', async () => {
-      await expect(controller.updateStatus('0', updateStatusDto)).rejects.toThrow();
+      await expect(
+        controller.updateStatus('0', updateStatusDto),
+      ).rejects.toThrow();
     });
 
     it('should reject decimal id', async () => {
-      await expect(controller.updateStatus('1.5', updateStatusDto)).rejects.toThrow();
+      await expect(
+        controller.updateStatus('1.5', updateStatusDto),
+      ).rejects.toThrow();
     });
   });
 
@@ -367,17 +391,25 @@ describe('AdminProductsController', () => {
 
       mockAdminProductsService.updateStock.mockResolvedValue(mockProduct);
 
-      const result = await controller.updateStock(1, updateStockDtoWithoutReason);
+      const result = await controller.updateStock(
+        1,
+        updateStockDtoWithoutReason,
+      );
 
       expect(result).toEqual(mockProduct);
-      expect(service.updateStock).toHaveBeenCalledWith(1, updateStockDtoWithoutReason);
+      expect(service.updateStock).toHaveBeenCalledWith(
+        1,
+        updateStockDtoWithoutReason,
+      );
     });
 
     it('should handle service errors', async () => {
       const error = new Error('Product not found');
       mockAdminProductsService.updateStock.mockRejectedValue(error);
 
-      await expect(controller.updateStock(999, updateStockDto)).rejects.toThrow(error);
+      await expect(controller.updateStock(999, updateStockDto)).rejects.toThrow(
+        error,
+      );
       expect(service.updateStock).toHaveBeenCalledWith(999, updateStockDto);
     });
 
@@ -398,19 +430,27 @@ describe('AdminProductsController', () => {
     };
 
     it('should reject invalid non-numeric id', async () => {
-      await expect(controller.updateStock('abc', updateStockDto)).rejects.toThrow();
+      await expect(
+        controller.updateStock('abc', updateStockDto),
+      ).rejects.toThrow();
     });
 
     it('should reject negative id', async () => {
-      await expect(controller.updateStock('-1', updateStockDto)).rejects.toThrow();
+      await expect(
+        controller.updateStock('-1', updateStockDto),
+      ).rejects.toThrow();
     });
 
     it('should reject zero id', async () => {
-      await expect(controller.updateStock('0', updateStockDto)).rejects.toThrow();
+      await expect(
+        controller.updateStock('0', updateStockDto),
+      ).rejects.toThrow();
     });
 
     it('should reject decimal id', async () => {
-      await expect(controller.updateStock('1.5', updateStockDto)).rejects.toThrow();
+      await expect(
+        controller.updateStock('1.5', updateStockDto),
+      ).rejects.toThrow();
     });
   });
 
@@ -433,7 +473,9 @@ describe('AdminProductsController', () => {
         },
       ];
 
-      mockAdminProductsService.getLowStockProducts.mockResolvedValue(mockProducts);
+      mockAdminProductsService.getLowStockProducts.mockResolvedValue(
+        mockProducts,
+      );
 
       const result = await controller.getLowStockProducts();
 
@@ -477,7 +519,8 @@ describe('AdminProductsController', () => {
 
     it('should successfully generate upload URL', async () => {
       const mockResponse = {
-        uploadUrl: 'https://bucket.oss-cn-shanghai.aliyuncs.com/products/2024/01/14/uuid.jpg?signature=...',
+        uploadUrl:
+          'https://bucket.oss-cn-shanghai.aliyuncs.com/products/2024/01/14/uuid.jpg?signature=...',
         fileName: 'example.jpg',
         fileKey: 'products/2024/01/14/uuid.jpg',
       };
@@ -497,7 +540,9 @@ describe('AdminProductsController', () => {
         throw error;
       });
 
-      await expect(controller.generateUploadUrl(generateUploadUrlDto)).rejects.toThrow(error);
+      await expect(
+        controller.generateUploadUrl(generateUploadUrlDto),
+      ).rejects.toThrow(error);
       expect(service.generateUploadUrl).toHaveBeenCalledWith('example.jpg');
     });
 
@@ -505,7 +550,9 @@ describe('AdminProductsController', () => {
       const error = new Error('OSS service error');
       mockAdminProductsService.generateUploadUrl.mockRejectedValue(error);
 
-      await expect(controller.generateUploadUrl(generateUploadUrlDto)).rejects.toThrow(error);
+      await expect(
+        controller.generateUploadUrl(generateUploadUrlDto),
+      ).rejects.toThrow(error);
       expect(service.generateUploadUrl).toHaveBeenCalledWith('example.jpg');
     });
 
@@ -517,7 +564,9 @@ describe('AdminProductsController', () => {
         throw error;
       });
 
-      await expect(controller.generateUploadUrl(generateUploadUrlDto)).rejects.toThrow();
+      await expect(
+        controller.generateUploadUrl(generateUploadUrlDto),
+      ).rejects.toThrow();
 
       expect(errorLogger).toHaveBeenCalled();
     });

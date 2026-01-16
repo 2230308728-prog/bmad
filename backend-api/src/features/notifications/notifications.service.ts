@@ -53,19 +53,34 @@ export class NotificationsService {
 
   // 消息模板 ID 常量 - 使用 getter 方法确保 configService 已注入
   private get ORDER_CONFIRM_TEMPLATE_ID(): string {
-    return this.configService.get<string>('WECHAT_ORDER_CONFIRM_TEMPLATE_ID', '');
+    return this.configService.get<string>(
+      'WECHAT_ORDER_CONFIRM_TEMPLATE_ID',
+      '',
+    );
   }
   private get TRAVEL_REMINDER_TEMPLATE_ID(): string {
-    return this.configService.get<string>('WECHAT_TRAVEL_REMINDER_TEMPLATE_ID', '');
+    return this.configService.get<string>(
+      'WECHAT_TRAVEL_REMINDER_TEMPLATE_ID',
+      '',
+    );
   }
   private get REFUND_APPROVED_TEMPLATE_ID(): string {
-    return this.configService.get<string>('WECHAT_REFUND_APPROVED_TEMPLATE_ID', '');
+    return this.configService.get<string>(
+      'WECHAT_REFUND_APPROVED_TEMPLATE_ID',
+      '',
+    );
   }
   private get REFUND_REJECTED_TEMPLATE_ID(): string {
-    return this.configService.get<string>('WECHAT_REFUND_REJECTED_TEMPLATE_ID', '');
+    return this.configService.get<string>(
+      'WECHAT_REFUND_REJECTED_TEMPLATE_ID',
+      '',
+    );
   }
   private get REFUND_COMPLETED_TEMPLATE_ID(): string {
-    return this.configService.get<string>('WECHAT_REFUND_COMPLETED_TEMPLATE_ID', '');
+    return this.configService.get<string>(
+      'WECHAT_REFUND_COMPLETED_TEMPLATE_ID',
+      '',
+    );
   }
 
   /**
@@ -89,9 +104,7 @@ export class NotificationsService {
     const appSecret = this.configService.get<string>('WECHAT_APP_SECRET');
 
     if (!appId || !appSecret) {
-      throw new Error(
-        'WECHAT_APP_ID and WECHAT_APP_SECRET must be configured',
-      );
+      throw new Error('WECHAT_APP_ID and WECHAT_APP_SECRET must be configured');
     }
 
     try {
@@ -152,7 +165,9 @@ export class NotificationsService {
       );
 
       if (response.data.errcode === 0) {
-        this.logger.log(`Subscribe message sent successfully to ${openid}, template: ${templateId}`);
+        this.logger.log(
+          `Subscribe message sent successfully to ${openid}, template: ${templateId}`,
+        );
         return true;
       } else {
         // 改进：增加更多调试上下文
@@ -182,11 +197,10 @@ export class NotificationsService {
     notificationType: NotificationType,
   ): Promise<boolean> {
     try {
-      const preference = await this.prisma.userNotificationPreference.findUnique(
-        {
+      const preference =
+        await this.prisma.userNotificationPreference.findUnique({
           where: { userId },
-        },
-      );
+        });
 
       if (!preference) {
         return false;
@@ -239,7 +253,9 @@ export class NotificationsService {
       });
 
       if (!user?.openid) {
-        this.logger.warn(`User ${userId} has no openid, cannot send notification`);
+        this.logger.warn(
+          `User ${userId} has no openid, cannot send notification`,
+        );
         return false;
       }
 
@@ -247,8 +263,12 @@ export class NotificationsService {
       const templateData = {
         [this.TEMPLATE_KEYS.ORDER_NUMBER]: { value: orderNo }, // 订单编号
         [this.TEMPLATE_KEYS.PRODUCT_NAME]: { value: productName }, // 产品名称
-        [this.TEMPLATE_KEYS.BOOKING_DATE]: { value: this.formatDate(bookingDate) }, // 预订日期
-        [this.TEMPLATE_KEYS.PARTICIPANT_COUNT]: { value: participantCount.toString() }, // 参与人数
+        [this.TEMPLATE_KEYS.BOOKING_DATE]: {
+          value: this.formatDate(bookingDate),
+        }, // 预订日期
+        [this.TEMPLATE_KEYS.PARTICIPANT_COUNT]: {
+          value: participantCount.toString(),
+        }, // 参与人数
         [this.TEMPLATE_KEYS.CONTACT_PHONE]: { value: this.maskPhone(phone) }, // 联系电话（脱敏）
         [this.TEMPLATE_KEYS.ORDER_AMOUNT]: { value: `¥${amount.toFixed(2)}` }, // 订单金额
       };
@@ -307,14 +327,18 @@ export class NotificationsService {
       });
 
       if (!user?.openid) {
-        this.logger.warn(`User ${userId} has no openid, cannot send notification`);
+        this.logger.warn(
+          `User ${userId} has no openid, cannot send notification`,
+        );
         return false;
       }
 
       // 构建消息模板数据（使用命名常量代替魔法字符串）
       const templateData = {
         [this.TEMPLATE_KEYS.PRODUCT_NAME]: { value: productName }, // 产品名称
-        [this.TEMPLATE_KEYS.TRAVEL_DATE]: { value: this.formatDate(travelDate) }, // 活动日期
+        [this.TEMPLATE_KEYS.TRAVEL_DATE]: {
+          value: this.formatDate(travelDate),
+        }, // 活动日期
         [this.TEMPLATE_KEYS.TRAVEL_TIME]: { value: travelTime }, // 活动时间
         [this.TEMPLATE_KEYS.LOCATION]: { value: location }, // 活动地点
         [this.TEMPLATE_KEYS.MEETING_POINT]: { value: meetingPoint }, // 集合地点
@@ -365,8 +389,14 @@ export class NotificationsService {
           templateId = this.REFUND_APPROVED_TEMPLATE_ID;
           templateData = {
             [this.TEMPLATE_KEYS.REFUND_NUMBER]: { value: refundNo }, // 退款编号
-            [this.TEMPLATE_KEYS.REFUND_AMOUNT]: { value: `¥${amount.toFixed(2)}` }, // 退款金额
-            [this.TEMPLATE_KEYS.REFUND_DATE]: { value: this.formatDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)) }, // 预计到账时间（3天后）
+            [this.TEMPLATE_KEYS.REFUND_AMOUNT]: {
+              value: `¥${amount.toFixed(2)}`,
+            }, // 退款金额
+            [this.TEMPLATE_KEYS.REFUND_DATE]: {
+              value: this.formatDate(
+                new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+              ),
+            }, // 预计到账时间（3天后）
           };
           break;
 
@@ -375,8 +405,12 @@ export class NotificationsService {
           templateId = this.REFUND_REJECTED_TEMPLATE_ID;
           templateData = {
             [this.TEMPLATE_KEYS.REFUND_NUMBER]: { value: refundNo }, // 退款编号
-            [this.TEMPLATE_KEYS.REJECTED_REASON]: { value: rejectedReason || '未提供原因' }, // 拒绝原因
-            [this.TEMPLATE_KEYS.CUSTOMER_SERVICE]: { value: '请联系客服：400-123-4567' }, // 联系客服方式
+            [this.TEMPLATE_KEYS.REJECTED_REASON]: {
+              value: rejectedReason || '未提供原因',
+            }, // 拒绝原因
+            [this.TEMPLATE_KEYS.CUSTOMER_SERVICE]: {
+              value: '请联系客服：400-123-4567',
+            }, // 联系客服方式
           };
           break;
 
@@ -385,8 +419,14 @@ export class NotificationsService {
           templateId = this.REFUND_COMPLETED_TEMPLATE_ID;
           templateData = {
             [this.TEMPLATE_KEYS.REFUND_NUMBER]: { value: refundNo }, // 退款编号
-            [this.TEMPLATE_KEYS.REFUND_AMOUNT]: { value: `¥${amount.toFixed(2)}` }, // 退款金额
-            [this.TEMPLATE_KEYS.REFUND_DATE]: { value: completedAt ? this.formatDate(completedAt) : this.formatDate(new Date()) }, // 到账时间
+            [this.TEMPLATE_KEYS.REFUND_AMOUNT]: {
+              value: `¥${amount.toFixed(2)}`,
+            }, // 退款金额
+            [this.TEMPLATE_KEYS.REFUND_DATE]: {
+              value: completedAt
+                ? this.formatDate(completedAt)
+                : this.formatDate(new Date()),
+            }, // 到账时间
           };
           break;
 
@@ -396,7 +436,10 @@ export class NotificationsService {
       }
 
       // 检查用户是否订阅了对应类型的退款通知
-      const isSubscribed = await this.isUserSubscribed(userId, notificationType);
+      const isSubscribed = await this.isUserSubscribed(
+        userId,
+        notificationType,
+      );
       if (!isSubscribed) {
         this.logger.debug(
           `User ${userId} not subscribed to ${notificationType} notifications`,
@@ -411,7 +454,9 @@ export class NotificationsService {
       });
 
       if (!user?.openid) {
-        this.logger.warn(`User ${userId} has no openid, cannot send notification`);
+        this.logger.warn(
+          `User ${userId} has no openid, cannot send notification`,
+        );
         return false;
       }
 
@@ -485,7 +530,9 @@ export class NotificationsService {
       },
     });
 
-    this.logger.log(`User ${userId} subscription updated: ${notificationTypes.join(', ')}`);
+    this.logger.log(
+      `User ${userId} subscription updated: ${notificationTypes.join(', ')}`,
+    );
 
     return preference;
   }
@@ -509,7 +556,9 @@ export class NotificationsService {
           notificationTypes: [],
         },
       });
-      this.logger.log(`Created default subscription preference for user ${userId}`);
+      this.logger.log(
+        `Created default subscription preference for user ${userId}`,
+      );
     }
 
     return preference;

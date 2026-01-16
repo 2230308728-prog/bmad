@@ -13,7 +13,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiHeader,
+  ApiParam,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { RefundsService } from './refunds.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
@@ -86,7 +93,8 @@ export class RefundsController {
   })
   @ApiResponse({
     status: 400,
-    description: '请求参数验证失败或业务规则违反（订单状态不允许退款、已有进行中退款、超过退款期限）',
+    description:
+      '请求参数验证失败或业务规则违反（订单状态不允许退款、已有进行中退款、超过退款期限）',
   })
   @ApiResponse({
     status: 401,
@@ -104,7 +112,10 @@ export class RefundsController {
     status: 500,
     description: '服务器内部错误',
   })
-  async create(@CurrentUser() user: CurrentUserType, @Body() createRefundDto: CreateRefundDto) {
+  async create(
+    @CurrentUser() user: CurrentUserType,
+    @Body() createRefundDto: CreateRefundDto,
+  ) {
     try {
       this.logger.log(
         `Creating refund for user ${user.id}: orderId=${createRefundDto.orderId}`,
@@ -114,10 +125,7 @@ export class RefundsController {
 
       return { data: result };
     } catch (error) {
-      this.logger.error(
-        `Failed to create refund for user ${user.id}:`,
-        error,
-      );
+      this.logger.error(`Failed to create refund for user ${user.id}:`, error);
       throw error;
     }
   }
@@ -194,7 +202,10 @@ export class RefundsController {
     status: 500,
     description: '服务器内部错误',
   })
-  async findAll(@CurrentUser() user: CurrentUserType, @Query() queryDto: QueryRefundsDto) {
+  async findAll(
+    @CurrentUser() user: CurrentUserType,
+    @Query() queryDto: QueryRefundsDto,
+  ) {
     try {
       this.logger.log(
         `Querying refunds for user ${user.id}: page=${queryDto.page}, pageSize=${queryDto.pageSize}`,
@@ -204,10 +215,7 @@ export class RefundsController {
 
       return result;
     } catch (error) {
-      this.logger.error(
-        `Failed to query refunds for user ${user.id}:`,
-        error,
-      );
+      this.logger.error(`Failed to query refunds for user ${user.id}:`, error);
       throw error;
     }
   }
@@ -301,7 +309,10 @@ export class RefundsController {
     status: 500,
     description: '服务器内部错误',
   })
-  async findOne(@CurrentUser() user: CurrentUserType, @Param('id', ParseIntPipe) id: number) {
+  async findOne(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     try {
       this.logger.log(
         `Querying refund detail for user ${user.id}, refund ${id}`,

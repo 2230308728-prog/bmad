@@ -1,5 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TrendDataPointDto, OrdersTrendResponseDto } from './orders-trend-query.dto';
+import {
+  TrendDataPointDto,
+  OrdersTrendResponseDto,
+} from './orders-trend-query.dto';
 
 /**
  * 用户趋势响应

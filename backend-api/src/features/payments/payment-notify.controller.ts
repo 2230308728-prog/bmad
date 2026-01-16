@@ -9,7 +9,13 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
-import { OrderStatus, PaymentStatus, PaymentChannel, Prisma, Order } from '@prisma/client';
+import {
+  OrderStatus,
+  PaymentStatus,
+  PaymentChannel,
+  Prisma,
+  Order,
+} from '@prisma/client';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { WechatPayService, WechatPayNotifyData } from './wechat-pay.service';
 import { WechatPayNotifyDto } from './dto/wechat-pay-notify.dto';
@@ -147,7 +153,8 @@ export class PaymentNotifyController {
   })
   async handlePaymentNotify(
     @Body() notifyDto: WechatPayNotifyDto,
-    @Headers() headers: {
+    @Headers()
+    headers: {
       'wechatpay-timestamp'?: string;
       'wechatpay-nonce'?: string;
       'wechatpay-signature'?: string;
@@ -163,7 +170,10 @@ export class PaymentNotifyController {
       // 验证必需的请求头
       if (!timestamp || !nonce || !signature || !serial) {
         this.logger.warn(`支付回调缺少必需的请求头`);
-        throw new HttpException('Invalid request headers', HttpStatus.INTERNAL_SERVER_ERROR);
+        throw new HttpException(
+          'Invalid request headers',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
 
       this.logger.log(
@@ -181,16 +191,24 @@ export class PaymentNotifyController {
 
       if (!isValid) {
         this.logger.warn(`支付回调签名验证失败`);
-        throw new HttpException('Signature verification failed', HttpStatus.INTERNAL_SERVER_ERROR);
+        throw new HttpException(
+          'Signature verification failed',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
 
       // 2. 解密数据
-      const { ciphertext, nonce: encryptNonce, associated_data } = notifyDto.resource;
-      const notifyData: WechatPayNotifyData = this.wechatPayService.decipherNotify(
+      const {
         ciphertext,
+        nonce: encryptNonce,
         associated_data,
-        encryptNonce,
-      );
+      } = notifyDto.resource;
+      const notifyData: WechatPayNotifyData =
+        this.wechatPayService.decipherNotify(
+          ciphertext,
+          associated_data,
+          encryptNonce,
+        );
 
       this.logger.log(
         `支付回调数据解密成功: orderNo=${notifyData.out_trade_no}, tradeState=${notifyData.trade_state}`,
@@ -208,7 +226,10 @@ export class PaymentNotifyController {
 
       if (!order) {
         this.logger.error(`订单不存在: orderNo=${notifyData.out_trade_no}`);
-        throw new HttpException('Order not found', HttpStatus.INTERNAL_SERVER_ERROR);
+        throw new HttpException(
+          'Order not found',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
 
       // 4. 幂等性检查：订单已处理则直接返回成功
@@ -220,19 +241,27 @@ export class PaymentNotifyController {
           (order.status === OrderStatus.CANCELLED ||
             order.paymentStatus === PaymentStatus.CANCELLED))
       ) {
-        this.logger.log(`订单已处理，直接返回成功: orderNo=${order.orderNo}, status=${order.status}`);
+        this.logger.log(
+          `订单已处理，直接返回成功: orderNo=${order.orderNo}, status=${order.status}`,
+        );
         return { code: 'SUCCESS', message: '成功' };
       }
 
       // 5. 验证金额
       const notifyAmount = notifyData.amount.total;
-      const orderAmount = Prisma.Decimal.mul(order.actualAmount, 100).toNumber();
+      const orderAmount = Prisma.Decimal.mul(
+        order.actualAmount,
+        100,
+      ).toNumber();
 
       if (notifyAmount !== orderAmount) {
         this.logger.error(
           `金额不匹配: orderNo=${order.orderNo}, notifyAmount=${notifyAmount}, orderAmount=${orderAmount}`,
         );
-        throw new HttpException('Amount mismatch', HttpStatus.INTERNAL_SERVER_ERROR);
+        throw new HttpException(
+          'Amount mismatch',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
 
       // 6. 处理支付结果
@@ -245,16 +274,16 @@ export class PaymentNotifyController {
       return { code: 'SUCCESS', message: '成功' };
     } catch (error) {
       // 记录详细错误但不暴露给调用者
-      this.logger.error(
-        `处理支付回调失败: notifyId=${notifyDto.id}`,
-        error,
-      );
+      this.logger.error(`处理支付回调失败: notifyId=${notifyDto.id}`, error);
 
       // 重新抛出让 NestJS 返回 500
       if (error instanceof HttpException) {
         throw error;
       }
-      throw new HttpException('Processing failed', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Processing failed',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -316,10 +345,7 @@ export class PaymentNotifyController {
       // TODO: 5. 发送支付成功通知（Story 5.7 完善）
       this.logger.log(`占位：发送支付成功通知: orderNo=${order.orderNo}`);
     } catch (error) {
-      this.logger.error(
-        `处理支付成功失败: orderNo=${order.orderNo}`,
-        error,
-      );
+      this.logger.error(`处理支付成功失败: orderNo=${order.orderNo}`, error);
       throw error;
     }
   }
@@ -353,12 +379,11 @@ export class PaymentNotifyController {
         }
       });
 
-      this.logger.log(`支付失败处理完成: orderNo=${order.orderNo}, tradeState=${notifyData.trade_state}`);
-    } catch (error) {
-      this.logger.error(
-        `处理支付失败失败: orderNo=${order.orderNo}`,
-        error,
+      this.logger.log(
+        `支付失败处理完成: orderNo=${order.orderNo}, tradeState=${notifyData.trade_state}`,
       );
+    } catch (error) {
+      this.logger.error(`处理支付失败失败: orderNo=${order.orderNo}`, error);
       throw error;
     }
   }

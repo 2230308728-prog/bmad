@@ -33,14 +33,19 @@ export class UpdateOrderStatusDto {
 /**
  * 状态转换规则定义
  * PENDING → CANCELLED（允许）
- * PAID → CONFIRMED, COMPLETED, REFUNDING（允许）
+ * PAID → CONFIRMED, COMPLETED, REFUNDING, REFUNDED（允许）
  * CONFIRMED → COMPLETED（允许）
  * REFUNDING → REFUNDED（允许）
  * 其他转换：不允许
  */
 export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.PENDING]: [OrderStatus.CANCELLED],
-  [OrderStatus.PAID]: [OrderStatus.CONFIRMED, OrderStatus.COMPLETED, OrderStatus.REFUNDING],
+  [OrderStatus.PAID]: [
+    OrderStatus.CONFIRMED,
+    OrderStatus.COMPLETED,
+    OrderStatus.REFUNDING,
+    OrderStatus.REFUNDED,
+  ],
   [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED],
   [OrderStatus.REFUNDING]: [OrderStatus.REFUNDED],
   [OrderStatus.COMPLETED]: [],
@@ -54,7 +59,10 @@ export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
  * @param toStatus 目标状态
  * @returns 是否允许转换
  */
-export function isValidStatusTransition(fromStatus: OrderStatus, toStatus: OrderStatus): boolean {
+export function isValidStatusTransition(
+  fromStatus: OrderStatus,
+  toStatus: OrderStatus,
+): boolean {
   const allowedTransitions = ORDER_STATUS_TRANSITIONS[fromStatus] || [];
   return allowedTransitions.includes(toStatus);
 }

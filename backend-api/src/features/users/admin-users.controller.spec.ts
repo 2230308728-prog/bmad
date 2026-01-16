@@ -240,7 +240,10 @@ describe('AdminUsersController', () => {
       const result = await controller.updateStatus(mockUser, 1, updateDto);
 
       expect(result).toEqual({ data: mockUpdatedUser });
-      expect(mockAdminUsersService.updateStatus).toHaveBeenCalledWith(1, updateDto);
+      expect(mockAdminUsersService.updateStatus).toHaveBeenCalledWith(
+        1,
+        updateDto,
+      );
     });
 
     it('should update to ACTIVE status', async () => {
@@ -265,7 +268,10 @@ describe('AdminUsersController', () => {
 
       await controller.updateStatus(mockUser, 1, updateDto);
 
-      expect(mockAdminUsersService.updateStatus).toHaveBeenCalledWith(1, updateDto);
+      expect(mockAdminUsersService.updateStatus).toHaveBeenCalledWith(
+        1,
+        updateDto,
+      );
     });
 
     it('should update to INACTIVE status', async () => {
@@ -291,7 +297,10 @@ describe('AdminUsersController', () => {
       // ParseIntPipe converts the string '1' to number 1 before reaching the controller
       await controller.updateStatus(mockUser, 1, updateDto);
 
-      expect(mockAdminUsersService.updateStatus).toHaveBeenCalledWith(1, updateDto);
+      expect(mockAdminUsersService.updateStatus).toHaveBeenCalledWith(
+        1,
+        updateDto,
+      );
     });
   });
 
@@ -359,7 +368,10 @@ describe('AdminUsersController', () => {
       const result = await controller.findUserOrders(mockUser, 1, queryDto);
 
       expect(result).toEqual(mockOrderResult);
-      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(1, queryDto);
+      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(
+        1,
+        queryDto,
+      );
     });
 
     it('should filter by status', async () => {
@@ -378,7 +390,10 @@ describe('AdminUsersController', () => {
 
       await controller.findUserOrders(mockUser, 1, queryDto);
 
-      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(1, queryDto);
+      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(
+        1,
+        queryDto,
+      );
     });
 
     it('should filter by date range', async () => {
@@ -398,7 +413,10 @@ describe('AdminUsersController', () => {
 
       await controller.findUserOrders(mockUser, 1, queryDto);
 
-      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(1, queryDto);
+      expect(mockAdminUsersService.findUserOrders).toHaveBeenCalledWith(
+        1,
+        queryDto,
+      );
     });
   });
 

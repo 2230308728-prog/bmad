@@ -15,7 +15,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
  */
 @Module({
   imports: [PrismaModule, RedisModule, PaymentsModule, NotificationsModule],
-  controllers: [RefundsController, AdminRefundsController, RefundNotifyController],
+  controllers: [
+    RefundsController,
+    AdminRefundsController,
+    RefundNotifyController,
+  ],
   providers: [RefundsService, AdminRefundsService],
   exports: [RefundsService, AdminRefundsService],
 })

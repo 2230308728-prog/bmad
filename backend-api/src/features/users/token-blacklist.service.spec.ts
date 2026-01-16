@@ -64,7 +64,9 @@ describe('TokenBlacklistService', () => {
       const result = await service.isAccessBlacklisted('access_token_123');
 
       expect(result).toBe(true);
-      expect(cacheService.get).toHaveBeenCalledWith('blacklist:access:access_token_123');
+      expect(cacheService.get).toHaveBeenCalledWith(
+        'blacklist:access:access_token_123',
+      );
     });
 
     it('should return false if access token is not blacklisted', async () => {
@@ -83,7 +85,9 @@ describe('TokenBlacklistService', () => {
       const result = await service.isRefreshBlacklisted('refresh_token_456');
 
       expect(result).toBe(true);
-      expect(cacheService.get).toHaveBeenCalledWith('blacklist:refresh:refresh_token_456');
+      expect(cacheService.get).toHaveBeenCalledWith(
+        'blacklist:refresh:refresh_token_456',
+      );
     });
 
     it('should return false if refresh token is not blacklisted', async () => {

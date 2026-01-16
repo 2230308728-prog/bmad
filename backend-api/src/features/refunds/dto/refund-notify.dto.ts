@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, ValidateNested, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  ValidateNested,
+  IsObject,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -92,7 +98,8 @@ class RefundResourceDto {
 
   @ApiProperty({
     example: 'SUCCESS',
-    description: '退款状态：SUCCESS（成功）、ABNORMAL（异常）、PROCESSING（处理中）',
+    description:
+      '退款状态：SUCCESS（成功）、ABNORMAL（异常）、PROCESSING（处理中）',
     enum: ['SUCCESS', 'ABNORMAL', 'PROCESSING'],
   })
   @IsString()

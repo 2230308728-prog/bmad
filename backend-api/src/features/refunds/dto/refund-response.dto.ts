@@ -12,7 +12,11 @@ export class RefundResponseDto {
   @ApiProperty({ example: 'REF20240114123456789', description: '退款单号' })
   refundNo!: string;
 
-  @ApiProperty({ example: 'PENDING', description: '退款状态', enum: RefundStatus })
+  @ApiProperty({
+    example: 'PENDING',
+    description: '退款状态',
+    enum: RefundStatus,
+  })
   status!: RefundStatus;
 
   @ApiProperty({ example: '299.00', description: '退款金额（元）' })
@@ -33,7 +37,11 @@ export class RefundDetailResponseDto {
   @ApiProperty({ example: 'REF20240114123456789', description: '退款单号' })
   refundNo!: string;
 
-  @ApiProperty({ example: 'PENDING', description: '退款状态', enum: RefundStatus })
+  @ApiProperty({
+    example: 'PENDING',
+    description: '退款状态',
+    enum: RefundStatus,
+  })
   status!: RefundStatus;
 
   @ApiProperty({ example: '299.00', description: '退款金额（元）' })
@@ -59,16 +67,32 @@ export class RefundDetailResponseDto {
   @ApiProperty({ example: '2024-01-14T12:00:00Z', description: '申请时间' })
   appliedAt!: string;
 
-  @ApiProperty({ example: '2024-01-14T14:00:00Z', description: '审批时间', required: false })
+  @ApiProperty({
+    example: '2024-01-14T14:00:00Z',
+    description: '审批时间',
+    required: false,
+  })
   approvedAt?: string | null;
 
-  @ApiProperty({ example: '已批准退款', description: '管理员备注', required: false })
+  @ApiProperty({
+    example: '已批准退款',
+    description: '管理员备注',
+    required: false,
+  })
   adminNote?: string | null;
 
-  @ApiProperty({ example: '不符合退款条件', description: '拒绝原因', required: false })
+  @ApiProperty({
+    example: '不符合退款条件',
+    description: '拒绝原因',
+    required: false,
+  })
   rejectedReason?: string | null;
 
-  @ApiProperty({ example: '2024-01-15T10:00:00Z', description: '退款完成时间', required: false })
+  @ApiProperty({
+    example: '2024-01-15T10:00:00Z',
+    description: '退款完成时间',
+    required: false,
+  })
   refundedAt?: string | null;
 
   @ApiProperty({

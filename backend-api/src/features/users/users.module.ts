@@ -14,8 +14,26 @@ import { AuthModule } from '@/auth/auth.module';
 
 @Module({
   imports: [forwardRef(() => AuthModule), HttpModule],
-  controllers: [AdminAuthController, ParentAuthController, AuthController, AdminUsersController],
-  providers: [UsersService, WechatService, TokenBlacklistService, UserSessionService, AdminUsersService, PrismaService],
-  exports: [UsersService, WechatService, TokenBlacklistService, UserSessionService, AdminUsersService],
+  controllers: [
+    AdminAuthController,
+    ParentAuthController,
+    AuthController,
+    AdminUsersController,
+  ],
+  providers: [
+    UsersService,
+    WechatService,
+    TokenBlacklistService,
+    UserSessionService,
+    AdminUsersService,
+    PrismaService,
+  ],
+  exports: [
+    UsersService,
+    WechatService,
+    TokenBlacklistService,
+    UserSessionService,
+    AdminUsersService,
+  ],
 })
 export class UsersModule {}

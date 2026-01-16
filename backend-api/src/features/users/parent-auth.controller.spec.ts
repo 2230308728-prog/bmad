@@ -105,13 +105,18 @@ describe('ParentAuthController', () => {
           },
         },
       });
-      expect(mockWechatService.jscode2session).toHaveBeenCalledWith('valid_wechat_code');
+      expect(mockWechatService.jscode2session).toHaveBeenCalledWith(
+        'valid_wechat_code',
+      );
       expect(mockUsersService.findOrCreateParent).toHaveBeenCalledWith(
         mockOpenid,
         '测试用户',
         'https://example.com/avatar.jpg',
       );
-      expect(mockAuthService.generateTokens).toHaveBeenCalledWith(1, Role.PARENT);
+      expect(mockAuthService.generateTokens).toHaveBeenCalledWith(
+        1,
+        Role.PARENT,
+      );
     });
 
     it('should login successfully with existing user', async () => {
@@ -272,7 +277,9 @@ describe('ParentAuthController', () => {
       mockUsersService.findById.mockRejectedValue(notFoundError);
 
       // Act & Assert
-      await expect(controller.getProfile(mockUser)).rejects.toThrow('User not found');
+      await expect(controller.getProfile(mockUser)).rejects.toThrow(
+        'User not found',
+      );
       expect(mockUsersService.findById).toHaveBeenCalledWith(999);
     });
   });

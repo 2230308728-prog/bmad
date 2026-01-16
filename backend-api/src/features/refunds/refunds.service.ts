@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
@@ -40,9 +46,9 @@ export class RefundsService {
     const { orderId, reason, description, images } = dto;
 
     // 1. 验证订单存在且属于当前用户
-    const order = await this.prisma.order.findUnique({
+    const order = (await this.prisma.order.findUnique({
       where: { id: orderId },
-    }) as OrderWithBookingDate | null;
+    })) as OrderWithBookingDate | null;
 
     if (!order) {
       this.logger.warn(`退款申请失败: 订单不存在`);
@@ -90,7 +96,9 @@ export class RefundsService {
 
     if (timeUntilBooking < REFUND_DEADLINE_MS) {
       this.logger.warn(`退款申请失败: 已超过退款期限`);
-      throw new BadRequestException('已超过退款期限（活动开始前 48 小时内不可退款）');
+      throw new BadRequestException(
+        '已超过退款期限（活动开始前 48 小时内不可退款）',
+      );
     }
 
     // 5-6. 生成退款编号（带重试机制）和使用事务创建退款记录
@@ -273,7 +281,9 @@ export class RefundsService {
     }
 
     if (refund.userId !== userId) {
-      this.logger.warn(`退款记录不属于当前用户: refundId=${refundId}, userId=${userId}, refundUserId=${refund.userId}`);
+      this.logger.warn(
+        `退款记录不属于当前用户: refundId=${refundId}, userId=${userId}, refundUserId=${refund.userId}`,
+      );
       throw new ForbiddenException('无权访问此退款记录');
     }
 
@@ -301,7 +311,7 @@ export class RefundsService {
         orderNo: order.orderNo,
         status: order.status,
         totalAmount: order.totalAmount.toString(),
-        bookingDate: (order.bookingDate as any)?.toISOString().split('T')[0] || null,
+        bookingDate: order.bookingDate?.toISOString().split('T')[0] || null,
       },
       product,
     };

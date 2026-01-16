@@ -69,26 +69,34 @@ describe('DashboardService', () => {
       mockPrismaService.order.count.mockResolvedValueOnce(20); // today paid
       mockPrismaService.order.count.mockResolvedValueOnce(15); // today completed
       mockPrismaService.user.count.mockResolvedValueOnce(3); // today new users
-      mockPrismaService.order.aggregate.mockResolvedValueOnce({ _sum: { totalAmount: 7500 } });
+      mockPrismaService.order.aggregate.mockResolvedValueOnce({
+        _sum: { totalAmount: 7500 },
+      });
 
       mockPrismaService.order.count.mockResolvedValueOnce(150); // week orders
       mockPrismaService.order.count.mockResolvedValueOnce(120); // week paid
       mockPrismaService.order.count.mockResolvedValueOnce(100); // week completed
       mockPrismaService.user.count.mockResolvedValueOnce(18); // week new users
-      mockPrismaService.order.aggregate.mockResolvedValueOnce({ _sum: { totalAmount: 45000 } });
+      mockPrismaService.order.aggregate.mockResolvedValueOnce({
+        _sum: { totalAmount: 45000 },
+      });
 
       mockPrismaService.order.count.mockResolvedValueOnce(600); // month orders
       mockPrismaService.order.count.mockResolvedValueOnce(480); // month paid
       mockPrismaService.order.count.mockResolvedValueOnce(400); // month completed
       mockPrismaService.user.count.mockResolvedValueOnce(65); // month new users
-      mockPrismaService.order.aggregate.mockResolvedValueOnce({ _sum: { totalAmount: 180000 } });
+      mockPrismaService.order.aggregate.mockResolvedValueOnce({
+        _sum: { totalAmount: 180000 },
+      });
 
       mockPrismaService.user.count.mockResolvedValueOnce(150); // total users
       mockPrismaService.order.count.mockResolvedValueOnce(2000); // total orders
       mockPrismaService.product.count.mockResolvedValueOnce(50); // total products
-      mockPrismaService.order.aggregate.mockResolvedValueOnce({ _sum: { totalAmount: 600000 } });
+      mockPrismaService.order.aggregate.mockResolvedValueOnce({
+        _sum: { totalAmount: 600000 },
+      });
 
-      const result = await service.getOverview() as any;
+      const result = (await service.getOverview()) as any;
 
       expect(result).toHaveProperty('today');
       expect(result).toHaveProperty('week');
@@ -112,9 +120,11 @@ describe('DashboardService', () => {
       mockPrismaService.order.count.mockResolvedValue(0);
       mockPrismaService.user.count.mockResolvedValue(0);
       mockPrismaService.product.count.mockResolvedValue(0);
-      mockPrismaService.order.aggregate.mockResolvedValue({ _sum: { totalAmount: null } });
+      mockPrismaService.order.aggregate.mockResolvedValue({
+        _sum: { totalAmount: null },
+      });
 
-      const result = await service.getOverview() as any;
+      const result = (await service.getOverview()) as any;
 
       expect(result.today.ordersAmount).toBe('0.00');
       expect(result.total.revenue).toBe('0.00');
@@ -134,7 +144,7 @@ describe('DashboardService', () => {
       ];
       mockPrismaService.order.findMany.mockResolvedValue(mockOrders);
 
-      const result = await service.getOrdersTrend(query) as any;
+      const result = (await service.getOrdersTrend(query)) as any;
 
       expect(result).toHaveProperty('period', 'today');
       expect(result).toHaveProperty('granularity', 'hour');
@@ -148,7 +158,7 @@ describe('DashboardService', () => {
       const query = { period: 'week' };
       mockPrismaService.order.findMany.mockResolvedValue([]);
 
-      const result = await service.getOrdersTrend(query) as any;
+      const result = (await service.getOrdersTrend(query)) as any;
 
       expect(result.granularity).toBe('day');
     });
@@ -172,7 +182,7 @@ describe('DashboardService', () => {
       mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
       mockPrismaService.order.findMany.mockResolvedValue(mockOrders);
 
-      const result = await service.getUsersTrend(query) as any;
+      const result = (await service.getUsersTrend(query)) as any;
 
       expect(result).toHaveProperty('period', 'today');
       expect(result).toHaveProperty('granularity', 'hour');
@@ -193,7 +203,7 @@ describe('DashboardService', () => {
 
       mockPrismaService.$queryRaw.mockResolvedValue(mockCategoryStats);
 
-      const result = await service.getRevenueBreakdown() as any;
+      const result = (await service.getRevenueBreakdown()) as any;
 
       expect(result).toHaveProperty('byCategory');
       expect(result).toHaveProperty('byPaymentMethod');
@@ -208,7 +218,7 @@ describe('DashboardService', () => {
     it('should handle empty category stats', async () => {
       mockPrismaService.$queryRaw.mockResolvedValue([]);
 
-      const result = await service.getRevenueBreakdown() as any;
+      const result = (await service.getRevenueBreakdown()) as any;
 
       expect(result.byCategory).toHaveLength(0);
       expect(result.byPaymentMethod[0].amount).toBe('0.00');
@@ -245,7 +255,7 @@ describe('DashboardService', () => {
 
       mockPrismaService.$queryRaw.mockResolvedValue(mockProductStats);
 
-      const result = await service.getPopularProducts(query) as any;
+      const result = (await service.getPopularProducts(query)) as any;
 
       expect(result).toHaveProperty('period', 'week');
       expect(result).toHaveProperty('products');
@@ -290,7 +300,9 @@ describe('DashboardService', () => {
 
       mockPrismaService.$queryRaw.mockResolvedValue(mockProductStats);
 
-      const result = await service.getPopularProducts({ period: 'week' }) as any;
+      const result = (await service.getPopularProducts({
+        period: 'week',
+      })) as any;
 
       expect(result.products[0].conversionRate).toBe(0);
     });
@@ -309,15 +321,15 @@ describe('DashboardService', () => {
         .mockResolvedValueOnce(150); // paid orders
 
       // Setup mock for unique paid users (groupBy)
-      mockPrismaService.order.groupBy = jest.fn().mockResolvedValue([
-        { userId: 1 },
-        { userId: 2 },
-        { userId: 3 },
-      ]);
+      mockPrismaService.order.groupBy = jest
+        .fn()
+        .mockResolvedValue([{ userId: 1 }, { userId: 2 }, { userId: 3 }]);
     });
 
     it('should return conversion funnel analysis', async () => {
-      const result = await service.getConversionFunnel({ period: 'week' }) as any;
+      const result = (await service.getConversionFunnel({
+        period: 'week',
+      })) as any;
 
       expect(result).toHaveProperty('period', 'week');
       expect(result).toHaveProperty('funnel');
@@ -337,7 +349,9 @@ describe('DashboardService', () => {
     });
 
     it('should calculate dropoff percentages correctly', async () => {
-      const result = await service.getConversionFunnel({ period: 'week' }) as any;
+      const result = (await service.getConversionFunnel({
+        period: 'week',
+      })) as any;
 
       expect(result.dropoffs[0].stage).toBe('浏览产品→查看详情');
       expect(result.dropoffs[0].percentage).toBeGreaterThanOrEqual(0);
@@ -351,7 +365,9 @@ describe('DashboardService', () => {
       mockPrismaService.order.count.mockResolvedValue(0);
       mockPrismaService.order.groupBy.mockResolvedValue([]);
 
-      const result = await service.getConversionFunnel({ period: 'week' }) as any;
+      const result = (await service.getConversionFunnel({
+        period: 'week',
+      })) as any;
 
       expect(result.funnel[0].users).toBe(1); // minimum value
       expect(result.overallConversion).toBe(0);
@@ -364,19 +380,31 @@ describe('DashboardService', () => {
       const mockUsers = [
         { id: 1, createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000) },
         { id: 2, createdAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000) },
-        { id: 3, createdAt: new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000) },
+        {
+          id: 3,
+          createdAt: new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000),
+        },
       ];
 
       const mockOrders = [
-        { userId: 1, createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000) }, // day 1
-        { userId: 1, createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, // day 7
-        { userId: 2, createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, // day 7
+        {
+          userId: 1,
+          createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+        }, // day 1
+        {
+          userId: 1,
+          createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        }, // day 7
+        {
+          userId: 2,
+          createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        }, // day 7
       ];
 
       mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
       mockPrismaService.order.findMany.mockResolvedValue(mockOrders);
 
-      const result = await service.getUserRetention() as any;
+      const result = (await service.getUserRetention()) as any;
 
       expect(result).toHaveProperty('cohortAnalysis');
       expect(result).toHaveProperty('avgRetention');
@@ -389,21 +417,39 @@ describe('DashboardService', () => {
     it('should calculate retention rates correctly', async () => {
       const now = new Date();
       const mockUsers = [
-        { id: 1, createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000) },
-        { id: 2, createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000) },
-        { id: 3, createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000) },
+        {
+          id: 1,
+          createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+        },
+        {
+          id: 2,
+          createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+        },
+        {
+          id: 3,
+          createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+        },
       ];
 
       const mockOrders = [
-        { userId: 1, createdAt: new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000) }, // day 1
-        { userId: 2, createdAt: new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000) }, // day 1
-        { userId: 3, createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) }, // day 7
+        {
+          userId: 1,
+          createdAt: new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000),
+        }, // day 1
+        {
+          userId: 2,
+          createdAt: new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000),
+        }, // day 1
+        {
+          userId: 3,
+          createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
+        }, // day 7
       ];
 
       mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
       mockPrismaService.order.findMany.mockResolvedValue(mockOrders);
 
-      const result = await service.getUserRetention() as any;
+      const result = (await service.getUserRetention()) as any;
 
       // Should have 66.67% day1 retention (2/3)
       expect(result.avgRetention.day1).toBeGreaterThan(0);
@@ -414,7 +460,7 @@ describe('DashboardService', () => {
       mockPrismaService.user.findMany.mockResolvedValue([]);
       mockPrismaService.order.findMany.mockResolvedValue([]);
 
-      const result = await service.getUserRetention() as any;
+      const result = (await service.getUserRetention()) as any;
 
       expect(result.cohortAnalysis).toHaveLength(0);
       expect(result.avgRetention.day1).toBe(0);
@@ -454,14 +500,18 @@ describe('DashboardService', () => {
       const now = new Date();
       mockPrismaService.orderItem.findMany.mockResolvedValue([
         {
-          order: { createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000) },
+          order: {
+            createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+          },
         },
         {
-          order: { createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
+          order: {
+            createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
+          },
         },
       ]);
 
-      const result = await service.getProductPerformance(productId) as any;
+      const result = (await service.getProductPerformance(productId)) as any;
 
       expect(result).toHaveProperty('product');
       expect(result).toHaveProperty('stats');
@@ -491,7 +541,9 @@ describe('DashboardService', () => {
     it('should throw NotFoundException when product not found', async () => {
       mockPrismaService.product.findUnique = jest.fn().mockResolvedValue(null);
 
-      await expect(service.getProductPerformance(999)).rejects.toThrow('Product 999 not found');
+      await expect(service.getProductPerformance(999)).rejects.toThrow(
+        'Product 999 not found',
+      );
     });
 
     it('should calculate trend data correctly', async () => {
@@ -514,16 +566,21 @@ describe('DashboardService', () => {
       const mockOrders = [];
       for (let i = 0; i < 7; i++) {
         mockOrders.push({
-          order: { createdAt: new Date(now.getTime() - i * 24 * 60 * 60 * 1000) },
+          order: {
+            createdAt: new Date(now.getTime() - i * 24 * 60 * 60 * 1000),
+          },
         });
       }
       mockPrismaService.orderItem.findMany.mockResolvedValue(mockOrders);
 
-      const result = await service.getProductPerformance(productId) as any;
+      const result = (await service.getProductPerformance(productId)) as any;
 
       expect(result.trend.last7Days).toHaveLength(7);
       // Sum of all values should equal total orders
-      const totalOrders = result.trend.last7Days.reduce((sum: number, val: number) => sum + val, 0);
+      const totalOrders = result.trend.last7Days.reduce(
+        (sum: number, val: number) => sum + val,
+        0,
+      );
       expect(totalOrders).toBe(7);
     });
 
@@ -542,7 +599,7 @@ describe('DashboardService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       } as any;
 
-      const result = await service.getProductPerformance(productId) as any;
+      const result = (await service.getProductPerformance(productId)) as any;
 
       expect(result.stats.conversionRate).toBe(0);
       expect(result.stats.avgOrderValue).toBe('0.00');
@@ -556,7 +613,9 @@ describe('DashboardService', () => {
       await service.clearStatsCache();
 
       expect(mockCacheService.del).toHaveBeenCalledWith('dashboard:overview');
-      expect(mockCacheService.del).toHaveBeenCalledWith('dashboard:revenue:breakdown');
+      expect(mockCacheService.del).toHaveBeenCalledWith(
+        'dashboard:revenue:breakdown',
+      );
     });
 
     it('should handle cache deletion errors gracefully', async () => {

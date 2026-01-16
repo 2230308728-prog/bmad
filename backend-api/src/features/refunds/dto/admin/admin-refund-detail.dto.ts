@@ -33,22 +33,46 @@ export class AdminRefundDetailResponseDto {
   @ApiProperty({ example: '2024-01-14T12:00:00Z', description: '申请时间' })
   appliedAt!: string;
 
-  @ApiProperty({ example: '2024-01-14T14:00:00Z', description: '批准时间', required: false })
+  @ApiProperty({
+    example: '2024-01-14T14:00:00Z',
+    description: '批准时间',
+    required: false,
+  })
   approvedAt!: string | null;
 
-  @ApiProperty({ example: '已核实用户凭证，同意退款', description: '管理员备注', required: false })
+  @ApiProperty({
+    example: '已核实用户凭证，同意退款',
+    description: '管理员备注',
+    required: false,
+  })
   adminNote!: string | null;
 
-  @ApiProperty({ example: '不符合退款条件', description: '拒绝原因', required: false })
+  @ApiProperty({
+    example: '不符合退款条件',
+    description: '拒绝原因',
+    required: false,
+  })
   rejectedReason!: string | null;
 
-  @ApiProperty({ example: '2024-01-14T13:00:00Z', description: '拒绝时间', required: false })
+  @ApiProperty({
+    example: '2024-01-14T13:00:00Z',
+    description: '拒绝时间',
+    required: false,
+  })
   rejectedAt!: string | null;
 
-  @ApiProperty({ example: '2024-01-14T15:00:00Z', description: '退款完成时间', required: false })
+  @ApiProperty({
+    example: '2024-01-14T15:00:00Z',
+    description: '退款完成时间',
+    required: false,
+  })
   refundedAt!: string | null;
 
-  @ApiProperty({ example: 'REFUND_WX_123456', description: '微信退款单号', required: false })
+  @ApiProperty({
+    example: 'REFUND_WX_123456',
+    description: '微信退款单号',
+    required: false,
+  })
   wechatRefundId!: string | null;
 
   @ApiProperty({

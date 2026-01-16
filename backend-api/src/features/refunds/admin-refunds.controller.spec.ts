@@ -4,7 +4,11 @@ import { AdminRefundsController } from './admin-refunds.controller';
 import { AdminRefundsService } from './admin-refunds.service';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { RefundStatus } from '@prisma/client';
-import { AdminQueryRefundsDto, ApproveRefundDto, RejectRefundDto } from './dto/admin';
+import {
+  AdminQueryRefundsDto,
+  ApproveRefundDto,
+  RejectRefundDto,
+} from './dto/admin';
 
 describe('AdminRefundsController', () => {
   let controller: AdminRefundsController;
@@ -205,7 +209,11 @@ describe('AdminRefundsController', () => {
       const result = await controller.approve(1, approveDto, mockAdminUser);
 
       expect(result).toEqual(approvedRefund);
-      expect(service.approve).toHaveBeenCalledWith(1, '已核实用户凭证', mockAdminUser.id);
+      expect(service.approve).toHaveBeenCalledWith(
+        1,
+        '已核实用户凭证',
+        mockAdminUser.id,
+      );
     });
 
     it('should approve refund without adminNote', async () => {
@@ -221,7 +229,11 @@ describe('AdminRefundsController', () => {
       const result = await controller.approve(1, approveDto, mockAdminUser);
 
       expect(result).toEqual(approvedRefund);
-      expect(service.approve).toHaveBeenCalledWith(1, undefined, mockAdminUser.id);
+      expect(service.approve).toHaveBeenCalledWith(
+        1,
+        undefined,
+        mockAdminUser.id,
+      );
     });
   });
 
@@ -242,7 +254,11 @@ describe('AdminRefundsController', () => {
       const result = await controller.reject(1, rejectDto, mockAdminUser);
 
       expect(result).toEqual(rejectedRefund);
-      expect(service.reject).toHaveBeenCalledWith(1, '不符合退款条件', mockAdminUser.id);
+      expect(service.reject).toHaveBeenCalledWith(
+        1,
+        '不符合退款条件',
+        mockAdminUser.id,
+      );
     });
 
     it('should pass rejectedReason to service', async () => {
@@ -254,7 +270,11 @@ describe('AdminRefundsController', () => {
 
       await controller.reject(1, rejectDto, mockAdminUser);
 
-      expect(service.reject).toHaveBeenCalledWith(1, '活动开始前 48 小时内不可退款', mockAdminUser.id);
+      expect(service.reject).toHaveBeenCalledWith(
+        1,
+        '活动开始前 48 小时内不可退款',
+        mockAdminUser.id,
+      );
     });
   });
 

@@ -1,5 +1,20 @@
-import { Controller, Post, Body, UseGuards, Request, Logger, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Logger,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from '@/auth/auth.service';
 import { UsersService } from './users.service';
@@ -34,7 +49,8 @@ export class AuthController {
       const payload = await this.authService.validateRefreshToken(refreshToken);
 
       // 2. 检查刷新令牌是否在黑名单中
-      const isBlacklisted = await this.usersService.isRefreshTokenBlacklisted(refreshToken);
+      const isBlacklisted =
+        await this.usersService.isRefreshTokenBlacklisted(refreshToken);
       if (isBlacklisted) {
         throw new UnauthorizedException('刷新令牌已失效');
       }
@@ -60,13 +76,20 @@ export class AuthController {
       }
 
       // 6. 生成新的令牌对
-      const newTokens = await this.authService.generateTokens(user.id, user.role);
+      const newTokens = await this.authService.generateTokens(
+        user.id,
+        user.role,
+      );
 
       // 7. 刷新令牌轮换：将旧刷新令牌加入黑名单，保存新的刷新令牌
       const refreshTTL = 604800; // 7天
       await Promise.all([
         this.usersService.addRefreshTokenToBlacklist(refreshToken, refreshTTL),
-        this.usersService.saveRefreshToken(user.id, newTokens.refreshToken, refreshTTL),
+        this.usersService.saveRefreshToken(
+          user.id,
+          newTokens.refreshToken,
+          refreshTTL,
+        ),
       ]);
 
       this.logger.log(`Token refreshed successfully for user ${user.id}`);
@@ -76,10 +99,14 @@ export class AuthController {
         refreshToken: newTokens.refreshToken,
       };
     } catch (error) {
-      if (error instanceof UnauthorizedException || error instanceof ForbiddenException) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Token refresh failed: ${errorMessage}`);
       throw new UnauthorizedException('刷新令牌无效或已过期');
     }

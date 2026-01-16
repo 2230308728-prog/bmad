@@ -3,7 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
 import { TokenBlacklistService } from '@/features/users/token-blacklist.service';
 import { Role } from '@prisma/client';
-import type { JwtPayload, RefreshTokenPayload } from '../dto/jwt-payload.interface';
+import type {
+  JwtPayload,
+  RefreshTokenPayload,
+} from '../dto/jwt-payload.interface';
 
 // Mock passport and its dependencies
 jest.mock('@nestjs/passport', () => ({
@@ -78,7 +81,9 @@ describe('JwtStrategy', () => {
         id: 1,
         role: Role.ADMIN,
       });
-      expect(tokenBlacklistService.isAccessBlacklisted).toHaveBeenCalledWith('test_token');
+      expect(tokenBlacklistService.isAccessBlacklisted).toHaveBeenCalledWith(
+        'test_token',
+      );
     });
 
     it('should throw UnauthorizedException for non-access token type', async () => {
@@ -87,12 +92,12 @@ describe('JwtStrategy', () => {
         type: 'refresh',
       };
 
-      await expect(strategy.validate(mockRequest, invalidPayload)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(strategy.validate(mockRequest, invalidPayload)).rejects.toThrow(
-        '无效的令牌类型',
-      );
+      await expect(
+        strategy.validate(mockRequest, invalidPayload),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        strategy.validate(mockRequest, invalidPayload),
+      ).rejects.toThrow('无效的令牌类型');
     });
 
     it('should throw UnauthorizedException for refresh token type', async () => {
@@ -101,23 +106,23 @@ describe('JwtStrategy', () => {
         type: 'refresh',
       };
 
-      await expect(strategy.validate(mockRequest, refreshPayload)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(strategy.validate(mockRequest, refreshPayload)).rejects.toThrow(
-        '无效的令牌类型',
-      );
+      await expect(
+        strategy.validate(mockRequest, refreshPayload),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        strategy.validate(mockRequest, refreshPayload),
+      ).rejects.toThrow('无效的令牌类型');
     });
 
     it('should throw UnauthorizedException if token is blacklisted', async () => {
       mockTokenBlacklistService.isAccessBlacklisted.mockResolvedValue(true);
 
-      await expect(strategy.validate(mockRequest, validPayload)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(strategy.validate(mockRequest, validPayload)).rejects.toThrow(
-        '令牌已失效',
-      );
+      await expect(
+        strategy.validate(mockRequest, validPayload),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        strategy.validate(mockRequest, validPayload),
+      ).rejects.toThrow('令牌已失效');
     });
 
     it('should throw UnauthorizedException if authorization header is missing', async () => {
@@ -125,12 +130,12 @@ describe('JwtStrategy', () => {
         headers: {},
       };
 
-      await expect(strategy.validate(requestWithoutAuth, validPayload)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(strategy.validate(requestWithoutAuth, validPayload)).rejects.toThrow(
-        '缺少认证令牌',
-      );
+      await expect(
+        strategy.validate(requestWithoutAuth, validPayload),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        strategy.validate(requestWithoutAuth, validPayload),
+      ).rejects.toThrow('缺少认证令牌');
     });
 
     it('should extract token from authorization header correctly', async () => {
@@ -143,7 +148,9 @@ describe('JwtStrategy', () => {
       const result = await strategy.validate(requestWithToken, validPayload);
 
       expect(result).toEqual({ id: 1, role: Role.ADMIN });
-      expect(tokenBlacklistService.isAccessBlacklisted).toHaveBeenCalledWith('my_custom_token_123');
+      expect(tokenBlacklistService.isAccessBlacklisted).toHaveBeenCalledWith(
+        'my_custom_token_123',
+      );
     });
   });
 });

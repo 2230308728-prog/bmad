@@ -1,4 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
 
@@ -40,7 +46,9 @@ export class RolesGuard implements CanActivate {
     const hasRole = requiredRoles.some((role) => user.role === role);
 
     if (!hasRole) {
-      this.logger.warn(`访问被拒绝: 用户 ${user.id} 角色 ${user.role} 不满足要求 ${requiredRoles.join(', ')}`);
+      this.logger.warn(
+        `访问被拒绝: 用户 ${user.id} 角色 ${user.role} 不满足要求 ${requiredRoles.join(', ')}`,
+      );
       throw new ForbiddenException('权限不足');
     }
 

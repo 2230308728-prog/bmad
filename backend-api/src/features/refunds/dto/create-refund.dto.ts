@@ -21,7 +21,10 @@ export class CreateRefundDto {
   @Type(() => Number)
   orderId!: number;
 
-  @ApiProperty({ example: '行程有变，无法参加', description: '退款原因（简述）' })
+  @ApiProperty({
+    example: '行程有变，无法参加',
+    description: '退款原因（简述）',
+  })
   @IsNotEmpty({ message: '退款原因不能为空' })
   @IsString({ message: '退款原因必须是字符串' })
   @MaxLength(200, { message: '退款原因不能超过 200 个字符' })

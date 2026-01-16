@@ -114,7 +114,9 @@ describe('AdminOrdersController', () => {
     });
 
     it('should throw HttpException for invalid order ID', async () => {
-      await expect(controller.findOne(mockUser, 'invalid')).rejects.toThrow(HttpException);
+      await expect(controller.findOne(mockUser, 'invalid')).rejects.toThrow(
+        HttpException,
+      );
     });
   });
 
@@ -131,7 +133,11 @@ describe('AdminOrdersController', () => {
 
       expect(result).toHaveProperty('data');
       expect(result.data).toHaveProperty('message', '状态已更新');
-      expect(mockAdminOrdersService.updateStatus).toHaveBeenCalledWith(1, updateDto, 1);
+      expect(mockAdminOrdersService.updateStatus).toHaveBeenCalledWith(
+        1,
+        updateDto,
+        1,
+      );
     });
   });
 

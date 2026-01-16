@@ -14,7 +14,13 @@ import {
   Res,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -49,7 +55,8 @@ export class OrdersController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: '创建订单（提交预订信息）',
-    description: '家长提交预订信息创建订单，需要 PARENT 角色权限。验证产品存在性、库存、年龄范围后，使用 Redis 原子操作预扣库存并创建订单。',
+    description:
+      '家长提交预订信息创建订单，需要 PARENT 角色权限。验证产品存在性、库存、年龄范围后，使用 Redis 原子操作预扣库存并创建订单。',
   })
   @ApiHeader({
     name: 'Authorization',
@@ -81,7 +88,8 @@ export class OrdersController {
   })
   @ApiResponse({
     status: 400,
-    description: '请求参数验证失败（产品不存在或已下架、库存不足、年龄范围不符）',
+    description:
+      '请求参数验证失败（产品不存在或已下架、库存不足、年龄范围不符）',
   })
   @ApiResponse({
     status: 401,
@@ -95,7 +103,10 @@ export class OrdersController {
     status: 500,
     description: '服务器内部错误（订单创建失败，已回滚库存）',
   })
-  async create(@CurrentUser() user: CurrentUserType, @Body() createOrderDto: CreateOrderDto) {
+  async create(
+    @CurrentUser() user: CurrentUserType,
+    @Body() createOrderDto: CreateOrderDto,
+  ) {
     try {
       this.logger.log(
         `Creating order for user ${user.id}: productId=${createOrderDto.productId}`,
@@ -105,10 +116,7 @@ export class OrdersController {
 
       return { data: result };
     } catch (error) {
-      this.logger.error(
-        `Failed to create order for user ${user.id}:`,
-        error,
-      );
+      this.logger.error(`Failed to create order for user ${user.id}:`, error);
       throw error;
     }
   }
@@ -179,7 +187,8 @@ export class OrdersController {
   })
   @ApiResponse({
     status: 400,
-    description: '请求参数验证失败（page、pageSize、status、sortBy、sortOrder 无效）',
+    description:
+      '请求参数验证失败（page、pageSize、status、sortBy、sortOrder 无效）',
   })
   @ApiResponse({
     status: 401,
@@ -193,7 +202,10 @@ export class OrdersController {
     status: 500,
     description: '服务器内部错误',
   })
-  async findAll(@CurrentUser() user: CurrentUserType, @Query() queryDto: QueryOrdersDto) {
+  async findAll(
+    @CurrentUser() user: CurrentUserType,
+    @Query() queryDto: QueryOrdersDto,
+  ) {
     try {
       this.logger.log(
         `Querying orders for user ${user.id}: page=${queryDto.page}, pageSize=${queryDto.pageSize}, status=${queryDto.status}`,
@@ -203,10 +215,7 @@ export class OrdersController {
 
       return result;
     } catch (error) {
-      this.logger.error(
-        `Failed to query orders for user ${user.id}:`,
-        error,
-      );
+      this.logger.error(`Failed to query orders for user ${user.id}:`, error);
       throw error;
     }
   }
@@ -434,7 +443,8 @@ export class OrdersController {
       );
 
       // 检查频率限制
-      const isRateLimited = await this.ordersService.checkPaymentQueryRateLimit(orderId);
+      const isRateLimited =
+        await this.ordersService.checkPaymentQueryRateLimit(orderId);
 
       if (isRateLimited) {
         // 添加 Retry-After 响应头（60 秒后可重试）
@@ -445,7 +455,10 @@ export class OrdersController {
         );
       }
 
-      const result = await this.ordersService.checkPaymentStatus(orderId, user.id);
+      const result = await this.ordersService.checkPaymentStatus(
+        orderId,
+        user.id,
+      );
 
       return { data: result };
     } catch (error) {

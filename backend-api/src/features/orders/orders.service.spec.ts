@@ -148,8 +148,14 @@ describe('OrdersService', () => {
         title: '上海科技馆探索之旅',
         images: ['https://example.com/image.jpg'],
       });
-      expect(mockCacheService.setStock).toHaveBeenCalledWith('product:stock:1', 50);
-      expect(mockCacheService.decrby).toHaveBeenCalledWith('product:stock:1', 2);
+      expect(mockCacheService.setStock).toHaveBeenCalledWith(
+        'product:stock:1',
+        50,
+      );
+      expect(mockCacheService.decrby).toHaveBeenCalledWith(
+        'product:stock:1',
+        2,
+      );
     });
 
     it('should throw NotFoundException when product does not exist', async () => {
@@ -216,7 +222,10 @@ describe('OrdersService', () => {
       await expect(service.create(1, createOrderDto)).rejects.toThrow(
         new BadRequestException('库存不足，请选择其他日期或产品'),
       );
-      expect(mockCacheService.incrby).toHaveBeenCalledWith('product:stock:1', 2);
+      expect(mockCacheService.incrby).toHaveBeenCalledWith(
+        'product:stock:1',
+        2,
+      );
     });
 
     it('should rollback Redis stock when transaction fails', async () => {
@@ -225,10 +234,17 @@ describe('OrdersService', () => {
       mockCacheService.setStock.mockResolvedValue(undefined);
       mockCacheService.decrby.mockResolvedValue(48);
       // Mock transaction failure
-      mockPrismaService.$transaction.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.$transaction.mockRejectedValue(
+        new Error('Database error'),
+      );
 
-      await expect(service.create(1, createOrderDto)).rejects.toThrow('Database error');
-      expect(mockCacheService.incrby).toHaveBeenCalledWith('product:stock:1', 2);
+      await expect(service.create(1, createOrderDto)).rejects.toThrow(
+        'Database error',
+      );
+      expect(mockCacheService.incrby).toHaveBeenCalledWith(
+        'product:stock:1',
+        2,
+      );
     });
 
     it('should use existing Redis stock value when already initialized', async () => {
@@ -321,7 +337,9 @@ describe('OrdersService', () => {
     };
 
     it('should throw NotFoundException when order does not exist', async () => {
-      (mockPrismaService as any).order = { findFirst: jest.fn().mockResolvedValue(null) };
+      (mockPrismaService as any).order = {
+        findFirst: jest.fn().mockResolvedValue(null),
+      };
 
       await expect(service.checkPaymentStatus(1, 1)).rejects.toThrow(
         new NotFoundException('订单不存在'),
@@ -330,10 +348,14 @@ describe('OrdersService', () => {
 
     it('should throw ForbiddenException when order does not belong to user', async () => {
       (mockPrismaService as any).order = {
-        findFirst: jest.fn().mockResolvedValue({ ...mockOrderWithItems, userId: 2 }),
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ ...mockOrderWithItems, userId: 2 }),
       };
 
-      await expect(service.checkPaymentStatus(1, 1)).rejects.toThrow('无权访问此订单');
+      await expect(service.checkPaymentStatus(1, 1)).rejects.toThrow(
+        '无权访问此订单',
+      );
     });
 
     it('should return PAID status when order is already paid', async () => {
@@ -410,7 +432,10 @@ describe('OrdersService', () => {
 
       expect(result.status).toBe('CANCELLED');
       expect(result.message).toBe('支付已关闭');
-      expect(mockCacheService.incrby).toHaveBeenCalledWith('product:stock:10', 1);
+      expect(mockCacheService.incrby).toHaveBeenCalledWith(
+        'product:stock:10',
+        1,
+      );
     });
 
     it('should query WeChat Pay API, update order to PAID for SUCCESS status', async () => {
@@ -453,7 +478,9 @@ describe('OrdersService', () => {
       (mockPrismaService as any).order = {
         findFirst: jest.fn().mockResolvedValue(mockOrderWithItems),
       };
-      mockWechatPayService.queryOrder.mockRejectedValue(new Error('WeChat API error'));
+      mockWechatPayService.queryOrder.mockRejectedValue(
+        new Error('WeChat API error'),
+      );
 
       const result = await service.checkPaymentStatus(1, 1);
 
@@ -568,7 +595,10 @@ describe('OrdersService', () => {
       expect(result.pageSize).toBe(20);
       expect(result.data[0]).toHaveProperty('id', 1);
       expect(result.data[0]).toHaveProperty('orderNo', 'ORD20240114123456789');
-      expect(result.data[0]).toHaveProperty('productName', '上海科技馆探索之旅');
+      expect(result.data[0]).toHaveProperty(
+        'productName',
+        '上海科技馆探索之旅',
+      );
     });
 
     it('should filter orders by status', async () => {
@@ -577,7 +607,11 @@ describe('OrdersService', () => {
         count: jest.fn().mockResolvedValue(1),
       };
 
-      const result = await service.findAll(1, { page: 1, pageSize: 20, status: OrderStatus.PAID });
+      const result = await service.findAll(1, {
+        page: 1,
+        pageSize: 20,
+        status: OrderStatus.PAID,
+      });
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].status).toBe('PAID');
@@ -629,7 +663,12 @@ describe('OrdersService', () => {
         count: jest.fn().mockResolvedValue(2),
       };
 
-      await service.findAll(1, { page: 1, pageSize: 20, sortBy: 'totalAmount', sortOrder: 'asc' });
+      await service.findAll(1, {
+        page: 1,
+        pageSize: 20,
+        sortBy: 'totalAmount',
+        sortOrder: 'asc',
+      });
 
       expect((mockPrismaService as any).order.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -733,7 +772,7 @@ describe('OrdersService', () => {
           {
             id: 1,
             refundNo: 'REF20240114123456789',
-            refundAmount: new Prisma.Decimal(299),
+            amount: new Prisma.Decimal(299),
             reason: '家长原因退款',
             status: 'PENDING',
             createdAt: new Date('2024-01-14T14:00:00Z'),
@@ -747,7 +786,10 @@ describe('OrdersService', () => {
       const result = await service.findOne(1, 1);
 
       expect(result.refunds).toHaveLength(1);
-      expect(result.refunds[0]).toHaveProperty('refundNo', 'REF20240114123456789');
+      expect(result.refunds[0]).toHaveProperty(
+        'refundNo',
+        'REF20240114123456789',
+      );
     });
 
     it('should mask phone number correctly', async () => {

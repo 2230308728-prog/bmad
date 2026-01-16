@@ -16,7 +16,7 @@ import { Type } from 'class-transformer';
  * 自定义验证器装饰器工厂函数
  */
 export function MaxPriceGreaterThanMin(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'maxPriceGreaterThanMin',
       target: object.constructor,
@@ -48,7 +48,7 @@ export function MaxPriceGreaterThanMin(validationOptions?: ValidationOptions) {
  * 自定义验证器装饰器工厂函数
  */
 export function MaxAgeGreaterThanMin(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'maxAgeGreaterThanMin',
       target: object.constructor,

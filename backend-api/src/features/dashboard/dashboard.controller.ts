@@ -9,15 +9,26 @@ import {
   HttpStatus,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { DashboardService } from './dashboard.service';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { CurrentUser, type CurrentUserType } from '@/common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type CurrentUserType,
+} from '@/common/decorators/current-user.decorator';
 import { OverviewResponseDto } from './dto/overview-response.dto';
-import { OrdersTrendQueryDto, OrdersTrendResponseDto } from './dto/orders-trend-query.dto';
+import {
+  OrdersTrendQueryDto,
+  OrdersTrendResponseDto,
+} from './dto/orders-trend-query.dto';
 import { UsersTrendResponseDto } from './dto/users-trend-response.dto';
 import { RevenueBreakdownResponseDto } from './dto/revenue-breakdown-response.dto';
 import { PopularProductsResponseDto } from './dto/popular-products-response.dto';
@@ -86,7 +97,9 @@ export class DashboardController {
     status: 403,
     description: '权限不足（需要 ADMIN 角色）',
   })
-  async getOverview(@CurrentUser() user: CurrentUserType): Promise<{ data: OverviewResponseDto }> {
+  async getOverview(
+    @CurrentUser() user: CurrentUserType,
+  ): Promise<{ data: OverviewResponseDto }> {
     try {
       this.logger.log(`Admin ${user.id} querying dashboard overview`);
       const result = await this.dashboardService.getOverview();
@@ -135,7 +148,10 @@ export class DashboardController {
     @Query(ValidationPipe) query: OrdersTrendQueryDto,
   ): Promise<{ data: OrdersTrendResponseDto }> {
     try {
-      this.logger.log(`Admin ${user.id} querying orders trend with params:`, query);
+      this.logger.log(
+        `Admin ${user.id} querying orders trend with params:`,
+        query,
+      );
       const result = await this.dashboardService.getOrdersTrend(query);
       return { data: result as OrdersTrendResponseDto };
     } catch (error) {
@@ -177,7 +193,10 @@ export class DashboardController {
     @Query(ValidationPipe) query: OrdersTrendQueryDto,
   ): Promise<{ data: UsersTrendResponseDto }> {
     try {
-      this.logger.log(`Admin ${user.id} querying users trend with params:`, query);
+      this.logger.log(
+        `Admin ${user.id} querying users trend with params:`,
+        query,
+      );
       const result = await this.dashboardService.getUsersTrend(query);
       return { data: result as UsersTrendResponseDto };
     } catch (error) {
@@ -218,7 +237,9 @@ export class DashboardController {
     status: 403,
     description: '权限不足（需要 ADMIN 角色）',
   })
-  async getRevenueBreakdown(@CurrentUser() user: CurrentUserType): Promise<{ data: RevenueBreakdownResponseDto }> {
+  async getRevenueBreakdown(
+    @CurrentUser() user: CurrentUserType,
+  ): Promise<{ data: RevenueBreakdownResponseDto }> {
     try {
       this.logger.log(`Admin ${user.id} querying revenue breakdown`);
       const result = await this.dashboardService.getRevenueBreakdown();
@@ -287,7 +308,10 @@ export class DashboardController {
     @Query(ValidationPipe) query: PopularProductsQueryDto,
   ): Promise<{ data: PopularProductsResponseDto }> {
     try {
-      this.logger.log(`Admin ${user.id} querying popular products with params:`, query);
+      this.logger.log(
+        `Admin ${user.id} querying popular products with params:`,
+        query,
+      );
       const result = await this.dashboardService.getPopularProducts(query);
       return { data: result as PopularProductsResponseDto };
     } catch (error) {
@@ -352,7 +376,10 @@ export class DashboardController {
     @Query(ValidationPipe) query: ConversionFunnelQueryDto,
   ): Promise<{ data: ConversionFunnelResponseDto }> {
     try {
-      this.logger.log(`Admin ${user.id} querying conversion funnel with params:`, query);
+      this.logger.log(
+        `Admin ${user.id} querying conversion funnel with params:`,
+        query,
+      );
       const result = await this.dashboardService.getConversionFunnel(query);
       return { data: result as ConversionFunnelResponseDto };
     } catch (error) {
@@ -487,8 +514,12 @@ export class DashboardController {
     @Param('id') productId: string,
   ): Promise<{ data: ProductPerformanceResponseDto }> {
     try {
-      this.logger.log(`Admin ${user.id} querying product performance for: ${productId}`);
-      const result = await this.dashboardService.getProductPerformance(parseInt(productId, 10));
+      this.logger.log(
+        `Admin ${user.id} querying product performance for: ${productId}`,
+      );
+      const result = await this.dashboardService.getProductPerformance(
+        parseInt(productId, 10),
+      );
       return { data: result as ProductPerformanceResponseDto };
     } catch (error) {
       this.logger.error(`Failed to query product performance:`, error);

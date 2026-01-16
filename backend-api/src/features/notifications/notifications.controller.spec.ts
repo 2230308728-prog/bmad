@@ -122,9 +122,9 @@ describe('NotificationsController', () => {
       const result = await controller.getNotificationPreferences(mockRequest);
 
       expect(result).toEqual(mockPreference);
-      expect(
-        mockNotificationsService.getUserSubscription,
-      ).toHaveBeenCalledWith(1);
+      expect(mockNotificationsService.getUserSubscription).toHaveBeenCalledWith(
+        1,
+      );
     });
   });
 

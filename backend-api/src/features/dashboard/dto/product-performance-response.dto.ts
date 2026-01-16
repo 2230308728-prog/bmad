@@ -30,10 +30,16 @@ export class ProductPerformanceStatsDto {
  * 产品趋势数据
  */
 export class ProductTrendDto {
-  @ApiProperty({ description: '最近7天每日订单数', example: [15, 20, 18, 25, 22, 30, 28] })
+  @ApiProperty({
+    description: '最近7天每日订单数',
+    example: [15, 20, 18, 25, 22, 30, 28],
+  })
   last7Days: number[];
 
-  @ApiProperty({ description: '最近30天每周订单数', example: [100, 120, 110, 130, 125, 140, 135] })
+  @ApiProperty({
+    description: '最近30天每周订单数',
+    example: [100, 120, 110, 130, 125, 140, 135],
+  })
   last30Days: number[];
 }
 

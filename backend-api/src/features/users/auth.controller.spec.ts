@@ -92,37 +92,66 @@ describe('AuthController', () => {
         refreshToken: mockNewRefreshToken,
       });
 
-      expect(mockAuthService.validateRefreshToken).toHaveBeenCalledWith(mockRefreshToken);
-      expect(mockUsersService.isRefreshTokenBlacklisted).toHaveBeenCalledWith(mockRefreshToken);
-      expect(mockUsersService.validateRefreshToken).toHaveBeenCalledWith(1, mockRefreshToken);
+      expect(mockAuthService.validateRefreshToken).toHaveBeenCalledWith(
+        mockRefreshToken,
+      );
+      expect(mockUsersService.isRefreshTokenBlacklisted).toHaveBeenCalledWith(
+        mockRefreshToken,
+      );
+      expect(mockUsersService.validateRefreshToken).toHaveBeenCalledWith(
+        1,
+        mockRefreshToken,
+      );
       expect(mockUsersService.findById).toHaveBeenCalledWith(1);
-      expect(mockAuthService.generateTokens).toHaveBeenCalledWith(1, Role.ADMIN);
-      expect(mockUsersService.addRefreshTokenToBlacklist).toHaveBeenCalledWith(mockRefreshToken, 604800);
-      expect(mockUsersService.saveRefreshToken).toHaveBeenCalledWith(1, mockNewRefreshToken, 604800);
+      expect(mockAuthService.generateTokens).toHaveBeenCalledWith(
+        1,
+        Role.ADMIN,
+      );
+      expect(mockUsersService.addRefreshTokenToBlacklist).toHaveBeenCalledWith(
+        mockRefreshToken,
+        604800,
+      );
+      expect(mockUsersService.saveRefreshToken).toHaveBeenCalledWith(
+        1,
+        mockNewRefreshToken,
+        604800,
+      );
     });
 
     it('should throw UnauthorizedException if refresh token is blacklisted', async () => {
       mockUsersService.isRefreshTokenBlacklisted.mockResolvedValue(true);
       const refreshTokenDto = { refreshToken: mockRefreshToken };
 
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(UnauthorizedException);
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow('刷新令牌已失效');
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        '刷新令牌已失效',
+      );
     });
 
     it('should throw UnauthorizedException if refresh token session is invalid', async () => {
       mockUsersService.validateRefreshToken.mockResolvedValue(false);
       const refreshTokenDto = { refreshToken: mockRefreshToken };
 
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(UnauthorizedException);
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow('刷新令牌无效');
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        '刷新令牌无效',
+      );
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
       mockUsersService.findById.mockResolvedValue(null);
       const refreshTokenDto = { refreshToken: mockRefreshToken };
 
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(UnauthorizedException);
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow('用户不存在');
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        '用户不存在',
+      );
     });
 
     it('should throw ForbiddenException if user is disabled', async () => {
@@ -130,15 +159,23 @@ describe('AuthController', () => {
       mockUsersService.findById.mockResolvedValue(disabledUser);
       const refreshTokenDto = { refreshToken: mockRefreshToken };
 
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(ForbiddenException);
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow('用户账号已被禁用');
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        '用户账号已被禁用',
+      );
     });
 
     it('should throw UnauthorizedException on validation error', async () => {
-      mockAuthService.validateRefreshToken.mockRejectedValue(new Error('Invalid token'));
+      mockAuthService.validateRefreshToken.mockRejectedValue(
+        new Error('Invalid token'),
+      );
       const refreshTokenDto = { refreshToken: mockRefreshToken };
 
-      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.refresh(refreshTokenDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -157,7 +194,10 @@ describe('AuthController', () => {
     it('should successfully logout user', async () => {
       await controller.logout(mockUser, mockRequest);
 
-      expect(mockUsersService.addAccessTokenToBlacklist).toHaveBeenCalledWith('mock_access_token', 900);
+      expect(mockUsersService.addAccessTokenToBlacklist).toHaveBeenCalledWith(
+        'mock_access_token',
+        900,
+      );
       expect(mockUsersService.deleteUserRefreshTokens).toHaveBeenCalledWith(1);
     });
 
@@ -166,8 +206,12 @@ describe('AuthController', () => {
         headers: {},
       };
 
-      await expect(controller.logout(mockUser, requestWithoutAuth)).rejects.toThrow(UnauthorizedException);
-      await expect(controller.logout(mockUser, requestWithoutAuth)).rejects.toThrow('缺少认证令牌');
+      await expect(
+        controller.logout(mockUser, requestWithoutAuth),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        controller.logout(mockUser, requestWithoutAuth),
+      ).rejects.toThrow('缺少认证令牌');
     });
 
     it('should return success message', async () => {

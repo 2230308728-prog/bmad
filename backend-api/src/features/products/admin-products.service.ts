@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { ProductsService } from './products.service';
 import { OssService } from '../../oss/oss.service';
@@ -12,7 +17,9 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * 产品类型定义 - 用于方法返回值
  */
-type ProductWithCategory = Prisma.ProductGetPayload<{ include: { category: true } }>;
+type ProductWithCategory = Prisma.ProductGetPayload<{
+  include: { category: true };
+}>;
 
 /**
  * 带 lowStock 标志的产品类型
@@ -38,6 +45,79 @@ export class AdminProductsService {
   ) {}
 
   /**
+   * 查询产品列表（管理员视角）
+   * @param query 查询参数
+   * @returns 分页产品列表（包含所有状态的产品）
+   */
+  async findAll(query: {
+    page?: any;
+    pageSize?: any;
+    status?: ProductStatus;
+    categoryId?: any;
+    keyword?: string;
+  }) {
+    // Convert string query parameters to integers
+    const page = parseInt(query.page) || 1;
+    const pageSize = Math.min(parseInt(query.pageSize) || 20, 50); // Max 50 per page
+    const categoryId = query.categoryId
+      ? parseInt(query.categoryId)
+      : undefined;
+    const { status, keyword } = query;
+
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+
+    // 构建 WHERE 条件
+    const where: Prisma.ProductWhereInput = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
+
+    if (keyword) {
+      where.OR = [
+        { title: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+        { location: { contains: keyword, mode: 'insensitive' } },
+      ];
+    }
+
+    // 查询产品总数和数据
+    const [total, products] = await Promise.all([
+      this.prisma.product.count({ where }),
+      this.prisma.product.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          category: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+    ]);
+
+    // 转换价格格式
+    const data = products.map((product) => ({
+      ...product,
+      price: product.price.toFixed(2),
+      originalPrice: product.originalPrice?.toFixed(2) || null,
+    }));
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  /**
    * 创建产品
    * @param createProductDto 创建产品 DTO
    * @returns 创建的产品
@@ -51,7 +131,9 @@ export class AdminProductsService {
     });
 
     if (!category) {
-      throw new NotFoundException(`分类 ID ${createProductDto.categoryId} 不存在`);
+      throw new NotFoundException(
+        `分类 ID ${createProductDto.categoryId} 不存在`,
+      );
     }
 
     // 验证价格和库存
@@ -64,12 +146,18 @@ export class AdminProductsService {
     }
 
     // 验证原价大于现价
-    if (createProductDto.originalPrice !== undefined && createProductDto.originalPrice < createProductDto.price) {
+    if (
+      createProductDto.originalPrice !== undefined &&
+      createProductDto.originalPrice < createProductDto.price
+    ) {
       throw new BadRequestException('原价必须大于等于现价');
     }
 
     // 验证年龄范围
-    if (createProductDto.minAge !== undefined && createProductDto.maxAge !== undefined) {
+    if (
+      createProductDto.minAge !== undefined &&
+      createProductDto.maxAge !== undefined
+    ) {
       if (createProductDto.maxAge < createProductDto.minAge) {
         throw new BadRequestException('最大年龄不能小于最小年龄');
       }
@@ -139,7 +227,9 @@ export class AdminProductsService {
       });
 
       if (!category) {
-        throw new NotFoundException(`分类 ID ${updateProductDto.categoryId} 不存在`);
+        throw new NotFoundException(
+          `分类 ID ${updateProductDto.categoryId} 不存在`,
+        );
       }
     }
 
@@ -150,7 +240,10 @@ export class AdminProductsService {
 
     // 如果更新原价，验证原价大于现价
     const currentPrice = updateProductDto.price ?? existingProduct.price;
-    if (updateProductDto.originalPrice !== undefined && updateProductDto.originalPrice < Number(currentPrice)) {
+    if (
+      updateProductDto.originalPrice !== undefined &&
+      updateProductDto.originalPrice < Number(currentPrice)
+    ) {
       throw new BadRequestException('原价必须大于等于现价');
     }
 
@@ -167,27 +260,42 @@ export class AdminProductsService {
     }
 
     // 验证图片数量（最多 10 张）
-    if (updateProductDto.images !== undefined && updateProductDto.images.length > 10) {
+    if (
+      updateProductDto.images !== undefined &&
+      updateProductDto.images.length > 10
+    ) {
       throw new BadRequestException('产品最多支持 10 张图片');
     }
 
     // 构建更新数据（只包含提供的字段，防止清空非空字段）
     const updateData: Prisma.ProductUpdateInput = {};
-    if (updateProductDto.title !== undefined) updateData.title = updateProductDto.title;
-    if (updateProductDto.description !== undefined) updateData.description = updateProductDto.description;
+    if (updateProductDto.title !== undefined)
+      updateData.title = updateProductDto.title;
+    if (updateProductDto.description !== undefined)
+      updateData.description = updateProductDto.description;
     if (updateProductDto.categoryId !== undefined) {
       updateData.category = { connect: { id: updateProductDto.categoryId } };
     }
-    if (updateProductDto.price !== undefined) updateData.price = updateProductDto.price;
-    if (updateProductDto.originalPrice !== undefined) updateData.originalPrice = updateProductDto.originalPrice;
-    if (updateProductDto.stock !== undefined) updateData.stock = updateProductDto.stock;
-    if (updateProductDto.minAge !== undefined) updateData.minAge = updateProductDto.minAge;
-    if (updateProductDto.maxAge !== undefined) updateData.maxAge = updateProductDto.maxAge;
-    if (updateProductDto.duration !== undefined) updateData.duration = updateProductDto.duration;
-    if (updateProductDto.location !== undefined) updateData.location = updateProductDto.location;
-    if (updateProductDto.images !== undefined) updateData.images = updateProductDto.images;
-    if (updateProductDto.featured !== undefined) updateData.featured = updateProductDto.featured;
-    if (updateProductDto.status !== undefined) updateData.status = updateProductDto.status;
+    if (updateProductDto.price !== undefined)
+      updateData.price = updateProductDto.price;
+    if (updateProductDto.originalPrice !== undefined)
+      updateData.originalPrice = updateProductDto.originalPrice;
+    if (updateProductDto.stock !== undefined)
+      updateData.stock = updateProductDto.stock;
+    if (updateProductDto.minAge !== undefined)
+      updateData.minAge = updateProductDto.minAge;
+    if (updateProductDto.maxAge !== undefined)
+      updateData.maxAge = updateProductDto.maxAge;
+    if (updateProductDto.duration !== undefined)
+      updateData.duration = updateProductDto.duration;
+    if (updateProductDto.location !== undefined)
+      updateData.location = updateProductDto.location;
+    if (updateProductDto.images !== undefined)
+      updateData.images = updateProductDto.images;
+    if (updateProductDto.featured !== undefined)
+      updateData.featured = updateProductDto.featured;
+    if (updateProductDto.status !== undefined)
+      updateData.status = updateProductDto.status;
 
     // 更新产品
     const product = await this.prisma.product.update({
@@ -241,8 +349,13 @@ export class AdminProductsService {
       hasOrders = (orderCount as any)[0]?.count > 0;
     } catch (error: any) {
       // 只在表不存在时继续执行，其他错误重新抛出
-      if (error.message && error.message.includes('relation "orders" does not exist')) {
-        this.logger.debug('Orders table does not exist yet, skipping order check');
+      if (
+        error.message &&
+        error.message.includes('relation "orders" does not exist')
+      ) {
+        this.logger.debug(
+          'Orders table does not exist yet, skipping order check',
+        );
       } else {
         this.logger.warn(`Unexpected error checking orders: ${error.message}`);
         throw error;
@@ -275,7 +388,9 @@ export class AdminProductsService {
    * @returns 更新后的产品
    */
   async updateStatus(id: number, updateStatusDto: UpdateProductStatusDto) {
-    this.logger.log(`Updating product status: ${id} -> ${updateStatusDto.status}`);
+    this.logger.log(
+      `Updating product status: ${id} -> ${updateStatusDto.status}`,
+    );
 
     // 验证产品存在
     const product = await this.prisma.product.findUnique({
@@ -287,7 +402,10 @@ export class AdminProductsService {
     }
 
     // 验证状态转换合法性：不允许从 PUBLISHED 直接变为 DRAFT
-    if (product.status === ProductStatus.PUBLISHED && updateStatusDto.status === ProductStatus.DRAFT) {
+    if (
+      product.status === ProductStatus.PUBLISHED &&
+      updateStatusDto.status === ProductStatus.DRAFT
+    ) {
       throw new BadRequestException('不允许从已发布状态直接变为草稿状态');
     }
 
@@ -304,7 +422,9 @@ export class AdminProductsService {
       },
     });
 
-    this.logger.log(`Product status updated successfully: ${id} -> ${updateStatusDto.status}`);
+    this.logger.log(
+      `Product status updated successfully: ${id} -> ${updateStatusDto.status}`,
+    );
 
     // 清除产品缓存
     await this.productsService.clearProductsCache();
@@ -323,8 +443,13 @@ export class AdminProductsService {
    * @param updateStockDto 更新库存 DTO
    * @returns 更新后的产品（含 lowStock 标志）
    */
-  async updateStock(id: number, updateStockDto: UpdateProductStockDto): Promise<ProductWithLowStock> {
-    this.logger.log(`Updating product stock: ${id} -> ${updateStockDto.stock} (reason: ${updateStockDto.reason || 'N/A'})`);
+  async updateStock(
+    id: number,
+    updateStockDto: UpdateProductStockDto,
+  ): Promise<ProductWithLowStock> {
+    this.logger.log(
+      `Updating product stock: ${id} -> ${updateStockDto.stock} (reason: ${updateStockDto.reason || 'N/A'})`,
+    );
 
     // 验证产品存在
     const product = await this.prisma.product.findUnique({
@@ -373,10 +498,14 @@ export class AdminProductsService {
     // 检查库存是否 < 10，记录警告日志
     const lowStock = updatedProduct.stock < 10;
     if (lowStock) {
-      this.logger.warn(`⚠️ Low stock warning: Product ${id} (${updatedProduct.title}) has ${updatedProduct.stock} units left`);
+      this.logger.warn(
+        `⚠️ Low stock warning: Product ${id} (${updatedProduct.title}) has ${updatedProduct.stock} units left`,
+      );
     }
 
-    this.logger.log(`Product stock updated successfully: ${id} (${oldStock} -> ${updateStockDto.stock})`);
+    this.logger.log(
+      `Product stock updated successfully: ${id} (${oldStock} -> ${updateStockDto.stock})`,
+    );
 
     // 清除产品缓存
     await this.productsService.clearProductsCache();
@@ -435,7 +564,9 @@ export class AdminProductsService {
 
     // 验证文件类型（已通过 DTO 验证，这里额外确保）
     if (!this.ossService.validateFileType(fileName)) {
-      throw new BadRequestException('文件类型必须是以下之一: jpg, jpeg, png, webp');
+      throw new BadRequestException(
+        '文件类型必须是以下之一: jpg, jpeg, png, webp',
+      );
     }
 
     // 生成唯一文件名（使用 UUID + 日期路径）
@@ -446,7 +577,9 @@ export class AdminProductsService {
     const ext = fileName.split('.').pop();
     // 防御性检查：确保文件扩展名存在
     if (!ext || ext === fileName) {
-      throw new BadRequestException('文件名必须包含有效的扩展名（如 .jpg, .png）');
+      throw new BadRequestException(
+        '文件名必须包含有效的扩展名（如 .jpg, .png）',
+      );
     }
     const uniqueFileName = `products/${year}/${month}/${day}/${uuidv4()}.${ext}`;
 

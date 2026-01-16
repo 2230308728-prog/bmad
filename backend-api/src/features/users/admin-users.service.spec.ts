@@ -340,7 +340,9 @@ describe('AdminUsersService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.updateStatus(999, updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.updateStatus(999, updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when status is same', async () => {
@@ -353,7 +355,9 @@ describe('AdminUsersService', () => {
         status: UserStatus.ACTIVE,
       });
 
-      await expect(service.updateStatus(1, updateDto)).rejects.toThrow(BadRequestException);
+      await expect(service.updateStatus(1, updateDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -412,7 +416,11 @@ describe('AdminUsersService', () => {
         weekRegistered: 120,
         monthRegistered: 450,
       });
-      expect(mockCacheService.set).toHaveBeenCalledWith('user:stats', expect.any(Object), 300);
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        'user:stats',
+        expect.any(Object),
+        300,
+      );
     });
   });
 
@@ -520,7 +528,9 @@ describe('AdminUsersService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.findUserOrders(999, { page: 1, pageSize: 20 })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.findUserOrders(999, { page: 1, pageSize: 20 }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when date range is invalid', async () => {
@@ -533,7 +543,9 @@ describe('AdminUsersService', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
 
-      await expect(service.findUserOrders(1, queryDto)).rejects.toThrow(BadRequestException);
+      await expect(service.findUserOrders(1, queryDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -543,7 +555,9 @@ describe('AdminUsersService', () => {
       mockCacheService.get.mockResolvedValue(null);
       mockPrismaService.order.findMany
         .mockResolvedValueOnce([{ id: 1, createdAt: new Date('2024-01-01') }]) // allOrders
-        .mockResolvedValueOnce([{ actualAmount: { toString: () => '299.00' } }]); // paidOrders
+        .mockResolvedValueOnce([
+          { actualAmount: { toString: () => '299.00' } },
+        ]); // paidOrders
       mockPrismaService.order.findFirst
         .mockResolvedValueOnce({ createdAt: new Date('2024-01-01') }) // firstOrder
         .mockResolvedValueOnce({ createdAt: new Date('2024-01-31') }); // lastOrder
@@ -551,8 +565,16 @@ describe('AdminUsersService', () => {
         { status: OrderStatus.PAID, _count: 1 },
       ]);
       mockPrismaService.$queryRaw
-        .mockResolvedValueOnce([{ category_id: 1, category_name: '自然科学', order_count: BigInt(5) }])
-        .mockResolvedValueOnce([{ month: '2024-01', order_count: BigInt(10), total_amount: '2990.00' }]);
+        .mockResolvedValueOnce([
+          { category_id: 1, category_name: '自然科学', order_count: BigInt(5) },
+        ])
+        .mockResolvedValueOnce([
+          {
+            month: '2024-01',
+            order_count: BigInt(10),
+            total_amount: '2990.00',
+          },
+        ]);
       mockCacheService.set.mockResolvedValue(undefined);
 
       const result = await service.getUserOrderSummary(1);
@@ -612,7 +634,9 @@ describe('AdminUsersService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getUserOrderSummary(999)).rejects.toThrow(NotFoundException);
+      await expect(service.getUserOrderSummary(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should handle SQL query errors gracefully', async () => {
@@ -620,11 +644,15 @@ describe('AdminUsersService', () => {
       mockCacheService.get.mockResolvedValue(null);
       mockPrismaService.order.findMany
         .mockResolvedValueOnce([{ id: 1, createdAt: new Date('2024-01-01') }])
-        .mockResolvedValueOnce([{ actualAmount: { toString: () => '299.00' } }]);
+        .mockResolvedValueOnce([
+          { actualAmount: { toString: () => '299.00' } },
+        ]);
       mockPrismaService.order.findFirst
         .mockResolvedValueOnce({ createdAt: new Date('2024-01-01') })
         .mockResolvedValueOnce({ createdAt: new Date('2024-01-31') });
-      mockPrismaService.order.groupBy.mockResolvedValue([{ status: OrderStatus.PAID, _count: 1 }]);
+      mockPrismaService.order.groupBy.mockResolvedValue([
+        { status: OrderStatus.PAID, _count: 1 },
+      ]);
       mockPrismaService.$queryRaw.mockRejectedValue(new Error('SQL error'));
       mockCacheService.set.mockResolvedValue(undefined);
 
@@ -665,7 +693,9 @@ describe('AdminUsersService', () => {
     it('should throw NotFoundException when user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.findUserRefunds(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findUserRefunds(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should return empty array when user has no refunds', async () => {

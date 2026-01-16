@@ -224,10 +224,30 @@ describe('AdminIssuesService', () => {
       };
 
       const mockIssues = [
-        { ...mockIssue, id: 1, priority: IssuePriority.LOW, createdAt: new Date('2024-01-14') },
-        { ...mockIssue, id: 2, priority: IssuePriority.URGENT, createdAt: new Date('2024-01-14') },
-        { ...mockIssue, id: 3, priority: IssuePriority.MEDIUM, createdAt: new Date('2024-01-14') },
-        { ...mockIssue, id: 4, priority: IssuePriority.HIGH, createdAt: new Date('2024-01-14') },
+        {
+          ...mockIssue,
+          id: 1,
+          priority: IssuePriority.LOW,
+          createdAt: new Date('2024-01-14'),
+        },
+        {
+          ...mockIssue,
+          id: 2,
+          priority: IssuePriority.URGENT,
+          createdAt: new Date('2024-01-14'),
+        },
+        {
+          ...mockIssue,
+          id: 3,
+          priority: IssuePriority.MEDIUM,
+          createdAt: new Date('2024-01-14'),
+        },
+        {
+          ...mockIssue,
+          id: 4,
+          priority: IssuePriority.HIGH,
+          createdAt: new Date('2024-01-14'),
+        },
       ];
 
       mockPrismaService.userIssue.findMany.mockResolvedValue(mockIssues);
@@ -248,9 +268,24 @@ describe('AdminIssuesService', () => {
       };
 
       const mockIssues = [
-        { ...mockIssue, id: 1, priority: IssuePriority.HIGH, createdAt: new Date('2024-01-10') },
-        { ...mockIssue, id: 2, priority: IssuePriority.HIGH, createdAt: new Date('2024-01-15') },
-        { ...mockIssue, id: 3, priority: IssuePriority.HIGH, createdAt: new Date('2024-01-12') },
+        {
+          ...mockIssue,
+          id: 1,
+          priority: IssuePriority.HIGH,
+          createdAt: new Date('2024-01-10'),
+        },
+        {
+          ...mockIssue,
+          id: 2,
+          priority: IssuePriority.HIGH,
+          createdAt: new Date('2024-01-15'),
+        },
+        {
+          ...mockIssue,
+          id: 3,
+          priority: IssuePriority.HIGH,
+          createdAt: new Date('2024-01-12'),
+        },
       ];
 
       mockPrismaService.userIssue.findMany.mockResolvedValue(mockIssues);
@@ -314,16 +349,24 @@ describe('AdminIssuesService', () => {
     it('should throw NotFoundException if user does not exist', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.createIssue(createDto)).rejects.toThrow(NotFoundException);
-      await expect(service.createIssue(createDto)).rejects.toThrow('用户 1 不存在');
+      await expect(service.createIssue(createDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.createIssue(createDto)).rejects.toThrow(
+        '用户 1 不存在',
+      );
     });
 
     it('should throw NotFoundException if order does not exist', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.order.findUnique.mockResolvedValue(null);
 
-      await expect(service.createIssue(createDto)).rejects.toThrow(NotFoundException);
-      await expect(service.createIssue(createDto)).rejects.toThrow('订单 5 不存在');
+      await expect(service.createIssue(createDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.createIssue(createDto)).rejects.toThrow(
+        '订单 5 不存在',
+      );
     });
 
     it('should create issue without order', async () => {
@@ -394,8 +437,12 @@ describe('AdminIssuesService', () => {
     it('should throw NotFoundException if issue does not exist', async () => {
       mockPrismaService.userIssue.findUnique.mockResolvedValue(null);
 
-      await expect(service.updateIssueStatus(1, updateDto)).rejects.toThrow(NotFoundException);
-      await expect(service.updateIssueStatus(1, updateDto)).rejects.toThrow('问题 1 不存在');
+      await expect(service.updateIssueStatus(1, updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.updateIssueStatus(1, updateDto)).rejects.toThrow(
+        '问题 1 不存在',
+      );
     });
 
     it('should throw BadRequestException for invalid status transition', async () => {
@@ -408,8 +455,12 @@ describe('AdminIssuesService', () => {
         status: IssueStatus.IN_PROGRESS,
       };
 
-      await expect(service.updateIssueStatus(1, invalidUpdateDto)).rejects.toThrow(BadRequestException);
-      await expect(service.updateIssueStatus(1, invalidUpdateDto)).rejects.toThrow('非法的状态转换');
+      await expect(
+        service.updateIssueStatus(1, invalidUpdateDto),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.updateIssueStatus(1, invalidUpdateDto),
+      ).rejects.toThrow('非法的状态转换');
     });
 
     it('should throw BadRequestException when RESOLVED without resolution', async () => {
@@ -420,8 +471,12 @@ describe('AdminIssuesService', () => {
         status: IssueStatus.RESOLVED,
       };
 
-      await expect(service.updateIssueStatus(1, invalidUpdateDto)).rejects.toThrow(BadRequestException);
-      await expect(service.updateIssueStatus(1, invalidUpdateDto)).rejects.toThrow('必须提供解决方案');
+      await expect(
+        service.updateIssueStatus(1, invalidUpdateDto),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.updateIssueStatus(1, invalidUpdateDto),
+      ).rejects.toThrow('必须提供解决方案');
     });
 
     it('should throw BadRequestException when CLOSED without resolution', async () => {
@@ -431,8 +486,12 @@ describe('AdminIssuesService', () => {
         status: IssueStatus.CLOSED,
       };
 
-      await expect(service.updateIssueStatus(1, invalidUpdateDto)).rejects.toThrow(BadRequestException);
-      await expect(service.updateIssueStatus(1, invalidUpdateDto)).rejects.toThrow('必须提供解决方案');
+      await expect(
+        service.updateIssueStatus(1, invalidUpdateDto),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.updateIssueStatus(1, invalidUpdateDto),
+      ).rejects.toThrow('必须提供解决方案');
     });
 
     it('should set resolvedAt when status becomes RESOLVED', async () => {
@@ -563,8 +622,8 @@ describe('AdminIssuesService', () => {
       ]);
 
       mockPrismaService.userIssue.count
-        .mockResolvedValueOnce(3)   // todayCreated (first count call)
-        .mockResolvedValueOnce(50);  // total (second count call)
+        .mockResolvedValueOnce(3) // todayCreated (first count call)
+        .mockResolvedValueOnce(50); // total (second count call)
 
       const result = await service.getIssueStats();
 

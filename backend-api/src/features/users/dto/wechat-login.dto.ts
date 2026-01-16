@@ -1,4 +1,9 @@
-import { IsString, IsNotEmpty, IsOptional, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -20,7 +25,11 @@ export class WechatLoginDto {
   @IsNotEmpty({ message: 'code不能为空' })
   code!: string;
 
-  @ApiProperty({ required: false, type: WechatUserInfoDto, description: '微信用户信息' })
+  @ApiProperty({
+    required: false,
+    type: WechatUserInfoDto,
+    description: '微信用户信息',
+  })
   @ValidateNested()
   @Type(() => WechatUserInfoDto)
   @IsOptional()

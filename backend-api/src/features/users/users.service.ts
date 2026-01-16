@@ -1,4 +1,10 @@
-import { Injectable, ConflictException, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { UserSessionService } from './user-session.service';
@@ -210,7 +216,10 @@ export class UsersService {
    * @param refreshToken 刷新令牌
    * @returns 如果令牌匹配返回 true
    */
-  async validateRefreshToken(userId: number, refreshToken: string): Promise<boolean> {
+  async validateRefreshToken(
+    userId: number,
+    refreshToken: string,
+  ): Promise<boolean> {
     return this.userSessionService.validateRefreshToken(userId, refreshToken);
   }
 
@@ -219,7 +228,10 @@ export class UsersService {
    * @param refreshToken 刷新令牌
    * @param ttl 过期时间（秒）
    */
-  async addRefreshTokenToBlacklist(refreshToken: string, ttl: number): Promise<void> {
+  async addRefreshTokenToBlacklist(
+    refreshToken: string,
+    ttl: number,
+  ): Promise<void> {
     await this.tokenBlacklistService.addToRefreshBlacklist(refreshToken, ttl);
   }
 
@@ -229,7 +241,11 @@ export class UsersService {
    * @param refreshToken 刷新令牌
    * @param ttl 过期时间（秒）
    */
-  async saveRefreshToken(userId: number, refreshToken: string, ttl: number): Promise<void> {
+  async saveRefreshToken(
+    userId: number,
+    refreshToken: string,
+    ttl: number,
+  ): Promise<void> {
     await this.userSessionService.saveRefreshToken(userId, refreshToken, ttl);
   }
 
@@ -246,7 +262,10 @@ export class UsersService {
    * @param accessToken 访问令牌
    * @param ttl 过期时间（秒）
    */
-  async addAccessTokenToBlacklist(accessToken: string, ttl: number): Promise<void> {
+  async addAccessTokenToBlacklist(
+    accessToken: string,
+    ttl: number,
+  ): Promise<void> {
     await this.tokenBlacklistService.addToAccessBlacklist(accessToken, ttl);
   }
 }

@@ -64,12 +64,15 @@ describe('RefundsController', () => {
         appliedAt: '2024-01-14T12:00:00Z',
       };
 
-      (mockRefundsService.create as jest.Mock).mockResolvedValue(mockResult);
+      mockRefundsService.create.mockResolvedValue(mockResult);
 
       const result = await controller.create(mockUser, createRefundDto);
 
       expect(result).toEqual({ data: mockResult });
-      expect(mockRefundsService.create).toHaveBeenCalledWith(1, createRefundDto);
+      expect(mockRefundsService.create).toHaveBeenCalledWith(
+        1,
+        createRefundDto,
+      );
     });
   });
 
@@ -91,7 +94,7 @@ describe('RefundsController', () => {
         pageSize: 10,
       };
 
-      (mockRefundsService.findAll as jest.Mock).mockResolvedValue(mockResult);
+      mockRefundsService.findAll.mockResolvedValue(mockResult);
 
       const queryDto = new QueryRefundsDto();
       const result = await controller.findAll(mockUser, queryDto);
@@ -108,7 +111,7 @@ describe('RefundsController', () => {
         pageSize: 20,
       };
 
-      (mockRefundsService.findAll as jest.Mock).mockResolvedValue(mockResult);
+      mockRefundsService.findAll.mockResolvedValue(mockResult);
 
       const queryDto: QueryRefundsDto = { page: 2, pageSize: 20 };
       await controller.findAll(mockUser, queryDto);
@@ -146,7 +149,7 @@ describe('RefundsController', () => {
         },
       };
 
-      (mockRefundsService.findOne as jest.Mock).mockResolvedValue(mockResult);
+      mockRefundsService.findOne.mockResolvedValue(mockResult);
 
       const result = await controller.findOne(mockUser, 1);
 

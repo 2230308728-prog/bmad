@@ -25,7 +25,10 @@ export class CreateProductDto {
   @IsString({ message: '产品标题必须是字符串' })
   title!: string;
 
-  @ApiProperty({ example: '<p>精彩的科技探索之旅...</p>', description: '产品详细描述' })
+  @ApiProperty({
+    example: '<p>精彩的科技探索之旅...</p>',
+    description: '产品详细描述',
+  })
   @IsNotEmpty({ message: '产品描述不能为空' })
   @IsString({ message: '产品描述必须是字符串' })
   description!: string;
@@ -37,7 +40,7 @@ export class CreateProductDto {
   @Type(() => Number)
   categoryId!: number;
 
-  @ApiProperty({ example: 299.00, description: '产品价格' })
+  @ApiProperty({ example: 299.0, description: '产品价格' })
   @IsNotEmpty({ message: '产品价格不能为空' })
   @IsPositive({ message: '产品价格必须大于 0' })
   @Type(() => Number)
@@ -57,7 +60,11 @@ export class CreateProductDto {
 
   // 可选字段
 
-  @ApiProperty({ example: 399.00, description: '原价（用于展示优惠）', required: false })
+  @ApiProperty({
+    example: 399.0,
+    description: '原价（用于展示优惠）',
+    required: false,
+  })
   @IsOptional()
   @IsPositive({ message: '原价必须大于 0' })
   @Type(() => Number)
@@ -96,7 +103,12 @@ export class CreateProductDto {
   @IsBoolean({ message: '是否推荐必须是布尔值' })
   featured?: boolean;
 
-  @ApiProperty({ example: 'DRAFT', description: '产品状态', enum: ProductStatus, required: false })
+  @ApiProperty({
+    example: 'DRAFT',
+    description: '产品状态',
+    enum: ProductStatus,
+    required: false,
+  })
   @IsOptional()
   @IsEnum(ProductStatus, { message: '产品状态必须是有效的枚举值' })
   status?: ProductStatus;

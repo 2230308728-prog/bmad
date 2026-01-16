@@ -63,11 +63,45 @@ export class AdminRefundsController {
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiResponse({ status: 403, description: '权限不足（需要 ADMIN 角色）' })
   @ApiQuery({ name: 'page', required: false, example: 1, description: '页码' })
-  @ApiQuery({ name: 'pageSize', required: false, example: 20, description: '每页数量' })
-  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'APPROVED', 'REJECTED', 'PROCESSING', 'SUCCESS', 'FAILED', 'CANCELLED', 'COMPLETED'], description: '退款状态' })
-  @ApiQuery({ name: 'refundNo', required: false, example: 'REF20240114', description: '退款编号（部分匹配）' })
-  @ApiQuery({ name: 'startDate', required: false, example: '2024-01-01', description: '开始日期' })
-  @ApiQuery({ name: 'endDate', required: false, example: '2024-12-31', description: '结束日期' })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    example: 20,
+    description: '每页数量',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: [
+      'PENDING',
+      'APPROVED',
+      'REJECTED',
+      'PROCESSING',
+      'SUCCESS',
+      'FAILED',
+      'CANCELLED',
+      'COMPLETED',
+    ],
+    description: '退款状态',
+  })
+  @ApiQuery({
+    name: 'refundNo',
+    required: false,
+    example: 'REF20240114',
+    description: '退款编号（部分匹配）',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    example: '2024-01-01',
+    description: '开始日期',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    example: '2024-12-31',
+    description: '结束日期',
+  })
   async findAll(
     @Query(ValidationPipe) queryDto: AdminQueryRefundsDto,
   ): Promise<AdminPaginatedRefundsResponseDto> {
@@ -100,7 +134,8 @@ export class AdminRefundsController {
   @Get(':id')
   @ApiOperation({
     summary: '查询退款详情',
-    description: '管理员查询退款完整详情，包含所有用户、订单、支付记录信息（不脱敏）',
+    description:
+      '管理员查询退款完整详情，包含所有用户、订单、支付记录信息（不脱敏）',
   })
   @ApiParam({ name: 'id', example: 1, description: '退款 ID' })
   @ApiResponse({
@@ -123,7 +158,8 @@ export class AdminRefundsController {
   @Patch(':id/approve')
   @ApiOperation({
     summary: '批准退款',
-    description: '管理员批准退款申请，更新退款状态为 APPROVED，订单状态更新为 REFUNDED',
+    description:
+      '管理员批准退款申请，更新退款状态为 APPROVED，订单状态更新为 REFUNDED',
   })
   @ApiParam({ name: 'id', example: 1, description: '退款 ID' })
   @ApiResponse({
@@ -134,17 +170,16 @@ export class AdminRefundsController {
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiResponse({ status: 403, description: '权限不足（需要 ADMIN 角色）' })
   @ApiResponse({ status: 404, description: '退款记录不存在' })
-  @ApiResponse({ status: 400, description: '退款状态不允许批准（非 PENDING 状态）' })
+  @ApiResponse({
+    status: 400,
+    description: '退款状态不允许批准（非 PENDING 状态）',
+  })
   async approve(
     @Param('id', ParseIntPipe) id: number,
     @Body(ValidationPipe) approveDto: ApproveRefundDto,
     @CurrentUser() user: CurrentUserType,
   ): Promise<AdminRefundDetailResponseDto> {
-    return this.adminRefundsService.approve(
-      id,
-      approveDto.adminNote,
-      user.id,
-    );
+    return this.adminRefundsService.approve(id, approveDto.adminNote, user.id);
   }
 
   /**
@@ -153,7 +188,8 @@ export class AdminRefundsController {
   @Patch(':id/reject')
   @ApiOperation({
     summary: '拒绝退款',
-    description: '管理员拒绝退款申请，更新退款状态为 REJECTED，订单状态保持 PAID',
+    description:
+      '管理员拒绝退款申请，更新退款状态为 REJECTED，订单状态保持 PAID',
   })
   @ApiParam({ name: 'id', example: 1, description: '退款 ID' })
   @ApiResponse({
@@ -164,7 +200,10 @@ export class AdminRefundsController {
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiResponse({ status: 403, description: '权限不足（需要 ADMIN 角色）' })
   @ApiResponse({ status: 404, description: '退款记录不存在' })
-  @ApiResponse({ status: 400, description: '退款状态不允许拒绝（非 PENDING 状态）或拒绝原因未提供' })
+  @ApiResponse({
+    status: 400,
+    description: '退款状态不允许拒绝（非 PENDING 状态）或拒绝原因未提供',
+  })
   async reject(
     @Param('id', ParseIntPipe) id: number,
     @Body(ValidationPipe) rejectDto: RejectRefundDto,
@@ -195,7 +234,10 @@ export class AdminRefundsController {
   @ApiResponse({ status: 401, description: '未授权' })
   @ApiResponse({ status: 403, description: '权限不足（需要 ADMIN 角色）' })
   @ApiResponse({ status: 404, description: '退款记录不存在' })
-  @ApiResponse({ status: 400, description: '退款状态不允许重试（非 FAILED 状态）' })
+  @ApiResponse({
+    status: 400,
+    description: '退款状态不允许重试（非 FAILED 状态）',
+  })
   async retry(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: CurrentUserType,

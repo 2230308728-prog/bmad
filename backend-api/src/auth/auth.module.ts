@@ -19,7 +19,9 @@ import { UsersModule } from '@/features/users/users.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET');
-        const expiresIn = configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION');
+        const expiresIn = configService.get<string>(
+          'JWT_ACCESS_TOKEN_EXPIRATION',
+        );
 
         if (!secret) {
           throw new Error('JWT_SECRET environment variable is required');

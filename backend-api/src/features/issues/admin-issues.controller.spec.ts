@@ -228,7 +228,9 @@ describe('AdminIssuesController', () => {
       const result = await controller.create(mockUser, createDto);
 
       expect(result).toEqual({ data: mockIssue });
-      expect(mockAdminIssuesService.createIssue).toHaveBeenCalledWith(createDto);
+      expect(mockAdminIssuesService.createIssue).toHaveBeenCalledWith(
+        createDto,
+      );
     });
 
     it('should create issue without order', async () => {
@@ -249,7 +251,9 @@ describe('AdminIssuesController', () => {
 
       expect(result.data.orderId).toBeNull();
       expect(result.data.orderNo).toBeNull();
-      expect(mockAdminIssuesService.createIssue).toHaveBeenCalledWith(createDtoWithoutOrder);
+      expect(mockAdminIssuesService.createIssue).toHaveBeenCalledWith(
+        createDtoWithoutOrder,
+      );
     });
   });
 
@@ -272,7 +276,10 @@ describe('AdminIssuesController', () => {
       const result = await controller.updateStatus(mockUser, 1, updateDto);
 
       expect(result).toEqual({ data: updatedIssue });
-      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(1, updateDto);
+      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(
+        1,
+        updateDto,
+      );
     });
 
     it('should update to RESOLVED with resolution', async () => {
@@ -290,11 +297,18 @@ describe('AdminIssuesController', () => {
 
       mockAdminIssuesService.updateIssueStatus.mockResolvedValue(resolvedIssue);
 
-      const result = await controller.updateStatus(mockUser, 1, resolvedUpdateDto);
+      const result = await controller.updateStatus(
+        mockUser,
+        1,
+        resolvedUpdateDto,
+      );
 
       expect(result.data.status).toBe(IssueStatus.RESOLVED);
       expect(result.data.resolution).toBe('已解决');
-      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(1, resolvedUpdateDto);
+      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(
+        1,
+        resolvedUpdateDto,
+      );
     });
 
     it('should update to CLOSED with resolution', async () => {
@@ -312,11 +326,18 @@ describe('AdminIssuesController', () => {
 
       mockAdminIssuesService.updateIssueStatus.mockResolvedValue(closedIssue);
 
-      const result = await controller.updateStatus(mockUser, 1, closedUpdateDto);
+      const result = await controller.updateStatus(
+        mockUser,
+        1,
+        closedUpdateDto,
+      );
 
       expect(result.data.status).toBe(IssueStatus.CLOSED);
       expect(result.data.resolution).toBe('已关闭');
-      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(1, closedUpdateDto);
+      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(
+        1,
+        closedUpdateDto,
+      );
     });
 
     it('should update assignedTo only', async () => {
@@ -332,11 +353,18 @@ describe('AdminIssuesController', () => {
 
       mockAdminIssuesService.updateIssueStatus.mockResolvedValue(assignedIssue);
 
-      const result = await controller.updateStatus(mockUser, 1, assignUpdateDto);
+      const result = await controller.updateStatus(
+        mockUser,
+        1,
+        assignUpdateDto,
+      );
 
       expect(result.data.assignedTo).toBe(3);
       expect(result.data.assignedToName).toBe('管理员B');
-      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(1, assignUpdateDto);
+      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(
+        1,
+        assignUpdateDto,
+      );
     });
 
     it('should parse issue ID correctly', async () => {
@@ -344,7 +372,10 @@ describe('AdminIssuesController', () => {
 
       await controller.updateStatus(mockUser, 123, updateDto);
 
-      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(123, updateDto);
+      expect(mockAdminIssuesService.updateIssueStatus).toHaveBeenCalledWith(
+        123,
+        updateDto,
+      );
     });
   });
 });

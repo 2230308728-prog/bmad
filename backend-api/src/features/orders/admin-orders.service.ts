@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { AdminQueryOrdersDto } from './dto/admin/admin-query-orders.dto';
@@ -248,7 +253,11 @@ export class AdminOrdersService {
    * @param adminId 管理员 ID
    * @returns 更新后的订单
    */
-  async updateStatus(orderId: number, updateDto: UpdateOrderStatusDto, adminId: number) {
+  async updateStatus(
+    orderId: number,
+    updateDto: UpdateOrderStatusDto,
+    adminId: number,
+  ) {
     const { status, reason } = updateDto;
 
     // 查询订单

@@ -14,7 +14,13 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { AdminOrdersService } from './admin-orders.service';
 import { AdminQueryOrdersDto } from './dto/admin/admin-query-orders.dto';
 import { UpdateOrderStatusDto } from './dto/admin/update-order-status.dto';
@@ -22,7 +28,10 @@ import { OrderStatusUpdateResponseDto } from './dto/admin/update-order-status.dt
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { CurrentUser, type CurrentUserType } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type CurrentUserType,
+} from '../../common/decorators/current-user.decorator';
 
 /**
  * 管理员订单控制器
@@ -114,13 +123,87 @@ export class AdminOrdersController {
     status: 403,
     description: '权限不足（需要 ADMIN 角色）',
   })
-  async findAll(@CurrentUser() user: CurrentUserType, @Query(ValidationPipe) queryDto: AdminQueryOrdersDto) {
+  async findAll(
+    @CurrentUser() user: CurrentUserType,
+    @Query(ValidationPipe) queryDto: AdminQueryOrdersDto,
+  ) {
     try {
-      this.logger.log(`Admin ${user.id} querying orders with filters:`, queryDto);
+      this.logger.log(
+        `Admin ${user.id} querying orders with filters:`,
+        queryDto,
+      );
       const result = await this.adminOrdersService.findAll(queryDto);
       return result;
     } catch (error) {
       this.logger.error(`Failed to query orders for admin ${user.id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取订单统计数据
+   * NOTE: This route must be defined before /:id to avoid 'stats' being caught as an id parameter
+   * @param user 当前用户（管理员）
+   * @returns 统计数据
+   */
+  @Get('stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '获取订单统计数据（管理员）',
+    description: `获取平台订单的统计数据，包括：
+
+**统计指标：**
+- total: 总订单数
+- pending: 待支付订单数
+- paid: 已支付订单数
+- completed: 已完成订单数
+- cancelled: 已取消订单数
+- refunded: 已退款订单数
+- todayCount: 今日订单数
+- todayAmount: 今日订单金额（元）
+
+**数据用途：**
+- 管理后台仪表盘展示
+- 订单概览和趋势分析
+- 业务决策支持`,
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer JWT 令牌（访问令牌）',
+    required: true,
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '查询成功',
+    schema: {
+      example: {
+        total: 1000,
+        pending: 50,
+        paid: 800,
+        completed: 100,
+        cancelled: 30,
+        refunded: 20,
+        todayCount: 25,
+        todayAmount: '7500.00',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '未授权（缺少或无效的 JWT 令牌）',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '权限不足（需要 ADMIN 角色）',
+  })
+  async getStats(@CurrentUser() user: CurrentUserType) {
+    try {
+      this.logger.log(`Admin ${user.id} querying order stats`);
+      const result = await this.adminOrdersService.getStats();
+      return { data: result };
+    } catch (error) {
+      this.logger.error(`Failed to query order stats:`, error);
       throw error;
     }
   }
@@ -171,7 +254,7 @@ export class AdminOrdersController {
   })
   @ApiResponse({
     status: 403,
-   description: '权限不足（需要 ADMIN 角色）',
+    description: '权限不足（需要 ADMIN 角色）',
   })
   async findOne(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
     const orderId = parseInt(id, 10);
@@ -180,11 +263,16 @@ export class AdminOrdersController {
     }
 
     try {
-      this.logger.log(`Admin ${user.id} querying order detail for order ${orderId}`);
+      this.logger.log(
+        `Admin ${user.id} querying order detail for order ${orderId}`,
+      );
       const result = await this.adminOrdersService.findOne(orderId);
       return { data: result };
     } catch (error) {
-      this.logger.error(`Failed to query order detail for admin ${user.id}, order ${orderId}:`, error);
+      this.logger.error(
+        `Failed to query order detail for admin ${user.id}, order ${orderId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -255,7 +343,11 @@ export class AdminOrdersController {
       this.logger.log(
         `Admin ${user.id} updating order ${id} status to ${updateDto.status}`,
       );
-      const result = await this.adminOrdersService.updateStatus(id, updateDto, user.id);
+      const result = await this.adminOrdersService.updateStatus(
+        id,
+        updateDto,
+        user.id,
+      );
       return {
         data: {
           id: result.id,
@@ -269,73 +361,6 @@ export class AdminOrdersController {
       };
     } catch (error) {
       this.logger.error(`Failed to update order ${id} status:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * 获取订单统计数据
-   * @param user 当前用户（管理员）
-   * @returns 统计数据
-   */
-  @Get('stats')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: '获取订单统计数据（管理员）',
-    description: `获取平台订单的统计数据，包括：
-
-**统计指标：**
-- total: 总订单数
-- pending: 待支付订单数
-- paid: 已支付订单数
-- completed: 已完成订单数
-- cancelled: 已取消订单数
-- refunded: 已退款订单数
-- todayCount: 今日订单数
-- todayAmount: 今日订单金额（元）
-
-**数据用途：**
-- 管理后台仪表盘展示
-- 订单概览和趋势分析
-- 业务决策支持`,
-  })
-  @ApiHeader({
-    name: 'Authorization',
-    description: 'Bearer JWT 令牌（访问令牌）',
-    required: true,
-    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '查询成功',
-    schema: {
-      example: {
-        total: 1000,
-        pending: 50,
-        paid: 800,
-        completed: 100,
-        cancelled: 30,
-        refunded: 20,
-        todayCount: 25,
-        todayAmount: '7500.00',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 401,
-    description: '未授权（缺少或无效的 JWT 令牌）',
-  })
-  @ApiResponse({
-    status: 403,
-    description: '权限不足（需要 ADMIN 角色）',
-  })
-  async getStats(@CurrentUser() user: CurrentUserType) {
-    try {
-      this.logger.log(`Admin ${user.id} querying order stats`);
-      const result = await this.adminOrdersService.getStats();
-      return { data: result };
-    } catch (error) {
-      this.logger.error(`Failed to query order stats:`, error);
       throw error;
     }
   }

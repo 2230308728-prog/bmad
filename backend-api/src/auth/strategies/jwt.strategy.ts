@@ -20,7 +20,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const secret = configService.get<string>('JWT_SECRET');
 
     if (!secret) {
-      throw new Error('JWT_SECRET environment variable is required for JwtStrategy');
+      throw new Error(
+        'JWT_SECRET environment variable is required for JwtStrategy',
+      );
     }
 
     super({
@@ -56,7 +58,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token = authHeader.replace('Bearer ', '');
 
     // 检查令牌是否在黑名单中
-    const isBlacklisted = await this.tokenBlacklistService.isAccessBlacklisted(token);
+    const isBlacklisted =
+      await this.tokenBlacklistService.isAccessBlacklisted(token);
     if (isBlacklisted) {
       throw new UnauthorizedException('令牌已失效');
     }

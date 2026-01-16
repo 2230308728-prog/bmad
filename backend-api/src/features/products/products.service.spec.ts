@@ -68,7 +68,7 @@ describe('ProductsService', () => {
 
     service = module.get<ProductsService>(ProductsService);
     prismaService = module.get<PrismaService>(PrismaService);
-    cacheManager = module.get(CACHE_MANAGER) as unknown as MockCache;
+    cacheManager = module.get(CACHE_MANAGER);
     cacheService = module.get<CacheService>(CacheService);
 
     // Clear all mocks before each test
@@ -127,7 +127,9 @@ describe('ProductsService', () => {
       const result = await service.findAll(mockDto);
 
       expect(result).toEqual(cachedResult);
-      expect(cacheManager.get).toHaveBeenCalledWith('products:list:1:20:all:created');
+      expect(cacheManager.get).toHaveBeenCalledWith(
+        'products:list:1:20:all:created',
+      );
       expect(mockPrismaService.product.findMany).not.toHaveBeenCalled();
     });
 
@@ -138,7 +140,9 @@ describe('ProductsService', () => {
 
       const result = await service.findAll(mockDto);
 
-      expect(cacheManager.get).toHaveBeenCalledWith('products:list:1:20:all:created');
+      expect(cacheManager.get).toHaveBeenCalledWith(
+        'products:list:1:20:all:created',
+      );
       expect(mockPrismaService.product.findMany).toHaveBeenCalledWith({
         where: { status: 'PUBLISHED' },
         orderBy: { createdAt: 'desc' },
@@ -271,7 +275,9 @@ describe('ProductsService', () => {
     });
 
     it('should handle cache get failure gracefully', async () => {
-      mockCacheManager.get.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheManager.get.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
       mockPrismaService.product.findMany.mockResolvedValue(mockProducts);
       mockPrismaService.product.count.mockResolvedValue(2);
 
@@ -283,7 +289,9 @@ describe('ProductsService', () => {
 
     it('should handle cache set failure gracefully', async () => {
       mockCacheManager.get.mockResolvedValue(null);
-      mockCacheManager.set.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheManager.set.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
       mockPrismaService.product.findMany.mockResolvedValue(mockProducts);
       mockPrismaService.product.count.mockResolvedValue(2);
 
@@ -298,12 +306,14 @@ describe('ProductsService', () => {
     it('should clear all product cache via CacheKeyManager', async () => {
       await service.clearProductsCache();
 
-      expect(mockCacheKeyManagerService.invalidateProductCache).toHaveBeenCalledWith();
+      expect(
+        mockCacheKeyManagerService.invalidateProductCache,
+      ).toHaveBeenCalledWith();
     });
 
     it('should handle cache clear failure gracefully', async () => {
       mockCacheKeyManagerService.invalidateProductCache.mockRejectedValue(
-        new Error('Cache clear failed')
+        new Error('Cache clear failed'),
       );
 
       // Should not throw
@@ -315,12 +325,14 @@ describe('ProductsService', () => {
     it('should clear specific product cache via CacheKeyManager', async () => {
       await service.clearProductCache(123);
 
-      expect(mockCacheKeyManagerService.invalidateProductCache).toHaveBeenCalledWith(123);
+      expect(
+        mockCacheKeyManagerService.invalidateProductCache,
+      ).toHaveBeenCalledWith(123);
     });
 
     it('should handle specific product cache clear failure gracefully', async () => {
       mockCacheKeyManagerService.invalidateProductCache.mockRejectedValue(
-        new Error('Cache clear failed')
+        new Error('Cache clear failed'),
       );
 
       // Should not throw
@@ -545,7 +557,9 @@ describe('ProductsService', () => {
     });
 
     it('should handle cache failure gracefully', async () => {
-      mockCacheManager.get.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheManager.get.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
       mockPrismaService.product.findMany.mockResolvedValue(mockProducts);
       mockPrismaService.product.count.mockResolvedValue(2);
 
@@ -827,7 +841,9 @@ describe('ProductsService', () => {
     });
 
     it('should handle cache get failure gracefully', async () => {
-      mockCacheManager.get.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheManager.get.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
       mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
       mockPrismaService.product.update.mockResolvedValue({});
 
@@ -841,7 +857,9 @@ describe('ProductsService', () => {
     it('should handle cache set failure gracefully', async () => {
       mockCacheManager.get.mockResolvedValue(null);
       mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
-      mockCacheManager.set.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheManager.set.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
       mockPrismaService.product.update.mockResolvedValue({});
 
       const result = await service.findOne(1);
@@ -854,7 +872,9 @@ describe('ProductsService', () => {
     it('should handle viewCount increment failure gracefully', async () => {
       mockCacheManager.get.mockResolvedValue(null);
       mockPrismaService.product.findUnique.mockResolvedValue(mockProduct);
-      mockPrismaService.product.update.mockRejectedValue(new Error('Database error'));
+      mockPrismaService.product.update.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const result = await service.findOne(1);
 

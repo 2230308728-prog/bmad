@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CacheKeyManagerService, CacheKeyPattern } from './cache-key-manager.service';
+import {
+  CacheKeyManagerService,
+  CacheKeyPattern,
+} from './cache-key-manager.service';
 import { CacheService } from '../redis/cache.service';
 
 describe('CacheKeyManagerService', () => {
@@ -45,9 +48,7 @@ describe('CacheKeyManagerService', () => {
     });
 
     it('should register key with multiple tags', async () => {
-      mockCacheService.get
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
+      mockCacheService.get.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
       await service.registerKey('products:detail:123', [
         'product:123',
@@ -78,7 +79,9 @@ describe('CacheKeyManagerService', () => {
     });
 
     it('should handle cache errors gracefully', async () => {
-      mockCacheService.get.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheService.get.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
 
       await expect(
         service.registerKey('products:detail:123', ['product:123']),
@@ -243,7 +246,10 @@ describe('CacheKeyManagerService', () => {
       const stats = await service.getTagStats('product:123');
 
       expect(stats.count).toBe(2);
-      expect(stats.keys).toEqual(['products:detail:123', 'products:detail:456']);
+      expect(stats.keys).toEqual([
+        'products:detail:123',
+        'products:detail:456',
+      ]);
     });
 
     it('should return empty stats for non-existent tag', async () => {

@@ -19,7 +19,7 @@ export class ProductListItemDto {
   @ApiProperty({
     example: ['https://oss.example.com/image.jpg'],
     type: [String],
-    description: '产品图片列表'
+    description: '产品图片列表',
   })
   images!: string[];
 

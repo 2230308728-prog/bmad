@@ -48,9 +48,27 @@ describe('DashboardController', () => {
   describe('getOverview', () => {
     it('should return overview data', async () => {
       const mockResult = {
-        today: { orders: 25, ordersAmount: '7500.00', newUsers: 3, paidOrders: 20, completedOrders: 15 },
-        week: { orders: 150, ordersAmount: '45000.00', newUsers: 18, paidOrders: 120, completedOrders: 100 },
-        month: { orders: 600, ordersAmount: '180000.00', newUsers: 65, paidOrders: 480, completedOrders: 400 },
+        today: {
+          orders: 25,
+          ordersAmount: '7500.00',
+          newUsers: 3,
+          paidOrders: 20,
+          completedOrders: 15,
+        },
+        week: {
+          orders: 150,
+          ordersAmount: '45000.00',
+          newUsers: 18,
+          paidOrders: 120,
+          completedOrders: 100,
+        },
+        month: {
+          orders: 600,
+          ordersAmount: '180000.00',
+          newUsers: 65,
+          paidOrders: 480,
+          completedOrders: 400,
+        },
         total: { users: 150, orders: 2000, products: 50, revenue: '600000.00' },
       };
 
@@ -106,7 +124,9 @@ describe('DashboardController', () => {
     it('should return revenue breakdown data', async () => {
       const mockResult = {
         byCategory: [],
-        byPaymentMethod: [{ method: 'WECHAT', amount: '0.00', percentage: 100 }],
+        byPaymentMethod: [
+          { method: 'WECHAT', amount: '0.00', percentage: 100 },
+        ],
       };
 
       mockDashboardService.getRevenueBreakdown.mockResolvedValue(mockResult);

@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import { WechatPayService } from '../payments/wechat-pay.service';
@@ -9,7 +14,9 @@ import { AdminQueryRefundsDto } from './dto/admin';
 /**
  * Extended Order type with items and payments relations
  */
-interface OrderWithItems extends Prisma.OrderGetPayload<{ include: { items: true; payments?: true } }> {}
+interface OrderWithItems extends Prisma.OrderGetPayload<{
+  include: { items: true; payments?: true };
+}> {}
 
 /**
  * 管理员退款服务
@@ -167,7 +174,8 @@ export class AdminRefundsService {
 
     // 获取第一个订单项的产品信息
     const firstItem = (refund.order as OrderWithItems).items?.[0];
-    let product: { id: number; title: string; images: string[] } | undefined = undefined;
+    let product: { id: number; title: string; images: string[] } | undefined =
+      undefined;
     if (firstItem) {
       const productData = await this.prisma.product.findUnique({
         where: { id: firstItem.productId },
@@ -215,7 +223,10 @@ export class AdminRefundsService {
         totalAmount: refund.order.totalAmount.toString(),
         actualAmount: refund.order.actualAmount.toString(),
         paymentStatus: refund.order.paymentStatus,
-        bookingDate: (refund.order as OrderWithItems).bookingDate?.toISOString().split('T')[0] || null,
+        bookingDate:
+          (refund.order as OrderWithItems).bookingDate
+            ?.toISOString()
+            .split('T')[0] || null,
         items: (refund.order as OrderWithItems).items.map((item) => ({
           id: item.id,
           productId: item.productId,
@@ -225,14 +236,15 @@ export class AdminRefundsService {
           subtotal: item.subtotal.toString(),
         })),
       },
-      payments: (refund.order as OrderWithItems).payments?.map((payment) => ({
-        id: payment.id,
-        transactionId: payment.transactionId,
-        channel: payment.channel,
-        amount: payment.amount.toString(),
-        status: payment.status,
-        createdAt: payment.createdAt.toISOString(),
-      })) || [],
+      payments:
+        (refund.order as OrderWithItems).payments?.map((payment) => ({
+          id: payment.id,
+          transactionId: payment.transactionId,
+          channel: payment.channel,
+          amount: payment.amount.toString(),
+          status: payment.status,
+          createdAt: payment.createdAt.toISOString(),
+        })) || [],
       product,
     };
   }
@@ -244,7 +256,11 @@ export class AdminRefundsService {
    * @param adminId 管理员 ID
    * @returns 更新后的退款信息
    */
-  async approve(refundId: number, adminNote: string | undefined, adminId: number) {
+  async approve(
+    refundId: number,
+    adminNote: string | undefined,
+    adminId: number,
+  ) {
     // 查询退款记录
     const refund = await this.prisma.refundRecord.findUnique({
       where: { id: refundId },
@@ -260,7 +276,9 @@ export class AdminRefundsService {
 
     // 验证退款状态为 PENDING
     if (refund.status !== RefundStatus.PENDING) {
-      this.logger.warn(`退款状态不允许批准: refundId=${refundId}, status=${refund.status}`);
+      this.logger.warn(
+        `退款状态不允许批准: refundId=${refundId}, status=${refund.status}`,
+      );
       throw new BadRequestException('只有待审核的退款可以批准');
     }
 
@@ -288,7 +306,9 @@ export class AdminRefundsService {
       return updatedRefund;
     });
 
-    this.logger.log(`退款已批准: refundNo=${result.refundNo}, adminId=${adminId}`);
+    this.logger.log(
+      `退款已批准: refundNo=${result.refundNo}, adminId=${adminId}`,
+    );
 
     // Story 5.7: 发送退款批准通知
     // NOTE: 通知发送失败不影响主流程（记录日志即可）
@@ -406,7 +426,9 @@ export class AdminRefundsService {
 
     // 验证退款状态为 PENDING
     if (refund.status !== RefundStatus.PENDING) {
-      this.logger.warn(`退款状态不允许拒绝: refundId=${refundId}, status=${refund.status}`);
+      this.logger.warn(
+        `退款状态不允许拒绝: refundId=${refundId}, status=${refund.status}`,
+      );
       throw new BadRequestException('只有待审核的退款可以拒绝');
     }
 
@@ -421,7 +443,9 @@ export class AdminRefundsService {
       },
     });
 
-    this.logger.log(`退款已拒绝: refundNo=${result.refundNo}, adminId=${adminId}`);
+    this.logger.log(
+      `退款已拒绝: refundNo=${result.refundNo}, adminId=${adminId}`,
+    );
 
     // Story 5.7: 发送退款拒绝通知
     // NOTE: 通知发送失败不影响主流程（记录日志即可）
@@ -474,12 +498,24 @@ export class AdminRefundsService {
       // 总退款数
       this.prisma.refundRecord.count(),
       // 各状态退款数
-      this.prisma.refundRecord.count({ where: { status: RefundStatus.PENDING } }),
-      this.prisma.refundRecord.count({ where: { status: RefundStatus.APPROVED } }),
-      this.prisma.refundRecord.count({ where: { status: RefundStatus.REJECTED } }),
-      this.prisma.refundRecord.count({ where: { status: RefundStatus.PROCESSING } }),
-      this.prisma.refundRecord.count({ where: { status: RefundStatus.COMPLETED } }),
-      this.prisma.refundRecord.count({ where: { status: RefundStatus.FAILED } }),
+      this.prisma.refundRecord.count({
+        where: { status: RefundStatus.PENDING },
+      }),
+      this.prisma.refundRecord.count({
+        where: { status: RefundStatus.APPROVED },
+      }),
+      this.prisma.refundRecord.count({
+        where: { status: RefundStatus.REJECTED },
+      }),
+      this.prisma.refundRecord.count({
+        where: { status: RefundStatus.PROCESSING },
+      }),
+      this.prisma.refundRecord.count({
+        where: { status: RefundStatus.COMPLETED },
+      }),
+      this.prisma.refundRecord.count({
+        where: { status: RefundStatus.FAILED },
+      }),
       // 待处理退款（PENDING）的金额统计
       this.prisma.refundRecord.findMany({
         where: { status: RefundStatus.PENDING },
@@ -536,7 +572,9 @@ export class AdminRefundsService {
 
     // 验证退款状态为 FAILED
     if (refund.status !== RefundStatus.FAILED) {
-      this.logger.warn(`退款状态不允许重试: refundId=${refundId}, status=${refund.status}`);
+      this.logger.warn(
+        `退款状态不允许重试: refundId=${refundId}, status=${refund.status}`,
+      );
       throw new BadRequestException('只有失败的退款可以重试');
     }
 

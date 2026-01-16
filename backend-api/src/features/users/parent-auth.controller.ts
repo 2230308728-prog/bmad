@@ -1,5 +1,10 @@
 import { Controller, Post, Body, Logger, UseGuards, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiSecurity } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { WechatService } from './wechat.service';
 import { UsersService } from './users.service';
@@ -30,7 +35,9 @@ export class ParentAuthController {
   async wechatLogin(@Body() loginDto: WechatLoginDto) {
     try {
       // 1. 使用 code 换取 openid
-      this.logger.log(`WeChat login attempt with code: ${loginDto.code.substring(0, 10)}...`);
+      this.logger.log(
+        `WeChat login attempt with code: ${loginDto.code.substring(0, 10)}...`,
+      );
       const openid = await this.wechatService.jscode2session(loginDto.code);
 
       // 2. 查找或创建用户
@@ -45,7 +52,11 @@ export class ParentAuthController {
 
       // 4. 保存刷新令牌到用户会话
       const refreshTTL = 604800; // 7天
-      await this.usersService.saveRefreshToken(user.id, tokens.refreshToken, refreshTTL);
+      await this.usersService.saveRefreshToken(
+        user.id,
+        tokens.refreshToken,
+        refreshTTL,
+      );
 
       // 5. 返回响应
       this.logger.log(`WeChat login successful for user: ${user.id}`);

@@ -1,4 +1,12 @@
-import { IsNotEmpty, IsString, registerDecorator, ValidationArguments, ValidationOptions, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  registerDecorator,
+  ValidationArguments,
+  ValidationOptions,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
@@ -24,7 +32,7 @@ export class IsValidImageFileTypeConstraint implements ValidatorConstraintInterf
  * 自定义装饰器函数
  */
 export function IsValidImageFileType(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,

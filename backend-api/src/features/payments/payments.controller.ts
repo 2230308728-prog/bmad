@@ -11,7 +11,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiHeader } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { Role, OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { WechatPayService } from './wechat-pay.service';
@@ -49,7 +56,8 @@ export class PaymentsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '初始化支付',
-    description: '为指定订单创建支付，返回 JSAPI 支付参数。需要 PARENT 角色权限。',
+    description:
+      '为指定订单创建支付，返回 JSAPI 支付参数。需要 PARENT 角色权限。',
   })
   @ApiHeader({
     name: 'Authorization',
@@ -81,7 +89,8 @@ export class PaymentsController {
   })
   @ApiResponse({
     status: 400,
-    description: '请求参数验证失败（订单不存在、订单不属于当前用户、订单状态不是 PENDING）',
+    description:
+      '请求参数验证失败（订单不存在、订单不属于当前用户、订单状态不是 PENDING）',
   })
   @ApiResponse({
     status: 401,
@@ -140,7 +149,9 @@ export class PaymentsController {
 
       // 4. 调用微信支付统一下单 API
       // 金额单位：分（需要将元转为分，四舍五入）
-      const totalAmountInCents = Math.round(Prisma.Decimal.mul(order.totalAmount, 100).toNumber());
+      const totalAmountInCents = Math.round(
+        Prisma.Decimal.mul(order.totalAmount, 100).toNumber(),
+      );
 
       // 生成商品描述（使用产品名称快照，如果是多个产品则显示"多个产品"）
       const description =
@@ -158,7 +169,9 @@ export class PaymentsController {
       // 5. 生成 JSAPI 支付参数
       const jsapiParams = this.wechatPayService.generateJsapiParams(prepayId);
 
-      this.logger.log(`Payment created successfully for order ${orderId}, prepayId: ${prepayId}`);
+      this.logger.log(
+        `Payment created successfully for order ${orderId}, prepayId: ${prepayId}`,
+      );
 
       return { data: jsapiParams };
     } catch (error) {

@@ -15,7 +15,10 @@ export class CacheService implements OnModuleInit {
   private readonly logger = new Logger(CacheService.name);
   private redisAvailable = true;
 
-  constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache & { stores?: Map<string, unknown> }) {
+  constructor(
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache & { stores?: Map<string, unknown> },
+  ) {
     // 不在构造函数中调用异步方法
   }
 
@@ -164,9 +167,14 @@ export class CacheService implements OnModuleInit {
       if (this.cacheManager.stores) {
         for (const [, store] of this.cacheManager.stores) {
           const cacheStore = store as any;
-          if (cacheStore.client && typeof cacheStore.client.decrby === 'function') {
+          if (
+            cacheStore.client &&
+            typeof cacheStore.client.decrby === 'function'
+          ) {
             const result = await cacheStore.client.decrby(key, value);
-            this.logger.debug(`Redis DECRBY [key: ${key}, value: ${value}, result: ${result}]`);
+            this.logger.debug(
+              `Redis DECRBY [key: ${key}, value: ${value}, result: ${result}]`,
+            );
             return result;
           }
         }
@@ -193,9 +201,14 @@ export class CacheService implements OnModuleInit {
       if (this.cacheManager.stores) {
         for (const [, store] of this.cacheManager.stores) {
           const cacheStore = store as any;
-          if (cacheStore.client && typeof cacheStore.client.incrby === 'function') {
+          if (
+            cacheStore.client &&
+            typeof cacheStore.client.incrby === 'function'
+          ) {
             const result = await cacheStore.client.incrby(key, value);
-            this.logger.debug(`Redis INCRBY [key: ${key}, value: ${value}, result: ${result}]`);
+            this.logger.debug(
+              `Redis INCRBY [key: ${key}, value: ${value}, result: ${result}]`,
+            );
             return result;
           }
         }
@@ -230,7 +243,10 @@ export class CacheService implements OnModuleInit {
       if (this.cacheManager.stores) {
         for (const [, store] of this.cacheManager.stores) {
           const cacheStore = store as any;
-          if (cacheStore.client && typeof cacheStore.client.get === 'function') {
+          if (
+            cacheStore.client &&
+            typeof cacheStore.client.get === 'function'
+          ) {
             const result = await cacheStore.client.get(key);
             return result !== null ? parseInt(result, 10) : null;
           }
@@ -258,7 +274,10 @@ export class CacheService implements OnModuleInit {
       if (this.cacheManager.stores) {
         for (const [, store] of this.cacheManager.stores) {
           const cacheStore = store as any;
-          if (cacheStore.client && typeof cacheStore.client.set === 'function') {
+          if (
+            cacheStore.client &&
+            typeof cacheStore.client.set === 'function'
+          ) {
             await cacheStore.client.set(key, value.toString());
             this.logger.debug(`设置库存 [key: ${key}, value: ${value}]`);
             return;

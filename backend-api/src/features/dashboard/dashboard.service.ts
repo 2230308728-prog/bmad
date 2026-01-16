@@ -65,41 +65,61 @@ export class DashboardService {
     ] = await Promise.all([
       // 今日数据
       this.prisma.order.count({ where: { createdAt: { gte: todayStart } } }),
-      this.prisma.order.count({ where: { createdAt: { gte: todayStart }, status: 'PAID' } }),
-      this.prisma.order.count({ where: { createdAt: { gte: todayStart }, status: 'COMPLETED' } }),
+      this.prisma.order.count({
+        where: { createdAt: { gte: todayStart }, status: 'PAID' },
+      }),
+      this.prisma.order.count({
+        where: { createdAt: { gte: todayStart }, status: 'COMPLETED' },
+      }),
       this.prisma.user.count({ where: { createdAt: { gte: todayStart } } }),
-      this.prisma.order.aggregate({
-        where: { createdAt: { gte: todayStart } },
-        _sum: { totalAmount: true },
-      }).then((result) => result._sum.totalAmount || 0),
+      this.prisma.order
+        .aggregate({
+          where: { createdAt: { gte: todayStart } },
+          _sum: { totalAmount: true },
+        })
+        .then((result) => result._sum.totalAmount || 0),
 
       // 本周数据
       this.prisma.order.count({ where: { createdAt: { gte: weekStart } } }),
-      this.prisma.order.count({ where: { createdAt: { gte: weekStart }, status: 'PAID' } }),
-      this.prisma.order.count({ where: { createdAt: { gte: weekStart }, status: 'COMPLETED' } }),
+      this.prisma.order.count({
+        where: { createdAt: { gte: weekStart }, status: 'PAID' },
+      }),
+      this.prisma.order.count({
+        where: { createdAt: { gte: weekStart }, status: 'COMPLETED' },
+      }),
       this.prisma.user.count({ where: { createdAt: { gte: weekStart } } }),
-      this.prisma.order.aggregate({
-        where: { createdAt: { gte: weekStart } },
-        _sum: { totalAmount: true },
-      }).then((result) => result._sum.totalAmount || 0),
+      this.prisma.order
+        .aggregate({
+          where: { createdAt: { gte: weekStart } },
+          _sum: { totalAmount: true },
+        })
+        .then((result) => result._sum.totalAmount || 0),
 
       // 本月数据
       this.prisma.order.count({ where: { createdAt: { gte: monthStart } } }),
-      this.prisma.order.count({ where: { createdAt: { gte: monthStart }, status: 'PAID' } }),
-      this.prisma.order.count({ where: { createdAt: { gte: monthStart }, status: 'COMPLETED' } }),
+      this.prisma.order.count({
+        where: { createdAt: { gte: monthStart }, status: 'PAID' },
+      }),
+      this.prisma.order.count({
+        where: { createdAt: { gte: monthStart }, status: 'COMPLETED' },
+      }),
       this.prisma.user.count({ where: { createdAt: { gte: monthStart } } }),
-      this.prisma.order.aggregate({
-        where: { createdAt: { gte: monthStart } },
-        _sum: { totalAmount: true },
-      }).then((result) => result._sum.totalAmount || 0),
+      this.prisma.order
+        .aggregate({
+          where: { createdAt: { gte: monthStart } },
+          _sum: { totalAmount: true },
+        })
+        .then((result) => result._sum.totalAmount || 0),
 
       // 总计数据
       this.prisma.user.count(),
       this.prisma.order.count(),
       this.prisma.product.count(),
-      this.prisma.order.aggregate({
-        _sum: { totalAmount: true },
-      }).then((result) => result._sum.totalAmount || 0),
+      this.prisma.order
+        .aggregate({
+          _sum: { totalAmount: true },
+        })
+        .then((result) => result._sum.totalAmount || 0),
     ]);
 
     const result = {
@@ -145,7 +165,9 @@ export class DashboardService {
     const { period = 'today', granularity } = query;
     const actualGranularity = granularity || this.getDefaultGranularity(period);
 
-    this.logger.log(`Computing orders trend for period: ${period}, granularity: ${actualGranularity}`);
+    this.logger.log(
+      `Computing orders trend for period: ${period}, granularity: ${actualGranularity}`,
+    );
 
     // 尝试从缓存获取
     const cacheKey = `dashboard:orders:trend:${period}:${actualGranularity}`;
@@ -178,7 +200,10 @@ export class DashboardService {
         this.isOrderInBucket(order.createdAt, bucket, actualGranularity),
       );
 
-      const totalAmount = bucketOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+      const totalAmount = bucketOrders.reduce(
+        (sum, order) => sum + Number(order.totalAmount || 0),
+        0,
+      );
 
       return {
         time: bucket.label,
@@ -189,7 +214,10 @@ export class DashboardService {
 
     // 计算总计
     const totalOrders = orders.length;
-    const totalAmount = orders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+    const totalAmount = orders.reduce(
+      (sum, order) => sum + Number(order.totalAmount || 0),
+      0,
+    );
 
     const result = {
       period,
@@ -212,7 +240,9 @@ export class DashboardService {
     const { period = 'today', granularity } = query;
     const actualGranularity = granularity || this.getDefaultGranularity(period);
 
-    this.logger.log(`Computing users trend for period: ${period}, granularity: ${actualGranularity}`);
+    this.logger.log(
+      `Computing users trend for period: ${period}, granularity: ${actualGranularity}`,
+    );
 
     // 尝试从缓存获取
     const cacheKey = `dashboard:users:trend:${period}:${actualGranularity}`;
@@ -297,7 +327,11 @@ export class DashboardService {
     // 使用原生 SQL 查询进行数据库层面的聚合，更高效
     // 按 category 分组统计订单数量和金额总和
     const categoryStats = await this.prisma.$queryRaw<
-      Array<{ category_name: string; order_count: bigint; total_amount: number }>
+      Array<{
+        category_name: string;
+        order_count: bigint;
+        total_amount: number;
+      }>
     >`
       SELECT
         COALESCE(pc.name, '未分类') as category_name,
@@ -313,14 +347,22 @@ export class DashboardService {
     `;
 
     // 计算总金额
-    const totalAmount = categoryStats.reduce((sum, stat) => sum + Number(stat.total_amount || 0), 0);
+    const totalAmount = categoryStats.reduce(
+      (sum, stat) => sum + Number(stat.total_amount || 0),
+      0,
+    );
 
     // 转换为响应格式
     const byCategory = categoryStats.map((stat) => ({
       category: stat.category_name,
       orders: Number(stat.order_count),
       amount: this.formatDecimal(Number(stat.total_amount || 0)),
-      percentage: totalAmount > 0 ? Number(((Number(stat.total_amount || 0) / totalAmount) * 100).toFixed(2)) : 0,
+      percentage:
+        totalAmount > 0
+          ? Number(
+              ((Number(stat.total_amount || 0) / totalAmount) * 100).toFixed(2),
+            )
+          : 0,
     }));
 
     // 支付方式统计（当前只有微信支付）
@@ -349,7 +391,9 @@ export class DashboardService {
   async getPopularProducts(query: { period?: string; limit?: number }) {
     const { period = 'week', limit = 10 } = query;
 
-    this.logger.log(`Computing popular products for period: ${period}, limit: ${limit}`);
+    this.logger.log(
+      `Computing popular products for period: ${period}, limit: ${limit}`,
+    );
 
     // 尝试从缓存获取
     const cacheKey = `dashboard:products:popular:${period}:${limit}`;
@@ -398,15 +442,22 @@ export class DashboardService {
     `;
 
     // 计算汇总数据
-    const totalOrders = productStats.reduce((sum, stat) => sum + Number(stat.order_count || 0), 0);
-    const totalAmount = productStats.reduce((sum, stat) => sum + Number(stat.total_amount || 0), 0);
-    const avgConversionRate = productStats.length > 0
-      ? productStats.reduce((sum, stat) => {
-          const views = Number(stat.view_count || 0);
-          const orders = Number(stat.order_count || 0);
-          return sum + (views > 0 ? (orders / views) * 100 : 0);
-        }, 0) / productStats.length
-      : 0;
+    const totalOrders = productStats.reduce(
+      (sum, stat) => sum + Number(stat.order_count || 0),
+      0,
+    );
+    const totalAmount = productStats.reduce(
+      (sum, stat) => sum + Number(stat.total_amount || 0),
+      0,
+    );
+    const avgConversionRate =
+      productStats.length > 0
+        ? productStats.reduce((sum, stat) => {
+            const views = Number(stat.view_count || 0);
+            const orders = Number(stat.order_count || 0);
+            return sum + (views > 0 ? (orders / views) * 100 : 0);
+          }, 0) / productStats.length
+        : 0;
 
     // 转换为响应格式
     const products = productStats.map((stat, index) => {
@@ -421,7 +472,8 @@ export class DashboardService {
         orders: orders,
         amount: this.formatDecimal(Number(stat.total_amount || 0)),
         views: views,
-        conversionRate: views > 0 ? Number(((orders / views) * 100).toFixed(2)) : 0,
+        conversionRate:
+          views > 0 ? Number(((orders / views) * 100).toFixed(2)) : 0,
         avgRating: 0, // TODO: 从评价系统获取
         rank: index + 1,
       };
@@ -464,7 +516,15 @@ export class DashboardService {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const monthEnd = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     switch (period) {
       case 'today':
@@ -477,7 +537,9 @@ export class DashboardService {
         // 使用一个很早的日期作为起始时间
         return { startDate: new Date(2020, 0, 1), endDate: new Date() };
       default:
-        this.logger.warn(`Invalid period value: ${period}, defaulting to 'today'`);
+        this.logger.warn(
+          `Invalid period value: ${period}, defaulting to 'today'`,
+        );
         return { startDate: todayStart, endDate: new Date() };
     }
   }
@@ -485,13 +547,20 @@ export class DashboardService {
   /**
    * 生成时间桶
    */
-  private generateTimeBuckets(period: string, granularity: string): Array<{ label: string; start: Date; end: Date }> {
+  private generateTimeBuckets(
+    period: string,
+    granularity: string,
+  ): Array<{ label: string; start: Date; end: Date }> {
     const buckets: Array<{ label: string; start: Date; end: Date }> = [];
 
     if (period === 'today' && granularity === 'hour') {
       // 生成营业时间的小时桶
       const now = new Date();
-      for (let hour = this.BUSINESS_HOURS_START; hour <= this.BUSINESS_HOURS_END; hour++) {
+      for (
+        let hour = this.BUSINESS_HOURS_START;
+        hour <= this.BUSINESS_HOURS_END;
+        hour++
+      ) {
         const start = new Date(now);
         start.setHours(hour, 0, 0, 0);
         const end = new Date(now);
@@ -532,7 +601,11 @@ export class DashboardService {
   /**
    * 判断订单是否在时间桶内
    */
-  private isOrderInBucket(orderDate: Date, bucket: { start: Date; end: Date }, granularity: string): boolean {
+  private isOrderInBucket(
+    orderDate: Date,
+    bucket: { start: Date; end: Date },
+    granularity: string,
+  ): boolean {
     if (granularity === 'hour') {
       const orderHour = orderDate.getHours();
       const bucketHour = bucket.start.getHours();
@@ -605,11 +678,18 @@ export class DashboardService {
     const { startDate, endDate } = this.getTimeRange(period);
 
     // 并行查询漏斗各阶段数据
-    const [totalProductViews, totalCreatedOrders, totalPaidOrders, uniquePaidUsers] = await Promise.all([
+    const [
+      totalProductViews,
+      totalCreatedOrders,
+      totalPaidOrders,
+      uniquePaidUsers,
+    ] = await Promise.all([
       // 1. 浏览产品 - 统计所有产品浏览量总和
-      this.prisma.product.aggregate({
-        _sum: { viewCount: true },
-      }).then((result) => Number(result._sum.viewCount || 0)),
+      this.prisma.product
+        .aggregate({
+          _sum: { viewCount: true },
+        })
+        .then((result) => Number(result._sum.viewCount || 0)),
 
       // 2. 创建订单 - 统计时间范围内的订单数
       this.prisma.order.count({
@@ -627,19 +707,24 @@ export class DashboardService {
       }),
 
       // 4. 完成支付的唯一用户数
-      this.prisma.order.groupBy({
-        by: ['userId'],
-        where: {
-          createdAt: { gte: startDate, lte: endDate },
-          status: { in: ['PAID', 'COMPLETED'] },
-        },
-      }).then((result) => result.length),
+      this.prisma.order
+        .groupBy({
+          by: ['userId'],
+          where: {
+            createdAt: { gte: startDate, lte: endDate },
+            status: { in: ['PAID', 'COMPLETED'] },
+          },
+        })
+        .then((result) => result.length),
     ]);
 
     // 构建漏斗数据
     const browseProducts = Math.max(totalProductViews, 1); // 避免除零
     // 查看详情：保守估计为浏览产品的 60%（因为没有详情页访问追踪）
-    const viewDetails = Math.max(Math.ceil(browseProducts * 0.6), totalCreatedOrders);
+    const viewDetails = Math.max(
+      Math.ceil(browseProducts * 0.6),
+      totalCreatedOrders,
+    );
     const createOrders = totalCreatedOrders;
     const completePayment = uniquePaidUsers;
 
@@ -663,29 +748,48 @@ export class DashboardService {
       {
         stage: '完成支付',
         users: completePayment,
-        percentage: Number(((completePayment / browseProducts) * 100).toFixed(2)),
+        percentage: Number(
+          ((completePayment / browseProducts) * 100).toFixed(2),
+        ),
       },
     ];
 
     // 计算总体转化率
-    const overallConversion = Number(((completePayment / browseProducts) * 100).toFixed(2));
+    const overallConversion = Number(
+      ((completePayment / browseProducts) * 100).toFixed(2),
+    );
 
     // 计算流失数据
     const dropoffs = [
       {
         stage: '浏览产品→查看详情',
         users: browseProducts - viewDetails,
-        percentage: Number((((browseProducts - viewDetails) / browseProducts) * 100).toFixed(2)),
+        percentage: Number(
+          (((browseProducts - viewDetails) / browseProducts) * 100).toFixed(2),
+        ),
       },
       {
         stage: '查看详情→创建订单',
         users: viewDetails - createOrders,
-        percentage: viewDetails > 0 ? Number((((viewDetails - createOrders) / viewDetails) * 100).toFixed(2)) : 0,
+        percentage:
+          viewDetails > 0
+            ? Number(
+                (((viewDetails - createOrders) / viewDetails) * 100).toFixed(2),
+              )
+            : 0,
       },
       {
         stage: '创建订单→完成支付',
         users: createOrders - completePayment,
-        percentage: createOrders > 0 ? Number((((createOrders - completePayment) / createOrders) * 100).toFixed(2)) : 0,
+        percentage:
+          createOrders > 0
+            ? Number(
+                (
+                  ((createOrders - completePayment) / createOrders) *
+                  100
+                ).toFixed(2),
+              )
+            : 0,
       },
     ];
 
@@ -736,14 +840,19 @@ export class DashboardService {
     });
 
     // 按周分组用户（队列）- 同时保存用户的注册时间
-    const cohorts = new Map<string, Array<{ userId: number; createdAt: Date }>>();
+    const cohorts = new Map<
+      string,
+      Array<{ userId: number; createdAt: Date }>
+    >();
     for (const user of users) {
       const weekNumber = this.getWeekNumber(user.createdAt);
       const cohortKey = `${user.createdAt.getFullYear()}-${weekNumber}`;
       if (!cohorts.has(cohortKey)) {
         cohorts.set(cohortKey, []);
       }
-      cohorts.get(cohortKey)!.push({ userId: user.id, createdAt: user.createdAt });
+      cohorts
+        .get(cohortKey)!
+        .push({ userId: user.id, createdAt: user.createdAt });
     }
 
     // 获取这些用户的订单
@@ -772,7 +881,9 @@ export class DashboardService {
       if (cohortSize === 0) continue;
 
       // 创建用户ID到注册时间的映射
-      const userCreatedAtMap = new Map(cohortUsers.map((u) => [u.userId, u.createdAt]));
+      const userCreatedAtMap = new Map(
+        cohortUsers.map((u) => [u.userId, u.createdAt]),
+      );
 
       // 计算留存用户数
       let day1Retained = 0;
@@ -785,7 +896,8 @@ export class DashboardService {
 
         // 计算订单日期与用户注册日期的天数差
         const daysSinceRegistration = Math.floor(
-          (order.createdAt.getTime() - userCreatedAt.getTime()) / (1000 * 60 * 60 * 24),
+          (order.createdAt.getTime() - userCreatedAt.getTime()) /
+            (1000 * 60 * 60 * 24),
         );
 
         if (daysSinceRegistration >= 1 && daysSinceRegistration < 2) {
@@ -798,9 +910,18 @@ export class DashboardService {
       }
 
       // 计算留存率
-      const day1Rate = cohortSize > 0 ? Number(((day1Retained / cohortSize) * 100).toFixed(2)) : 0;
-      const day7Rate = cohortSize > 0 ? Number(((day7Retained / cohortSize) * 100).toFixed(2)) : 0;
-      const day30Rate = cohortSize > 0 ? Number(((day30Retained / cohortSize) * 100).toFixed(2)) : 0;
+      const day1Rate =
+        cohortSize > 0
+          ? Number(((day1Retained / cohortSize) * 100).toFixed(2))
+          : 0;
+      const day7Rate =
+        cohortSize > 0
+          ? Number(((day7Retained / cohortSize) * 100).toFixed(2))
+          : 0;
+      const day30Rate =
+        cohortSize > 0
+          ? Number(((day30Retained / cohortSize) * 100).toFixed(2))
+          : 0;
 
       cohortAnalysis.push({
         period: cohortKey.replace('-', '-W'),
@@ -821,9 +942,12 @@ export class DashboardService {
 
     // 计算平均留存率
     const avgRetention = {
-      day1: validCohorts > 0 ? Number((totalDay1 / validCohorts).toFixed(2)) : 0,
-      day7: validCohorts > 0 ? Number((totalDay7 / validCohorts).toFixed(2)) : 0,
-      day30: validCohorts > 0 ? Number((totalDay30 / validCohorts).toFixed(2)) : 0,
+      day1:
+        validCohorts > 0 ? Number((totalDay1 / validCohorts).toFixed(2)) : 0,
+      day7:
+        validCohorts > 0 ? Number((totalDay7 / validCohorts).toFixed(2)) : 0,
+      day30:
+        validCohorts > 0 ? Number((totalDay30 / validCohorts).toFixed(2)) : 0,
     };
 
     const result = {
@@ -841,11 +965,13 @@ export class DashboardService {
    * 获取日期在一年中的周数
    */
   private getWeekNumber(date: Date): number {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const d = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
     const dayNum = d.getUTCDay() || 7;
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
   }
 
   /**
@@ -953,10 +1079,20 @@ export class DashboardService {
     const totalViews = product.viewCount || 0;
 
     // 计算统计数据
-    const conversionRate = totalViews > 0 ? Number(((totalOrders / totalViews) * 100).toFixed(2)) : 0;
-    const avgOrderValue = totalOrders > 0 ? Number((totalRevenue / totalOrders).toFixed(2)) : 0;
-    const cancelRate = totalOrders > 0 ? Number(((cancelledOrders / totalOrders) * 100).toFixed(2)) : 0;
-    const refundRate = totalOrders > 0 ? Number(((refundedOrders / totalOrders) * 100).toFixed(2)) : 0;
+    const conversionRate =
+      totalViews > 0
+        ? Number(((totalOrders / totalViews) * 100).toFixed(2))
+        : 0;
+    const avgOrderValue =
+      totalOrders > 0 ? Number((totalRevenue / totalOrders).toFixed(2)) : 0;
+    const cancelRate =
+      totalOrders > 0
+        ? Number(((cancelledOrders / totalOrders) * 100).toFixed(2))
+        : 0;
+    const refundRate =
+      totalOrders > 0
+        ? Number(((refundedOrders / totalOrders) * 100).toFixed(2))
+        : 0;
 
     // 计算趋势数据（最近7天和30天）
     const now = new Date();
@@ -968,7 +1104,9 @@ export class DashboardService {
     // 填充趋势数据
     for (const item of recentOrders) {
       const orderDate = new Date(item.order.createdAt);
-      const daysDiff = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
+      const daysDiff = Math.floor(
+        (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
 
       if (daysDiff < 7 && daysDiff >= 0) {
         last7Days[6 - daysDiff]++;

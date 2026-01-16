@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '@/redis/cache.service';
 import { QueryIssuesDto } from './dto/admin/query-issues.dto';
@@ -36,10 +41,12 @@ export class AdminIssuesService {
    * @returns 分页问题列表
    */
   async findIssues(queryDto: QueryIssuesDto) {
-    this.logger.log(`Admin querying issues with filters: ${JSON.stringify({
-      ...queryDto,
-      // 不记录敏感信息
-    })}`);
+    this.logger.log(
+      `Admin querying issues with filters: ${JSON.stringify({
+        ...queryDto,
+        // 不记录敏感信息
+      })}`,
+    );
 
     const {
       page = 1,
@@ -218,8 +225,14 @@ export class AdminIssuesService {
 
     // 验证 RESOLVED/CLOSED 必须提供 resolution
     const newStatus = status || existingIssue.status;
-    if ((newStatus === IssueStatus.RESOLVED || newStatus === IssueStatus.CLOSED) && !resolution) {
-      throw new BadRequestException('状态变更为 RESOLVED 或 CLOSED 时必须提供解决方案（resolution）');
+    if (
+      (newStatus === IssueStatus.RESOLVED ||
+        newStatus === IssueStatus.CLOSED) &&
+      !resolution
+    ) {
+      throw new BadRequestException(
+        '状态变更为 RESOLVED 或 CLOSED 时必须提供解决方案（resolution）',
+      );
     }
 
     // 准备更新数据
@@ -238,7 +251,10 @@ export class AdminIssuesService {
     }
 
     // 如果状态变更为 RESOLVED 或 CLOSED，设置 resolved_at
-    if (status && (status === IssueStatus.RESOLVED || status === IssueStatus.CLOSED)) {
+    if (
+      status &&
+      (status === IssueStatus.RESOLVED || status === IssueStatus.CLOSED)
+    ) {
       updateData.resolvedAt = new Date();
     }
 
@@ -293,53 +309,50 @@ export class AdminIssuesService {
     }
 
     // 并行查询统计数据
-    const [
-      statusStats,
-      priorityStats,
-      resolvedIssues,
-      todayIssues,
-      total,
-    ] = await Promise.all([
-      // 各状态问题数量
-      this.prisma.userIssue.groupBy({
-        by: ['status'],
-        _count: true,
-      }),
-      // 各优先级问题数量
-      this.prisma.userIssue.groupBy({
-        by: ['priority'],
-        _count: true,
-        where: {
-          status: { in: [IssueStatus.OPEN, IssueStatus.IN_PROGRESS] },
-        },
-      }),
-      // 已解决问题（用于计算平均解决时间）
-      this.prisma.userIssue.findMany({
-        where: {
-          status: { in: [IssueStatus.RESOLVED, IssueStatus.CLOSED] },
-          resolvedAt: { not: null },
-        },
-        select: {
-          createdAt: true,
-          resolvedAt: true,
-        },
-      }).then((issues) =>
-        issues.map((issue) => ({
-          createdAt: issue.createdAt,
-          resolvedAt: issue.resolvedAt!,
-        })),
-      ),
-      // 今日新增问题
-      this.prisma.userIssue.count({
-        where: {
-          createdAt: {
-            gte: this.getTodayStart(),
+    const [statusStats, priorityStats, resolvedIssues, todayIssues, total] =
+      await Promise.all([
+        // 各状态问题数量
+        this.prisma.userIssue.groupBy({
+          by: ['status'],
+          _count: true,
+        }),
+        // 各优先级问题数量
+        this.prisma.userIssue.groupBy({
+          by: ['priority'],
+          _count: true,
+          where: {
+            status: { in: [IssueStatus.OPEN, IssueStatus.IN_PROGRESS] },
           },
-        },
-      }),
-      // 总问题数
-      this.prisma.userIssue.count(),
-    ]);
+        }),
+        // 已解决问题（用于计算平均解决时间）
+        this.prisma.userIssue
+          .findMany({
+            where: {
+              status: { in: [IssueStatus.RESOLVED, IssueStatus.CLOSED] },
+              resolvedAt: { not: null },
+            },
+            select: {
+              createdAt: true,
+              resolvedAt: true,
+            },
+          })
+          .then((issues) =>
+            issues.map((issue) => ({
+              createdAt: issue.createdAt,
+              resolvedAt: issue.resolvedAt!,
+            })),
+          ),
+        // 今日新增问题
+        this.prisma.userIssue.count({
+          where: {
+            createdAt: {
+              gte: this.getTodayStart(),
+            },
+          },
+        }),
+        // 总问题数
+        this.prisma.userIssue.count(),
+      ]);
 
     // 构建统计结果
     const stats: IssueStatsResponseDto = {
@@ -365,10 +378,14 @@ export class AdminIssuesService {
    * 优先级从高到低：URGENT > HIGH > MEDIUM > LOW
    * 同优先级按创建时间倒序
    */
-  private sortByPriority(issues: { priority: IssuePriority; createdAt: Date }[]): any[] {
+  private sortByPriority(
+    issues: { priority: IssuePriority; createdAt: Date }[],
+  ): any[] {
     return issues.sort((a, b) => {
-      const weightA = this.PRIORITY_WEIGHT[a.priority as keyof typeof this.PRIORITY_WEIGHT];
-      const weightB = this.PRIORITY_WEIGHT[b.priority as keyof typeof this.PRIORITY_WEIGHT];
+      const weightA =
+        this.PRIORITY_WEIGHT[a.priority as keyof typeof this.PRIORITY_WEIGHT];
+      const weightB =
+        this.PRIORITY_WEIGHT[b.priority as keyof typeof this.PRIORITY_WEIGHT];
 
       // 优先级高的在前
       if (weightA !== weightB) {
@@ -412,7 +429,7 @@ export class AdminIssuesService {
    */
   private maskPhone(phone: string): string {
     if (!phone || typeof phone !== 'string' || phone.length < 7) {
-      return '';  // 返回空字符串而非原始值，避免泄露数据
+      return ''; // 返回空字符串而非原始值，避免泄露数据
     }
     return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4);
   }
@@ -420,10 +437,17 @@ export class AdminIssuesService {
   /**
    * 验证状态转换是否合法
    */
-  private validateStatusTransition(currentStatus: IssueStatus, newStatus: IssueStatus): void {
+  private validateStatusTransition(
+    currentStatus: IssueStatus,
+    newStatus: IssueStatus,
+  ): void {
     const validTransitions: Record<IssueStatus, IssueStatus[]> = {
       [IssueStatus.OPEN]: [IssueStatus.IN_PROGRESS, IssueStatus.CLOSED],
-      [IssueStatus.IN_PROGRESS]: [IssueStatus.OPEN, IssueStatus.RESOLVED, IssueStatus.CLOSED],
+      [IssueStatus.IN_PROGRESS]: [
+        IssueStatus.OPEN,
+        IssueStatus.RESOLVED,
+        IssueStatus.CLOSED,
+      ],
       [IssueStatus.RESOLVED]: [IssueStatus.IN_PROGRESS, IssueStatus.CLOSED],
       [IssueStatus.CLOSED]: [], // 已关闭不能变更状态
     };
@@ -439,7 +463,10 @@ export class AdminIssuesService {
   /**
    * 从状态统计中获取指定状态的计数
    */
-  private getCountByStatus(stats: { status: IssueStatus; _count: number }[], status: IssueStatus): number {
+  private getCountByStatus(
+    stats: { status: IssueStatus; _count: number }[],
+    status: IssueStatus,
+  ): number {
     const stat = stats.find((s) => s.status === status);
     return stat?._count || 0;
   }
@@ -458,13 +485,15 @@ export class AdminIssuesService {
   /**
    * 计算平均解决时间
    */
-  private calculateAvgResolutionTime(resolvedIssues: { createdAt: Date; resolvedAt: Date }[]): string {
+  private calculateAvgResolutionTime(
+    resolvedIssues: { createdAt: Date; resolvedAt: Date }[],
+  ): string {
     if (resolvedIssues.length === 0) {
       return '0小时';
     }
 
     const totalHours = resolvedIssues.reduce((sum, issue) => {
-      const resolvedAt = issue.resolvedAt!.getTime();
+      const resolvedAt = issue.resolvedAt.getTime();
       const createdAt = issue.createdAt.getTime();
       const diffHours = (resolvedAt - createdAt) / (1000 * 60 * 60);
       return sum + diffHours;

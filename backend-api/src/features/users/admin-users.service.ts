@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { CacheService } from '@/redis/cache.service';
 import { QueryUsersDto } from './dto/admin/query-users.dto';
@@ -9,7 +14,13 @@ import { UserStatsResponseDto } from './dto/admin/user-stats-response.dto';
 import { UserOrderListResponseDto } from './dto/admin/user-order-list-response.dto';
 import { UserOrderSummaryResponseDto } from './dto/admin/user-order-summary-response.dto';
 import { UserRefundListResponseDto } from './dto/admin/user-refund-list-response.dto';
-import { UserStatus, Role, OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
+import {
+  UserStatus,
+  Role,
+  OrderStatus,
+  PaymentStatus,
+  Prisma,
+} from '@prisma/client';
 
 /**
  * 管理员用户服务
@@ -110,7 +121,11 @@ export class AdminUsersService {
 
     // 构建响应数据
     const data = users.map((user) => {
-      const stats = userStats.get(user.id) || { orderCount: 0, totalSpent: '0.00', lastOrderAt: null };
+      const stats = userStats.get(user.id) || {
+        orderCount: 0,
+        totalSpent: '0.00',
+        lastOrderAt: null,
+      };
       return {
         id: user.id,
         nickname: user.nickname,
@@ -162,7 +177,11 @@ export class AdminUsersService {
 
     // 统计用户订单信息
     const stats = await this.getUserStatistics([userId]);
-    const userStat = stats.get(userId) || { orderCount: 0, totalSpent: '0.00', lastOrderAt: null };
+    const userStat = stats.get(userId) || {
+      orderCount: 0,
+      totalSpent: '0.00',
+      lastOrderAt: null,
+    };
 
     // 构建响应数据（手机号不脱敏）
     return {
@@ -188,7 +207,10 @@ export class AdminUsersService {
    * @param updateDto 状态更新请求
    * @returns 更新后的用户信息
    */
-  async updateStatus(userId: number, updateDto: UpdateUserStatusDto): Promise<UserDetailResponseDto> {
+  async updateStatus(
+    userId: number,
+    updateDto: UpdateUserStatusDto,
+  ): Promise<UserDetailResponseDto> {
     const { status } = updateDto;
 
     // 查询用户
@@ -225,7 +247,9 @@ export class AdminUsersService {
       },
     });
 
-    this.logger.log(`用户状态已更新: userId=${userId}, ${user.status} → ${status}`);
+    this.logger.log(
+      `用户状态已更新: userId=${userId}, ${user.status} → ${status}`,
+    );
 
     // 清除相关 Redis 缓存
     try {
@@ -239,7 +263,11 @@ export class AdminUsersService {
 
     // 统计用户订单信息
     const stats = await this.getUserStatistics([userId]);
-    const userStat = stats.get(userId) || { orderCount: 0, totalSpent: '0.00', lastOrderAt: null };
+    const userStat = stats.get(userId) || {
+      orderCount: 0,
+      totalSpent: '0.00',
+      lastOrderAt: null,
+    };
 
     // 返回更新后的用户信息
     return {
@@ -265,7 +293,8 @@ export class AdminUsersService {
    */
   async getStats(): Promise<UserStatsResponseDto> {
     // 尝试从缓存获取
-    const cached = await this.cacheService.get<UserStatsResponseDto>('user:stats');
+    const cached =
+      await this.cacheService.get<UserStatsResponseDto>('user:stats');
     if (cached) {
       this.logger.debug('返回缓存的用户统计数据');
       return cached;
@@ -317,9 +346,12 @@ export class AdminUsersService {
     const admins = roleStats.find((s) => s.role === Role.ADMIN)?._count || 0;
 
     // 从状态统计中提取各状态数量
-    const active = statusStats.find((s) => s.status === UserStatus.ACTIVE)?._count || 0;
-    const inactive = statusStats.find((s) => s.status === UserStatus.INACTIVE)?._count || 0;
-    const banned = statusStats.find((s) => s.status === UserStatus.BANNED)?._count || 0;
+    const active =
+      statusStats.find((s) => s.status === UserStatus.ACTIVE)?._count || 0;
+    const inactive =
+      statusStats.find((s) => s.status === UserStatus.INACTIVE)?._count || 0;
+    const banned =
+      statusStats.find((s) => s.status === UserStatus.BANNED)?._count || 0;
 
     const stats = {
       total,
@@ -371,14 +403,20 @@ export class AdminUsersService {
 
     // 初始化所有用户的统计
     for (const userId of userIds) {
-      statsMap.set(userId, { orderCount: 0, totalSpent: '0.00', lastOrderAt: null });
+      statsMap.set(userId, {
+        orderCount: 0,
+        totalSpent: '0.00',
+        lastOrderAt: null,
+      });
     }
 
     // 聚合订单数据
     for (const order of orders) {
       const current = statsMap.get(order.userId)!;
       current.orderCount += 1;
-      current.totalSpent = (Number(current.totalSpent) + Number(order.totalAmount)).toFixed(2);
+      current.totalSpent = (
+        Number(current.totalSpent) + Number(order.totalAmount)
+      ).toFixed(2);
 
       // 更新最近订单时间
       if (!current.lastOrderAt || order.createdAt > current.lastOrderAt) {
@@ -431,7 +469,12 @@ export class AdminUsersService {
   async findUserOrders(
     userId: number,
     queryDto: QueryUserOrdersDto,
-  ): Promise<{ data: UserOrderListResponseDto[]; total: number; page: number; pageSize: number }> {
+  ): Promise<{
+    data: UserOrderListResponseDto[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
     const { page = 1, pageSize = 20, status, startDate, endDate } = queryDto;
 
     // 验证用户存在
@@ -534,7 +577,9 @@ export class AdminUsersService {
    * @param userId 用户 ID
    * @returns 订单汇总统计
    */
-  async getUserOrderSummary(userId: number): Promise<UserOrderSummaryResponseDto> {
+  async getUserOrderSummary(
+    userId: number,
+  ): Promise<UserOrderSummaryResponseDto> {
     // 验证用户存在
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -548,15 +593,24 @@ export class AdminUsersService {
 
     // 尝试从缓存获取
     const cacheKey = `user:order-summary:${userId}`;
-    const cached = await this.cacheService.get<UserOrderSummaryResponseDto>(cacheKey);
+    const cached =
+      await this.cacheService.get<UserOrderSummaryResponseDto>(cacheKey);
     if (cached) {
       this.logger.debug(`返回缓存的用户订单汇总: userId=${userId}`);
       return cached;
     }
 
     // 并行查询各项统计数据
-    let categoryStats: { category_id: number; category_name: string; order_count: bigint }[] = [];
-    let monthlyStats: { month: string; order_count: bigint; total_amount: string }[] = [];
+    let categoryStats: {
+      category_id: number;
+      category_name: string;
+      order_count: bigint;
+    }[] = [];
+    let monthlyStats: {
+      month: string;
+      order_count: bigint;
+      total_amount: string;
+    }[] = [];
 
     const [
       allOrders,
@@ -643,18 +697,25 @@ export class AdminUsersService {
 
     // 计算各状态订单数
     const totalOrders = allOrders.length;
-    const paidOrdersCount = statusCounts.find((s) => s.status === OrderStatus.PAID)?._count || 0;
-    const completedOrders = statusCounts.find((s) => s.status === OrderStatus.COMPLETED)?._count || 0;
-    const cancelledOrders = statusCounts.find((s) => s.status === OrderStatus.CANCELLED)?._count || 0;
-    const refundedOrders = statusCounts.find((s) => s.status === OrderStatus.REFUNDED)?._count || 0;
+    const paidOrdersCount =
+      statusCounts.find((s) => s.status === OrderStatus.PAID)?._count || 0;
+    const completedOrders =
+      statusCounts.find((s) => s.status === OrderStatus.COMPLETED)?._count || 0;
+    const cancelledOrders =
+      statusCounts.find((s) => s.status === OrderStatus.CANCELLED)?._count || 0;
+    const refundedOrders =
+      statusCounts.find((s) => s.status === OrderStatus.REFUNDED)?._count || 0;
 
     // 计算总消费金额
-    const totalSpent = paidOrdersForAmount.reduce((sum, order) => sum + Number(order.actualAmount), 0).toFixed(2);
+    const totalSpent = paidOrdersForAmount
+      .reduce((sum, order) => sum + Number(order.actualAmount), 0)
+      .toFixed(2);
 
     // 计算平均订单金额
-    const avgOrderAmount = paidOrdersForAmount.length > 0
-      ? (Number(totalSpent) / paidOrdersForAmount.length).toFixed(2)
-      : '0.00';
+    const avgOrderAmount =
+      paidOrdersForAmount.length > 0
+        ? (Number(totalSpent) / paidOrdersForAmount.length).toFixed(2)
+        : '0.00';
 
     // 构建响应数据
     const summary: UserOrderSummaryResponseDto = {

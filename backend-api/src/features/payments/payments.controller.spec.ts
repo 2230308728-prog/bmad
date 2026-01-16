@@ -90,7 +90,11 @@ describe('PaymentsController', () => {
         paySign: 'signature...',
       });
 
-      const result = await controller.createPayment(mockUser, 1, createPaymentDto);
+      const result = await controller.createPayment(
+        mockUser,
+        1,
+        createPaymentDto,
+      );
 
       expect(result).toHaveProperty('data');
       expect(result.data).toHaveProperty('timeStamp');
@@ -109,9 +113,9 @@ describe('PaymentsController', () => {
     it('should throw BadRequestException when order does not exist', async () => {
       mockPrismaService.order.findFirst.mockResolvedValue(null);
 
-      await expect(controller.createPayment(mockUser, 1, createPaymentDto)).rejects.toThrow(
-        new BadRequestException('订单不存在或不属于当前用户'),
-      );
+      await expect(
+        controller.createPayment(mockUser, 1, createPaymentDto),
+      ).rejects.toThrow(new BadRequestException('订单不存在或不属于当前用户'));
       expect(mockWechatPayService.createJsapiOrder).not.toHaveBeenCalled();
     });
 
@@ -119,9 +123,9 @@ describe('PaymentsController', () => {
       const paidOrder = { ...mockOrder, status: OrderStatus.PAID };
       mockPrismaService.order.findFirst.mockResolvedValue(paidOrder);
 
-      await expect(controller.createPayment(mockUser, 1, createPaymentDto)).rejects.toThrow(
-        new BadRequestException('订单状态不正确，无法支付'),
-      );
+      await expect(
+        controller.createPayment(mockUser, 1, createPaymentDto),
+      ).rejects.toThrow(new BadRequestException('订单状态不正确，无法支付'));
       expect(mockWechatPayService.createJsapiOrder).not.toHaveBeenCalled();
     });
 
@@ -129,7 +133,9 @@ describe('PaymentsController', () => {
       mockPrismaService.order.findFirst.mockResolvedValue(mockOrder);
       mockWechatPayService.isAvailable.mockReturnValue(false);
 
-      await expect(controller.createPayment(mockUser, 1, createPaymentDto)).rejects.toThrow(
+      await expect(
+        controller.createPayment(mockUser, 1, createPaymentDto),
+      ).rejects.toThrow(
         new BadRequestException('支付服务暂时不可用，请稍后重试'),
       );
       expect(mockWechatPayService.createJsapiOrder).not.toHaveBeenCalled();
@@ -140,8 +146,16 @@ describe('PaymentsController', () => {
         ...mockOrder,
         totalAmount: new Prisma.Decimal(300),
         items: [
-          { productName: '产品1', productPrice: new Prisma.Decimal(100), quantity: 1 },
-          { productName: '产品2', productPrice: new Prisma.Decimal(200), quantity: 1 },
+          {
+            productName: '产品1',
+            productPrice: new Prisma.Decimal(100),
+            quantity: 1,
+          },
+          {
+            productName: '产品2',
+            productPrice: new Prisma.Decimal(200),
+            quantity: 1,
+          },
         ],
       };
       mockPrismaService.order.findFirst.mockResolvedValue(multiItemOrder);
